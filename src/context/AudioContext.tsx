@@ -663,6 +663,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentTime(0);
     setProgress(0);
 
+    // Sync muted state with user choice
+    audioRef.current.muted = isMuted;
+
     // Stop Hls if active
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -679,12 +682,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           hls.loadSource(url);
           hls.attachMedia(audioRef.current!);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            audioRef.current!.muted = isMuted;
             audioRef.current!.play();
             setIsPlaying(true);
           });
         } else if (audioRef.current!.canPlayType("application/vnd.apple.mpegurl")) {
           // Native Safari HLS
           audioRef.current!.src = url;
+          audioRef.current!.muted = isMuted;
           audioRef.current!.play();
           setIsPlaying(true);
         }
@@ -692,6 +697,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       // Standard MP3 streams
       audioRef.current.src = url;
+      audioRef.current.muted = isMuted;
       audioRef.current.play();
       setIsPlaying(true);
     }
@@ -701,16 +707,25 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const togglePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
-      audioRef.current.pause();
+      if (currentTrack.isLive) {
+        // Mute instead of pause for live stream to keep background stream active at live edge
+        audioRef.current.muted = true;
+      } else {
+        audioRef.current.pause();
+      }
       setIsPlaying(false);
     } else {
-      // If live, reload feed to sync live edge immediately (prevent latency)
       if (currentTrack.isLive) {
-        playUrl(currentTrack.streamUrl, true);
+        // Restore user mute preference and ensure playing
+        audioRef.current.muted = isMuted;
+        audioRef.current.play().catch(err => {
+          console.warn("Autoplay blocked, re-requesting stream:", err);
+          playUrl(currentTrack.streamUrl, true);
+        });
       } else {
         audioRef.current.play();
-        setIsPlaying(true);
       }
+      setIsPlaying(true);
     }
   };
 
@@ -718,7 +733,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!audioRef.current) return;
     const nextMute = !isMuted;
     setIsMuted(nextMute);
-    audioRef.current.muted = nextMute;
+    // Keep muted if player is paused, otherwise set to nextMute
+    audioRef.current.muted = !isPlaying ? true : nextMute;
   };
 
   const changeVolume = (v: number) => {
@@ -728,7 +744,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audioRef.current.volume = cleanV;
     if (cleanV > 0 && isMuted) {
       setIsMuted(false);
-      audioRef.current.muted = false;
+      if (isPlaying) {
+        audioRef.current.muted = false;
+      }
     }
   };
 
