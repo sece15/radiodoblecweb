@@ -308,7 +308,7 @@ const DEFAULT_BANNED_WORDS = [
 
 const DEFAULT_AVATAR = "https://lh3.googleusercontent.com/aida-public/AB6AXuA6srmeb-vk1Q2DfS7yC25Domf9c0kLipds57TXJh5KR9tiwF0baTSxCYrkymfzHxHofWx2YGAQDG57_xmYQtC9MQx8VQPS6a0rLLTKzaPewxsyENt8isBr4H-DAbKm6rLb-w9dsT6EiKYAAbHSbGQA863cyUibAznEG1WcAP_Dj4yODOI3MVpRgwobV6sGpli8fKGgEMGNGPG7wXpGs26dibxLVsd1eiJZvnFe-8M6cXt8AYRNIw6JQ294dBMMJ4TD46rF6izIPJeP";
 
-const DEFAULT_STREAM = "https://stream.zeno.fm/4sqc41bg84zuv";
+const DEFAULT_STREAM = process.env.NEXT_PUBLIC_STREAM_URL || "http://31.220.77.18:8000/radio.mp3";
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Audio Ref & HLS Loader
@@ -457,7 +457,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // 4. AzuraCast Nowplaying metadata poll simulation & fetch attempt
     const pollMetadata = async () => {
       try {
-        const res = await fetch("http://localhost/api/nowplaying");
+        const azuraUrl = process.env.NEXT_PUBLIC_AZURACAST_URL || "http://31.220.77.18";
+        const res = await fetch(`${azuraUrl}/api/nowplaying`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
