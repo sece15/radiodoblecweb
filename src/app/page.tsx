@@ -151,7 +151,7 @@ export default function Home() {
           backgroundColor: "var(--background)",
           border: "4px solid var(--primary)",
           padding: "8px 16px",
-          height: "64px",
+          height: "88px",
         }}
       >
         {/* Left Side: BUSCAR button */}
@@ -183,8 +183,8 @@ export default function Home() {
             left: "50%",
             top: "50%",
             transform: "translate(-50%, -50%)",
-            height: "54px",
-            width: "54px",
+            height: "80px",
+            width: "80px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

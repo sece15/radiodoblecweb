@@ -339,9 +339,23 @@ export const SpotifyPlayerBar: React.FC<SpotifyPlayerBarProps> = ({
           justifyContent: "flex-end",
           width: "25%",
           gap: "16px",
-          minWidth: "180px",
+          minWidth: "220px",
         }}
       >
+        {/* Logo next to volume icon */}
+        <img
+          src="/RADIO-2026.png"
+          alt="Radio 2026"
+          style={{
+            height: "48px",
+            width: "48px",
+            objectFit: "contain",
+            flexShrink: 0,
+            marginLeft: "16px",
+            marginRight: "auto",
+          }}
+        />
+
         {/* Mute button */}
         <button
           onClick={toggleMute}

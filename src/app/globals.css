@@ -342,7 +342,7 @@ button {
 .chat-sidebar-container {
   width: 360px;
   border-left: 4px solid var(--primary);
-  height: calc(100vh - 64px - 96px); /* below header, above footer */
+  height: calc(100vh - 88px - 96px); /* below header, above footer */
   background-color: var(--background);
   display: flex;
   flex-direction: column;
@@ -355,10 +355,10 @@ button {
 @media (max-width: 768px) {
   .chat-sidebar-container {
     position: fixed;
-    top: 64px;
+    top: 88px;
     right: 0;
     width: 100%;
-    height: calc(100vh - 64px - 96px);
+    height: calc(100vh - 88px - 96px);
     z-index: 500;
     border-left: none;
     border-top: 4px solid var(--primary);

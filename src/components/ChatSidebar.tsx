@@ -31,6 +31,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
     userProfile,
     updateUserRole,
     listenersCount,
+    isAuthenticated,
+    signInWithGoogle,
   } = useAudio();
 
   const [typedMessage, setTypedMessage] = useState("");
@@ -522,7 +524,26 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
             alignItems: "center",
           }}
         >
-          {isCurrentUserBanned ? (
+          {!isAuthenticated ? (
+            <button
+              onClick={signInWithGoogle}
+              className="neo-button fun-hover-wobble"
+              style={{
+                width: "100%",
+                backgroundColor: "var(--primary-container)",
+                padding: "10px",
+                textAlign: "center",
+                color: "var(--primary)",
+                fontWeight: 900,
+                fontSize: "0.75rem",
+                boxShadow: "3px 3px 0px var(--primary)",
+                cursor: "pointer",
+                textTransform: "uppercase",
+              }}
+            >
+              🔑 INICIAR SESIÓN CON GOOGLE PARA CHATEAR
+            </button>
+          ) : isCurrentUserBanned ? (
             <div
               style={{
                 width: "100%",
