@@ -717,6 +717,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       setIsPlaying(false);
     } else {
+      // Si no hay ninguna fuente de audio cargada aún, la cargamos de inmediato.
+      // Esto previene que play() falle por fuente vacía y que luego sea bloqueado por políticas de Autoplay.
+      if (!audioRef.current.src || audioRef.current.src === window.location.href) {
+        playUrl(currentTrack.streamUrl, currentTrack.isLive);
+        return;
+      }
+
       if (currentTrack.isLive) {
         // Restore user mute preference and ensure playing
         audioRef.current.muted = isMuted;
