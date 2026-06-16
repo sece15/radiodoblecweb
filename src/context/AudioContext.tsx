@@ -579,8 +579,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     disconnectChatSocket();
 
     try {
-      // Connect to default Socket Deno microservice at http://localhost:8081
-      const socket = io("http://localhost:8081", {
+      const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8081";
+      console.log(`🔌 Conectando al microservicio de chat en: ${chatUrl}`);
+      const socket = io(chatUrl, {
         reconnection: true,
         reconnectionDelay: 2000,
         query: { username, accessToken: token },
@@ -588,7 +589,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       socketRef.current = socket;
 
       socket.on("connect", () => {
-        console.log("WebSocket chat connected to microservice at localhost:8081");
+        console.log(`WebSocket chat connected to microservice at ${chatUrl}`);
       });
 
       socket.on("chat_history", (history: any[]) => {
