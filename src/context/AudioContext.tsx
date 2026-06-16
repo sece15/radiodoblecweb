@@ -308,7 +308,7 @@ const DEFAULT_BANNED_WORDS = [
 
 const DEFAULT_AVATAR = "https://lh3.googleusercontent.com/aida-public/AB6AXuA6srmeb-vk1Q2DfS7yC25Domf9c0kLipds57TXJh5KR9tiwF0baTSxCYrkymfzHxHofWx2YGAQDG57_xmYQtC9MQx8VQPS6a0rLLTKzaPewxsyENt8isBr4H-DAbKm6rLb-w9dsT6EiKYAAbHSbGQA863cyUibAznEG1WcAP_Dj4yODOI3MVpRgwobV6sGpli8fKGgEMGNGPG7wXpGs26dibxLVsd1eiJZvnFe-8M6cXt8AYRNIw6JQ294dBMMJ4TD46rF6izIPJeP";
 
-const DEFAULT_STREAM = "http://localhost/hls/radio_doble_c/live.m3u8";
+const DEFAULT_STREAM = "https://stream.zeno.fm/4sqc41bg84zuv";
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Audio Ref & HLS Loader
