@@ -1,0 +1,502 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800;900&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+/* Dynamic Brutalist Zine Theme System */
+[data-theme="PUNK_NEON"] {
+  --primary: #1A1D10;
+  --on-primary: #F9FBE5;
+  --primary-container: #CCFF00;
+  --on-primary-container: #161E00;
+  --secondary: #5E5E5E;
+  --secondary-container: #E2E2E2;
+  --surface-container: #EDF0DA;
+  --on-surface-variant: #444933;
+  --background: #F9FBE5;
+  --on-background: #1A1D10;
+  --error: #BA1A1A;
+  --card-bg: #FFFFFF;
+  --bubble-bg: #CCFF00;
+}
+
+[data-theme="COSMIC_DARK"] {
+  --primary: #FFFFFF;
+  --on-primary: #12141C;
+  --primary-container: #00FFCC;
+  --on-primary-container: #12141C;
+  --secondary: #262A3B;
+  --secondary-container: #1A1D2B;
+  --surface-container: #1A1D2B;
+  --on-surface-variant: #8B92AC;
+  --background: #12141C;
+  --on-background: #FFFFFF;
+  --error: #BA1A1A;
+  --card-bg: #262A3B;
+  --bubble-bg: #00FFCC;
+}
+
+[data-theme="CYBER_RED"] {
+  --primary: #111111;
+  --on-primary: #FAE000;
+  --primary-container: #FF0D43;
+  --on-primary-container: #FFFFFF;
+  --secondary: #FFFFFF;
+  --secondary-container: #F3D400;
+  --surface-container: #F3D400;
+  --on-surface-variant: #333333;
+  --background: #FAE000;
+  --on-background: #111111;
+  --error: #BA1A1A;
+  --card-bg: #FFFFFF;
+  --bubble-bg: #FF0D43;
+}
+
+[data-theme="RETRO_AMBER"] {
+  --primary: #FFFFB000;
+  --on-primary: #150F05;
+  --primary-container: #FFFF8000;
+  --on-primary-container: #150F05;
+  --secondary: #261C0D;
+  --secondary-container: #1E1509;
+  --surface-container: #1E1509;
+  --on-surface-variant: #CF8500;
+  --background: #150F05;
+  --on-background: #FFFFB000;
+  --error: #FFFF3B30;
+  --card-bg: #261C0D;
+  --bubble-bg: #FFFF8000;
+}
+
+/* Global resets & Typography */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  max-width: 100vw;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: var(--background);
+  color: var(--on-background);
+  font-family: 'Outfit', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+}
+
+/* scanlines CRT effect overlay */
+.scanlines {
+  position: relative;
+}
+.scanlines::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.12) 50%
+  );
+  background-size: 100% 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Zine background graphics styling */
+.zine-background {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: var(--background);
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.zine-collage-img {
+  position: absolute;
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+[data-theme="COSMIC_DARK"] .zine-collage-img,
+[data-theme="RETRO_AMBER"] .zine-collage-img {
+  opacity: 0.08;
+  mix-blend-mode: screen;
+  filter: invert(1);
+}
+
+/* Neo-brutalist utility decorators */
+.neo-card {
+  position: relative;
+  border: 4px solid var(--primary);
+  background-color: var(--card-bg);
+  box-shadow: 6px 6px 0px 0px var(--primary);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.neo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid var(--primary);
+  background-color: var(--card-bg);
+  box-shadow: 6px 6px 0px 0px var(--primary);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  padding: 12px 16px;
+  transform: translate(0px, 0px);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  user-select: none;
+}
+
+.neo-button:active {
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0px 0px var(--primary);
+}
+
+.neo-button-circular {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid var(--primary);
+  border-radius: 50%;
+  background-color: var(--card-bg);
+  box-shadow: 5px 5px 0px 0px var(--primary);
+  cursor: pointer;
+  transform: translate(0px, 0px);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  user-select: none;
+}
+
+.neo-button-circular:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0px 0px var(--primary);
+}
+
+/* Tactile Active state for all buttons globally (overriding inline styles) */
+button:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: 1px 1px 0px 0px var(--primary) !important;
+}
+
+button {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+/* Comic Speech Bubble Clip-path styles */
+.comic-bubble-wrapper {
+  position: relative;
+  filter: drop-shadow(6px 6px 0px var(--primary));
+}
+
+.comic-bubble-container {
+  background-color: var(--bubble-bg);
+  border: 4px solid var(--primary);
+  clip-path: polygon(
+    0% 0%, 
+    100% 0%, 
+    100% 78%, 
+    70% 78%, 
+    70% 100%, 
+    55% 78%, 
+    0% 78%
+  );
+  padding: 32px 32px 110px 32px;
+}
+
+/* Interactive slider track custom styling */
+.neo-slider-track {
+  position: relative;
+  width: 100%;
+  height: 26px;
+  border: 4px solid var(--primary);
+  background-color: rgba(26, 29, 16, 0.1);
+  cursor: pointer;
+}
+
+.neo-slider-fill {
+  height: 100%;
+  background-color: var(--primary-container);
+  border-right: 2px solid var(--primary);
+}
+
+.neo-slider-thumb {
+  position: absolute;
+  top: -6px;
+  width: 20px;
+  height: 32px;
+  background-color: #FFFFFF;
+  border: 3px solid var(--primary);
+  pointer-events: none;
+}
+
+/* Custom Web Scrollbars */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+  border-left: 3px solid var(--primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--primary-container);
+  border: 3px solid var(--primary);
+}
+
+/* Zine Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}
+
+.pulse-dot {
+  animation: pulse 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-sweep {
+  animation: spin 4s infinite linear;
+  transform-origin: center;
+}
+
+/* --- WEB LAYOUT REFACTOR ADDITIONS --- */
+
+.zine-title-large {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.0rem, 5.5vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  color: var(--primary-container);
+  -webkit-text-stroke: 3px var(--primary);
+  paint-order: stroke fill;
+  text-shadow: 6px 6px 0px var(--primary);
+  transform: rotate(-1.5deg);
+  display: inline-block;
+  margin-bottom: 8px;
+  animation: title-wobble 4s ease-in-out infinite;
+}
+
+.zine-subtitle-sticker {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 0.08rem;
+  padding: 4px 12px;
+  transform: rotate(1deg);
+  box-shadow: 3px 3px 0px var(--primary-container);
+  border: 2px solid var(--primary-container);
+  display: inline-block;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+@keyframes title-wobble {
+  0%, 100% { transform: rotate(-1.5deg) scale(1); }
+  50% { transform: rotate(1deg) scale(1.02); }
+}
+
+.spotify-player-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 96px;
+  background-color: var(--background);
+  border-top: 4px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  z-index: 1000;
+  box-shadow: 0px -4px 10px rgba(0,0,0,0.15);
+}
+
+.chat-sidebar-container {
+  width: 360px;
+  border-left: 4px solid var(--primary);
+  height: calc(100vh - 64px - 96px); /* below header, above footer */
+  background-color: var(--background);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease;
+  z-index: 90;
+}
+
+@media (max-width: 768px) {
+  .chat-sidebar-container {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    width: 100%;
+    height: calc(100vh - 64px - 96px);
+    z-index: 500;
+    border-left: none;
+    border-top: 4px solid var(--primary);
+  }
+}
+
+.spotify-slider-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border: 2px solid var(--primary);
+  background-color: rgba(26, 29, 16, 0.1);
+  cursor: pointer;
+}
+
+.spotify-slider-fill {
+  height: 100%;
+  background-color: var(--primary-container);
+}
+
+.spotify-slider-thumb {
+  position: absolute;
+  top: -4px;
+  width: 10px;
+  height: 12px;
+  background-color: #FFFFFF;
+  border: 2px solid var(--primary);
+  pointer-events: none;
+}
+
+/* Store Product Hover Wobble Effect */
+.store-card-hover {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.store-card-hover:hover {
+  transform: scale(1.05) rotate(0deg) !important;
+  box-shadow: 6px 6px 0px var(--primary-container) !important;
+}
+
+/* Split-screen Modal Layouts (Side-by-side on Desktop, Stacked on Mobile) */
+.modal-split-container {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.modal-split-left {
+  flex: 1.1;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.modal-split-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+  .modal-split-container {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal-split-left {
+    max-width: 100%;
+  }
+}
+
+/* Ocultar barras de desplazamiento globales para ganar espacio y estetica limpia */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;  /* IE y Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* TikTok-style snappy spring bounce hover effect (plays once and settles) */
+@keyframes tiktok-bounce {
+  0% {
+    transform: rotate(var(--rest-rot, 0deg));
+  }
+  25% {
+    transform: rotate(calc(var(--rest-rot, 0deg) + 6deg));
+  }
+  60% {
+    transform: rotate(calc(var(--rest-rot, 0deg) - 6deg));
+  }
+  100% {
+    transform: rotate(var(--rest-rot, 0deg));
+  }
+}
+
+.fun-hover-wobble {
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+}
+
+.fun-hover-wobble:hover {
+  animation: tiktok-bounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+  box-shadow: 4px 4px 0px var(--primary-container) !important;
+}
+
+/* Cart Drawer Slide-In Animation */
+@keyframes cart-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.cart-drawer-active {
+  animation: cart-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Mock File Upload Neo-Brutalist Box */
+.mock-upload-box {
+  border: 3px dashed var(--primary);
+  background-color: var(--card-bg);
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.mock-upload-box:hover {
+  background-color: rgba(26, 29, 16, 0.05);
+  border-color: var(--primary-container);
+}
+
+
+
