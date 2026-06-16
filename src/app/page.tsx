@@ -395,7 +395,7 @@ export default function Home() {
                 RADIO DOBLE C
               </h1>
               <div className="zine-subtitle-sticker">
-                📻 98.9 FM — EL FANZINE RADIO BRUTAL
+                Radio Doble C — Fucking good Shit
               </div>
             </div>
 
