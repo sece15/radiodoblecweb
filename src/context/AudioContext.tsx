@@ -522,9 +522,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           connectChatSocket(uName, session.access_token);
         }
       });
-
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" && session) {
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session) {
           setIsAuthenticated(true);
           const meta = session.user.user_metadata;
           const uName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
@@ -541,6 +540,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
 
           connectChatSocket(uName, session.access_token);
+
+          // Clean up URL hash after successful login redirect
+          if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
+            window.history.replaceState(null, "", window.location.pathname);
+          }
         } else if (event === "SIGNED_OUT") {
           setIsAuthenticated(false);
           setUserProfile({
@@ -553,9 +557,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           localStorage.removeItem("user_profile");
           disconnectChatSocket();
         }
-      });
-
-      return () => {
+      });      return () => {
         subscription.unsubscribe();
         clearInterval(progressInterval);
         clearInterval(scanInterval);
