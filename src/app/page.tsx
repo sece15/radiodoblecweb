@@ -72,6 +72,18 @@ export default function Home() {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
+  // Custom Toast Notification States
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"info" | "error" | "success">("info");
+  
+  const showToast = (message: string, type: "info" | "error" | "success" = "info") => {
+    setToastMessage(message);
+    setToastType(type);
+    setTimeout(() => {
+      setToastMessage((prev) => (prev === message ? null : prev));
+    }, 4000);
+  };
+
   // Cart Helper Actions
   const addToCart = (product: any, color: string, size: string) => {
     const cartItemId = `${product.id}-${color}-${size}`;
@@ -705,7 +717,7 @@ export default function Home() {
                 <button
                   onClick={() => {
                     if (!isAuthenticated) {
-                      alert("Por favor, iniciá sesión en la sección Mi Perfil para continuar con tu compra.");
+                      showToast("Por favor, iniciá sesión en la sección Mi Perfil para continuar con tu compra.", "error");
                       setActiveTab("profile");
                       setCartOpen(false);
                       return;
@@ -1082,7 +1094,7 @@ export default function Home() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!paymentTxId) {
-                  alert("Por favor ingresa el ID de transacción.");
+                  showToast("Por favor ingresa el ID de transacción.", "error");
                   return;
                 }
 
@@ -1284,6 +1296,54 @@ export default function Home() {
               ENTENDIDO, VOLVER A LA TIENDA 📻
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Neo-brutalist Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: toastType === "error" ? "#BA1A1A" : toastType === "success" ? "#1B6B2F" : "var(--primary-container)",
+            color: toastType === "error" ? "white" : "var(--primary)",
+            border: "4px solid var(--primary)",
+            padding: "12px 20px",
+            fontWeight: 900,
+            fontSize: "0.75rem",
+            boxShadow: "4px 4px 0px var(--primary)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textTransform: "uppercase",
+            fontFamily: "monospace",
+            maxWidth: "90%",
+            textAlign: "center",
+          }}
+        >
+          <span>{toastType === "error" ? "⚠️" : "⚡"}</span>
+          <span>{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: 900,
+              fontSize: "1rem",
+              marginLeft: "8px",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
     </main>

@@ -560,24 +560,44 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
             </div>
           ) : (
             <>
-              <textarea
-                value={typedMessage}
-                onChange={(e) => setTypedMessage(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder="Escribe en la sintonía..."
-                style={{
-                  flex: 1,
-                  height: "36px",
-                  minHeight: "36px",
-                  maxHeight: "80px",
-                  padding: "6px 8px",
-                  border: "2px solid var(--primary)",
-                  outline: "none",
-                  fontSize: "0.7rem",
-                  resize: "none",
-                  fontFamily: "inherit",
-                }}
-              />
+              <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+                <textarea
+                  value={typedMessage}
+                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 400))}
+                  onKeyDown={handleKeyPress}
+                  maxLength={400}
+                  placeholder="Escribe en la sintonía..."
+                  style={{
+                    width: "100%",
+                    height: "36px",
+                    minHeight: "36px",
+                    maxHeight: "80px",
+                    padding: "6px 8px 6px 8px",
+                    paddingRight: "45px", // Leave room for character counter
+                    border: "2px solid var(--primary)",
+                    outline: "none",
+                    fontSize: "0.7rem",
+                    resize: "none",
+                    fontFamily: "inherit",
+                  }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: "4px",
+                    right: "6px",
+                    fontSize: "0.55rem",
+                    fontWeight: 900,
+                    color: typedMessage.length >= 380 ? "#BA1A1A" : "gray",
+                    pointerEvents: "none",
+                    opacity: typedMessage.length > 0 ? 0.7 : 0,
+                    transition: "opacity 0.2s, color 0.2s",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {typedMessage.length}/400
+                </span>
+              </div>
 
               <button
                 onClick={handleSend}
