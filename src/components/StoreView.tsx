@@ -438,10 +438,10 @@ export const StoreView: React.FC<StoreViewProps> = ({ addToCart, onModalToggle }
         <div
           style={{
             position: "fixed",
-            top: "88px", // Lowered to render below the 88px sticky header
+            top: 0, // Cover the header!
             left: 0,
             width: "100vw",
-            height: "calc(100vh - 88px)", // Reduced height to match
+            height: "100vh", // Full screen
             backgroundColor: "rgba(0, 0, 0, 0.65)",
             backdropFilter: "blur(4px)",
             zIndex: 3000,

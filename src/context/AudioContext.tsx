@@ -524,6 +524,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           // Connect Socket.IO chat
           connectChatSocket(uName, session.access_token);
+        } else {
+          // Connect as guest if no session
+          setIsAuthenticated(false);
+          connectChatSocket("Oyente", "guest");
         }
       });
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -559,7 +563,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             followersCount: "1.2K",
           });
           localStorage.removeItem("user_profile");
-          disconnectChatSocket();
+          // Connect as guest on logout
+          connectChatSocket("Oyente", "guest");
         }
       });      return () => {
         subscription.unsubscribe();
@@ -568,6 +573,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         clearInterval(metadataInterval);
         disconnectChatSocket();
       };
+    } else {
+      // Connect as guest if supabase is not initialized
+      connectChatSocket("Oyente", "guest");
     }
 
     return () => {
