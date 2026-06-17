@@ -438,14 +438,14 @@ export default function Home() {
 
       {/* 3. PERSISTENT SPOTIFY-STYLE FOOTER PLAYER BAR OR FLOATING PLAYER */}
       {activeTab === "store" ? (
-        /* FLOATING COMPACT PLAYER ON BOTTOM-LEFT */
+        /* FLOATING COMPACT PLAYER ON BOTTOM-RIGHT */
         <div
           onClick={() => setPlayerExpanded(true)}
           className="neo-card store-card-hover"
           style={{
             position: "fixed",
             bottom: "24px",
-            left: "24px",
+            right: "24px",
             zIndex: 1000,
             backgroundColor: "var(--primary-container)",
             border: "3px solid var(--primary)",
