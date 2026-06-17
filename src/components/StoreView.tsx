@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ShoppingCart, Star, Sparkles } from "lucide-react";
 
 interface Product {
@@ -17,9 +17,10 @@ interface Product {
 
 interface StoreViewProps {
   addToCart: (product: Product, color: string, size: string) => void;
+  onModalToggle?: (isOpen: boolean) => void;
 }
 
-export const StoreView: React.FC<StoreViewProps> = ({ addToCart }) => {
+export const StoreView: React.FC<StoreViewProps> = ({ addToCart, onModalToggle }) => {
   const products: Product[] = [
     {
       id: "1",
@@ -87,6 +88,13 @@ export const StoreView: React.FC<StoreViewProps> = ({ addToCart }) => {
   // Modal Detail States
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("");
+
+  // Trigger modal callback for parent stacking context z-index adjustment
+  useEffect(() => {
+    if (onModalToggle) {
+      onModalToggle(!!selectedProduct);
+    }
+  }, [selectedProduct, onModalToggle]);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [activeImgIndex, setActiveImgIndex] = useState<number>(0);
   const [isSpecsOpen, setSpecsOpen] = useState<boolean>(false);
@@ -430,10 +438,10 @@ export const StoreView: React.FC<StoreViewProps> = ({ addToCart }) => {
         <div
           style={{
             position: "fixed",
-            top: 0,
+            top: "88px", // Lowered to render below the 88px sticky header
             left: 0,
             width: "100vw",
-            height: "100vh",
+            height: "calc(100vh - 88px)", // Reduced height to match
             backgroundColor: "rgba(0, 0, 0, 0.65)",
             backdropFilter: "blur(4px)",
             zIndex: 3000,

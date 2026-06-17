@@ -84,6 +84,9 @@ export default function Home() {
     }, 4000);
   };
 
+  // Stacking context z-index helper for product detail modals
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
   // Cart Helper Actions
   const addToCart = (product: any, color: string, size: string) => {
     const cartItemId = `${product.id}-${color}-${size}`;
@@ -145,7 +148,7 @@ export default function Home() {
       case "profile":
         return <ProfileView onNavigateToPlayer={() => setPlayerExpanded(true)} />;
       case "store":
-        return <StoreView addToCart={addToCart} />;
+        return <StoreView addToCart={addToCart} onModalToggle={setIsProductModalOpen} />;
       default:
         return (
           <ExploreView
@@ -402,6 +405,8 @@ export default function Home() {
             display: "flex",
             flexDirection: "column",
             paddingBottom: activeTab === "store" ? "80px" : "120px", // spacing for footer bar/floating player
+            position: "relative",
+            zIndex: isProductModalOpen ? 4000 : "auto",
           }}
         >
           <ZineBackgroundFrame>
@@ -422,7 +427,7 @@ export default function Home() {
                 RADIO DOBLE C
               </h1>
               <div className="zine-subtitle-sticker">
-                Radio Doble C — Fucking good Shit
+                Fucking good Shit
               </div>
             </div>
 
