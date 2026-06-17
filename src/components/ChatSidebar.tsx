@@ -563,9 +563,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
               <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
                 <textarea
                   value={typedMessage}
-                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 400))}
+                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
                   onKeyDown={handleKeyPress}
-                  maxLength={400}
+                  maxLength={150}
                   placeholder="Escribe en la sintonía..."
                   style={{
                     width: "100%",
@@ -588,14 +588,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
                     right: "6px",
                     fontSize: "0.55rem",
                     fontWeight: 900,
-                    color: typedMessage.length >= 380 ? "#BA1A1A" : "gray",
+                    color: typedMessage.length >= 135 ? "#BA1A1A" : "gray",
                     pointerEvents: "none",
                     opacity: typedMessage.length > 0 ? 0.7 : 0,
                     transition: "opacity 0.2s, color 0.2s",
                     fontFamily: "monospace",
                   }}
                 >
-                  {typedMessage.length}/400
+                  {typedMessage.length}/150
                 </span>
               </div>
 
