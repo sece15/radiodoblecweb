@@ -149,7 +149,7 @@ interface AudioContextType {
   isAuthenticated: boolean;
   signOut: () => void;
   signInWithGoogle: () => void;
-  signInWithEmail: (email: string) => void;
+  // signInWithEmail eliminada (SC-01: tenía contraseña hardcodeada)
 
   // Live status / now playing metadata
   isStreamerLive: boolean;
@@ -308,7 +308,8 @@ const DEFAULT_BANNED_WORDS = [
 
 const DEFAULT_AVATAR = "https://lh3.googleusercontent.com/aida-public/AB6AXuA6srmeb-vk1Q2DfS7yC25Domf9c0kLipds57TXJh5KR9tiwF0baTSxCYrkymfzHxHofWx2YGAQDG57_xmYQtC9MQx8VQPS6a0rLLTKzaPewxsyENt8isBr4H-DAbKm6rLb-w9dsT6EiKYAAbHSbGQA863cyUibAznEG1WcAP_Dj4yODOI3MVpRgwobV6sGpli8fKGgEMGNGPG7wXpGs26dibxLVsd1eiJZvnFe-8M6cXt8AYRNIw6JQ294dBMMJ4TD46rF6izIPJeP";
 
-const DEFAULT_STREAM = process.env.NEXT_PUBLIC_STREAM_URL || "http://31.220.77.18:8000/radio.mp3";
+// SC-07 / V2-03: Sin IPs hardcodeadas. Si la variable de entorno no está definida, no se reproduce nada.
+const DEFAULT_STREAM = process.env.NEXT_PUBLIC_STREAM_URL || "";
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Audio Ref & HLS Loader
@@ -457,7 +458,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // 4. AzuraCast Nowplaying metadata poll simulation & fetch attempt
     const pollMetadata = async () => {
       try {
-        const azuraUrl = process.env.NEXT_PUBLIC_AZURACAST_URL || "http://31.220.77.18";
+        // SC-07: No se usa IP hardcodeada. Si la var de entorno no está, se omite el fetch.
+        const azuraUrl = process.env.NEXT_PUBLIC_AZURACAST_URL;
+        if (!azuraUrl) return;
         const res = await fetch(`${azuraUrl}/api/nowplaying`);
         if (res.ok) {
           const data = await res.json();
@@ -585,7 +588,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const socket = io(chatUrl, {
         reconnection: true,
         reconnectionDelay: 2000,
-        query: { username, accessToken: token },
+        auth: { token }, // SC-07 / V2-07: JWT en auth para que no aparezca en logs de URL
+        query: { username },
       });
       socketRef.current = socket;
 
@@ -944,7 +948,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem("user_profile", JSON.stringify(updated));
   };
 
+  // SC-06: Solo disponible en modo desarrollo para evitar manipulación de roles desde la consola del navegador.
   const updateUserRole = (newRole: string) => {
+    if (process.env.NODE_ENV !== "development") {
+      console.warn("updateUserRole: bloqueada en producción (SC-06).");
+      return;
+    }
     setUserProfile(prev => {
       const updated = { ...prev, role: newRole };
       localStorage.setItem("user_profile", JSON.stringify(updated));
@@ -1067,15 +1076,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const signInWithEmail = async (email: string) => {
-    if (supabase) {
-      // Seeding a dummy password for direct login matching Deno credentials
-      await supabase.auth.signInWithPassword({
-        email,
-        password: "123456",
-      });
-    }
-  };
+  // SC-01: signInWithEmail ELIMINADA — tenía la contraseña "123456" hardcodeada.
+  // El único flujo de autenticación soportado es Google OAuth (signInWithGoogle).
 
   const signOut = async () => {
     if (supabase) {
@@ -1143,7 +1145,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isAuthenticated,
         signOut,
         signInWithGoogle,
-        signInWithEmail,
+        // signInWithEmail eliminada (SC-01)
         isStreamerLive,
         liveShowName,
         liveTrackTitle,

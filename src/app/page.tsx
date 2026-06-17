@@ -1,6 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+// SC-02: Cliente de Supabase para persistir pedidos en la tabla public.pedidos
+const supabase = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key) : null;
+})();
+
+// SC-03: Datos de pago desde variables de entorno, no hardcodeados
+const MP_ALIAS = process.env.NEXT_PUBLIC_MP_ALIAS || "";
+const MP_CVU = process.env.NEXT_PUBLIC_MP_CVU || "";
 import { useAudio } from "@/context/AudioContext";
 import { ZineBackgroundFrame } from "@/components/ZineBackgroundFrame";
 import { ExploreView } from "@/components/ExploreView";
@@ -31,7 +43,7 @@ interface CartItem {
 }
 
 export default function Home() {
-  const { selectTheme, isPlaying, currentTrack, togglePlayPause } = useAudio();
+  const { selectTheme, isPlaying, currentTrack, togglePlayPause, isAuthenticated } = useAudio();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("explore");
   const [isSearchActive, setSearchActive] = useState(false);
@@ -56,6 +68,9 @@ export default function Home() {
   const [paymentReceiptName, setPaymentReceiptName] = useState("");
   const [isCopiedAlias, setIsCopiedAlias] = useState(false);
   const [isCopiedCvu, setIsCopiedCvu] = useState(false);
+  // SC-02: Estados de la operación de guardado del pedido
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   // Cart Helper Actions
   const addToCart = (product: any, color: string, size: string) => {
@@ -681,8 +696,20 @@ export default function Home() {
                   </span>
                 </div>
 
+                {!isAuthenticated && (
+                  <p style={{ fontSize: "0.7rem", color: "var(--error)", fontWeight: "bold", textAlign: "center", margin: "4px 0" }}>
+                    ⚠️ Debés iniciar sesión en la pestaña Perfil para realizar tu pedido.
+                  </p>
+                )}
+
                 <button
                   onClick={() => {
+                    if (!isAuthenticated) {
+                      alert("Por favor, iniciá sesión en la sección Mi Perfil para continuar con tu compra.");
+                      setActiveTab("profile");
+                      setCartOpen(false);
+                      return;
+                    }
                     setCartOpen(false);
                     setCheckoutStep("shipping");
                   }}
@@ -975,11 +1002,12 @@ export default function Home() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <span style={{ fontSize: "0.6rem", fontWeight: "bold", opacity: 0.7 }}>ALIAS</span>
-                  <p style={{ fontSize: "0.8rem", fontWeight: 900, fontFamily: "monospace" }}>doblec.radio.mp</p>
+                  {/* SC-03: Dato desde variable de entorno NEXT_PUBLIC_MP_ALIAS */}
+                  <p style={{ fontSize: "0.8rem", fontWeight: 900, fontFamily: "monospace" }}>{MP_ALIAS || "—"}</p>
                 </div>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText("doblec.radio.mp");
+                    if (MP_ALIAS) navigator.clipboard.writeText(MP_ALIAS);
                     setIsCopiedAlias(true);
                     setTimeout(() => setIsCopiedAlias(false), 2000);
                   }}
@@ -999,11 +1027,12 @@ export default function Home() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "2px solid var(--primary)", paddingTop: "6px" }}>
                 <div>
                   <span style={{ fontSize: "0.6rem", fontWeight: "bold", opacity: 0.7 }}>CVU MERCADO PAGO</span>
-                  <p style={{ fontSize: "0.8rem", fontWeight: 900, fontFamily: "monospace" }}>0000003100000002394821</p>
+                  {/* SC-03: Dato desde variable de entorno NEXT_PUBLIC_MP_CVU */}
+                  <p style={{ fontSize: "0.8rem", fontWeight: 900, fontFamily: "monospace" }}>{MP_CVU || "—"}</p>
                 </div>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText("0000003100000002394821");
+                    if (MP_CVU) navigator.clipboard.writeText(MP_CVU);
                     setIsCopiedCvu(true);
                     setTimeout(() => setIsCopiedCvu(false), 2000);
                   }}
@@ -1050,12 +1079,54 @@ export default function Home() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (!paymentTxId) {
                   alert("Por favor ingresa el ID de transacción.");
                   return;
                 }
+
+                // SC-02: Persistir el pedido en Supabase antes de avanzar
+                setIsSubmittingOrder(true);
+                setOrderError(null);
+
+                const totalAmount = cart.reduce(
+                  (acc, item) => acc + parseFloat(item.product.price.replace("$", "")) * item.quantity, 0
+                ) + 5;
+
+                const orderPayload = {
+                  nombre: shippingName,
+                  email: shippingEmail,
+                  telefono: shippingPhone,
+                  direccion: shippingAddress,
+                  ciudad: shippingCity,
+                  items: cart.map((i) => ({
+                    id: i.id,
+                    nombre: i.product.name,
+                    color: i.color,
+                    talle: i.size,
+                    cantidad: i.quantity,
+                    precio_unitario: i.product.price,
+                  })),
+                  total: totalAmount,
+                  tx_id: paymentTxId,
+                  tiene_comprobante: Boolean(paymentReceiptName),
+                  estado: "pendiente_verificacion",
+                };
+
+                if (supabase) {
+                  const { error } = await supabase.from("pedidos").insert(orderPayload);
+                  if (error) {
+                    console.error("Error guardando pedido:", error);
+                    setOrderError("Hubo un error al registrar tu pedido. Intená de nuevo.");
+                    setIsSubmittingOrder(false);
+                    return;
+                  }
+                } else {
+                  console.warn("Supabase no configurado: pedido no persistido.");
+                }
+
+                setIsSubmittingOrder(false);
                 setCheckoutStep("success");
               }}
               style={{ display: "flex", flexDirection: "column", gap: "10px" }}
@@ -1101,18 +1172,26 @@ export default function Home() {
                 </div>
               </div>
 
+              {orderError && (
+                <p style={{ fontSize: "0.7rem", color: "var(--error)", fontWeight: "bold", textAlign: "center" }}>
+                  {orderError}
+                </p>
+              )}
               <button
                 type="submit"
+                disabled={isSubmittingOrder}
                 className="neo-button"
                 style={{
-                  backgroundColor: "var(--primary-container)",
+                  backgroundColor: isSubmittingOrder ? "var(--surface-container)" : "var(--primary-container)",
                   width: "100%",
                   padding: "10px",
                   fontSize: "0.75rem",
                   marginTop: "6px",
+                  opacity: isSubmittingOrder ? 0.7 : 1,
+                  cursor: isSubmittingOrder ? "not-allowed" : "pointer",
                 }}
               >
-                VALIDAR TRANSFERENCIA 🛡️
+                {isSubmittingOrder ? "REGISTRANDO PEDIDO... ⏳" : "VALIDAR TRANSFERENCIA 🛡️"}
               </button>
             </form>
           </div>
