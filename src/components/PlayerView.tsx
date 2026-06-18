@@ -654,7 +654,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                   style={{
                     flex: 1,
                     height: "32px",
-                    padding: "4px 8px",
+                    padding: "4px 8px 4px 12px",
                     border: isChatInputFocused
                       ? "2.5px solid var(--primary)"
                       : "2px solid var(--primary)",
