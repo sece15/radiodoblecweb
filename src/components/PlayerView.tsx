@@ -112,7 +112,6 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
 
   return (
     <div
-      className="scanlines"
       style={{
         position: "fixed",
         top: 0,
