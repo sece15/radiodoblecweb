@@ -491,7 +491,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
             height: "510px",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
+            overflow: "clip",
             transform: "rotate(1deg)",
             zIndex: 5,
           }}
