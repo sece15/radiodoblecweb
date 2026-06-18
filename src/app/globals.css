@@ -18,7 +18,7 @@
 }
 
 [data-theme="COSMIC_DARK"] {
-  --primary: #FFFFFF;
+  --primary: #00FFCC;
   --on-primary: #12141C;
   --primary-container: #00FFCC;
   --on-primary-container: #12141C;
@@ -50,19 +50,35 @@
 }
 
 [data-theme="RETRO_AMBER"] {
-  --primary: #FFFFB000;
+  --primary: #FFB000;
   --on-primary: #150F05;
-  --primary-container: #FFFF8000;
+  --primary-container: #FF8000;
   --on-primary-container: #150F05;
   --secondary: #261C0D;
   --secondary-container: #1E1509;
   --surface-container: #1E1509;
   --on-surface-variant: #CF8500;
   --background: #150F05;
-  --on-background: #FFFFB000;
-  --error: #FFFF3B30;
+  --on-background: #FFB000;
+  --error: #FF3B30;
   --card-bg: #261C0D;
-  --bubble-bg: #FFFF8000;
+  --bubble-bg: #FF8000;
+}
+
+[data-theme="TROPICAL"] {
+  --primary: #EC008C;
+  --on-primary: #F2EFE9;
+  --primary-container: #FF6C00;
+  --on-primary-container: #FFFFFF;
+  --secondary: #F2EFE9;
+  --secondary-container: #FFD300;
+  --surface-container: #F2EFE9;
+  --on-surface-variant: #FF6C00;
+  --background: #FFB6D9;
+  --on-background: #EC008C;
+  --error: #BA1A1A;
+  --card-bg: #F2EFE9;
+  --bubble-bg: #EC008C;
 }
 
 /* Global resets & Typography */
@@ -497,6 +513,84 @@ button {
   background-color: rgba(26, 29, 16, 0.05);
   border-color: var(--primary-container);
 }
+
+/* --- MOBILE RESPONSIVE WEB FOOTER PLAYER BAR --- */
+@media (max-width: 768px) {
+  .spotify-player-bar {
+    height: 80px !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  
+  .player-bar-left {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+  
+  /* Make the album art smaller on mobile */
+  .player-bar-left > div:first-child {
+    width: 44px !important;
+    height: 44px !important;
+    margin-right: 8px !important;
+    border-width: 2px !important;
+  }
+  
+  /* Hide the seek bar / timeline and skip buttons on mobile player footer */
+  .player-bar-center {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  
+  /* Hide skip buttons, only keep Play/Pause in center */
+  .player-bar-center button:not(.neo-button) {
+    display: none !important;
+  }
+  
+  /* Progress timeline wrapper (timeline & time texts) */
+  .player-bar-center > div:last-child {
+    display: none !important;
+  }
+  
+  .player-bar-center .neo-button {
+    width: 36px !important;
+    height: 36px !important;
+    border-width: 2.5px !important;
+  }
+  
+  .player-bar-right {
+    width: auto !important;
+    min-width: 0 !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* Hide logo, mute button, and volume input slider on mobile */
+  .player-bar-right img,
+  .player-bar-right button:not(.neo-button),
+  .player-bar-right input {
+    display: none !important;
+  }
+  
+  .player-bar-right .neo-button {
+    padding: 6px 8px !important;
+    box-shadow: 2px 2px 0px var(--primary) !important;
+  }
+}
+
+/* --- FULL SCREEN PLAYER VIEW SPLIT LAYOUT RESPONSIVENESS --- */
+@media (max-width: 868px) {
+  .player-view-split-container {
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+  .player-view-chat-panel {
+    display: none !important; /* Hide chat on mobile screens for full screen player overlay */
+  }
+}
+
 
 
 

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useAudio, Station, RadioProgram, PastBroadcast } from "@/context/AudioContext";
+import { useState, CSSProperties } from "react";
+import { useAudio } from "@/context/AudioContext";
+import { RadioProgram, PastBroadcast } from "@/types";
 import { Heart, Share2, Megaphone, Play, X } from "lucide-react";
 
 interface ExploreViewProps {
@@ -7,7 +8,7 @@ interface ExploreViewProps {
   filteredStyle?: string | null;
 }
 
-export const ExploreView: React.FC<ExploreViewProps> = ({ onNavigateToPlayer, filteredStyle }) => {
+export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewProps) => {
   const {
     stations,
     programs,
@@ -21,13 +22,17 @@ export const ExploreView: React.FC<ExploreViewProps> = ({ onNavigateToPlayer, fi
     liveTrackTitle,
     liveStatusText,
     scanState,
+    currentTrack,
+    isPlaying,
   } = useAudio();
 
   const [selectedStyle, setSelectedStyle] = useState<string>(filteredStyle || "TODOS");
+  const [prevFilteredStyle, setPrevFilteredStyle] = useState<string | null | undefined>(filteredStyle);
 
-  useEffect(() => {
+  if (filteredStyle !== prevFilteredStyle) {
+    setPrevFilteredStyle(filteredStyle);
     setSelectedStyle(filteredStyle || "TODOS");
-  }, [filteredStyle]);
+  }
 
   const [selectedProgram, setSelectedProgram] = useState<RadioProgram | null>(null);
 
@@ -176,13 +181,15 @@ export const ExploreView: React.FC<ExploreViewProps> = ({ onNavigateToPlayer, fi
                 className="neo-button fun-hover-wobble"
                 style={{
                   backgroundColor: isSelected ? "var(--primary-container)" : "var(--card-bg)",
-                  transform: isSelected ? `rotate(${restRotation}deg) scale(1.05)` : `rotate(${restRotation}deg)`,
+                  transform: isSelected 
+                    ? `translate(3px, 3px) rotate(0deg)` 
+                    : `rotate(${restRotation}deg)`,
                   padding: "8px 12px",
                   fontSize: "0.75rem",
-                  boxShadow: "3px 3px 0px var(--primary)",
+                  boxShadow: isSelected ? "0px 0px 0px var(--primary)" : "3px 3px 0px var(--primary)",
                   whiteSpace: "nowrap",
-                  ["--rest-rot" as any]: `${restRotation}deg`,
-                }}
+                  "--rest-rot": isSelected ? "0deg" : `${restRotation}deg`,
+                } as CSSProperties}
               >
                 {style}
               </button>
@@ -205,114 +212,116 @@ export const ExploreView: React.FC<ExploreViewProps> = ({ onNavigateToPlayer, fi
           }}
         >
           {filteredStations.map((station, idx) => {
-          const rotations = [-0.5, 0.8, -0.3];
-          const rot = rotations[idx % rotations.length];
-          return (
-            <div
-              key={station.id}
-              className="neo-card store-card-hover"
-              style={{
-                transform: `rotate(${rot}deg)`,
-                cursor: "pointer",
-                boxShadow: "6px 6px 0px var(--primary)",
-              }}
-              onClick={() => {
-                playStation(station);
-                onNavigateToPlayer();
-              }}
-            >
-              {/* Cover Photo */}
-              <div style={{ position: "relative", width: "100%", height: "160px", backgroundColor: "#1A1D10" }}>
-                <img
-                  src={station.imageUrl}
-                  alt={station.name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
-                />
+            const rotations = [-0.5, 0.8, -0.3];
+            const rot = rotations[idx % rotations.length];
+            const isCurrent = isPlaying && currentTrack.title === station.name;
+            return (
+              <div
+                key={station.id}
+                className="neo-card store-card-hover"
+                style={{
+                  transform: isCurrent ? `translate(5px, 5px) rotate(0deg)` : `rotate(${rot}deg)`,
+                  cursor: "pointer",
+                  boxShadow: isCurrent ? "1px 1px 0px var(--primary)" : "6px 6px 0px var(--primary)",
+                  backgroundColor: isCurrent ? "var(--primary-container)" : "var(--card-bg)",
+                }}
+                onClick={() => {
+                  playStation(station);
+                  onNavigateToPlayer();
+                }}
+              >
+                {/* Cover Photo */}
+                <div style={{ position: "relative", width: "100%", height: "160px", backgroundColor: "#1A1D10" }}>
+                  <img
+                    src={station.imageUrl}
+                    alt={station.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
+                  />
 
-                {/* Frequency tag */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "10px",
-                    left: "10px",
-                    backgroundColor: "var(--primary-container)",
-                    border: "2px solid var(--primary)",
-                    padding: "2px 8px",
-                    fontSize: "0.7rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {station.frequency}
-                </div>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                <h4
-                  style={{
-                    fontSize: "1.2rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    width: "max-content",
-                    borderBottom: "4px solid var(--primary-container)",
-                    paddingBottom: "2px",
-                  }}
-                >
-                  {station.name}
-                </h4>
-                <p style={{ fontSize: "0.75rem", opacity: 0.8, lineHeight: "1.1rem" }}>
-                  {station.description}
-                </p>
-
-                {/* Action buttons */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    borderTop: "2px solid var(--primary)",
-                    paddingTop: "10px",
-                    marginTop: "8px",
-                  }}
-                  onClick={(e) => e.stopPropagation()} // Stop click propagation to parent card play trigger
-                >
-                  <button
-                    onClick={() => toggleStationLike(station.id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
-                  >
-                    <Heart
-                      size={24}
-                      style={{
-                        fill: station.isLiked ? "#BA1A1A" : "none",
-                        color: station.isLiked ? "#BA1A1A" : "var(--primary)",
-                      }}
-                    />
-                  </button>
-
-                  <span
+                  {/* Frequency tag */}
+                  <div
                     style={{
-                      backgroundColor: "var(--background)",
-                      border: "1px solid var(--primary)",
-                      padding: "2px 6px",
-                      fontSize: "0.65rem",
-                      fontWeight: "bold",
+                      position: "absolute",
+                      top: "10px",
+                      left: "10px",
+                      backgroundColor: "var(--primary-container)",
+                      border: "2px solid var(--primary)",
+                      padding: "2px 8px",
+                      fontSize: "0.7rem",
+                      fontWeight: 900,
+                      fontFamily: "monospace",
                     }}
                   >
-                    {station.style}
-                  </span>
+                    {station.frequency}
+                  </div>
+                </div>
 
-                  <button
-                    onClick={() => handleShareStation(station.name)}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                {/* Body */}
+                <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <h4
+                    style={{
+                      fontSize: "1.2rem",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      width: "max-content",
+                      borderBottom: "4px solid var(--primary-container)",
+                      paddingBottom: "2px",
+                    }}
                   >
-                    <Share2 size={22} style={{ color: "var(--primary)" }} />
-                  </button>
+                    {station.name}
+                  </h4>
+                  <p style={{ fontSize: "0.75rem", opacity: 0.8, lineHeight: "1.1rem" }}>
+                    {station.description}
+                  </p>
+
+                  {/* Action buttons */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderTop: "2px solid var(--primary)",
+                      paddingTop: "10px",
+                      marginTop: "8px",
+                    }}
+                    onClick={(e) => e.stopPropagation()} // Stop click propagation to parent card play trigger
+                  >
+                    <button
+                      onClick={() => toggleStationLike(station.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                    >
+                      <Heart
+                        size={24}
+                        style={{
+                          fill: station.isLiked ? "#BA1A1A" : "none",
+                          color: station.isLiked ? "#BA1A1A" : "var(--primary)",
+                        }}
+                      />
+                    </button>
+
+                    <span
+                      style={{
+                        backgroundColor: "var(--background)",
+                        border: "1px solid var(--primary)",
+                        padding: "2px 6px",
+                        fontSize: "0.65rem",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {station.style}
+                    </span>
+
+                    <button
+                      onClick={() => handleShareStation(station.name)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                    >
+                      <Share2 size={22} style={{ color: "var(--primary)" }} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </div>
 
@@ -339,80 +348,80 @@ export const ExploreView: React.FC<ExploreViewProps> = ({ onNavigateToPlayer, fi
           }}
         >
           {programs.map((prog, idx) => {
-          const rotations = [0.5, -0.8, 0.3, -0.5];
-          const rot = rotations[idx % rotations.length];
-          return (
-            <div
-              key={prog.id}
-              className="neo-card store-card-hover"
-              style={{
-                transform: `rotate(${rot}deg)`,
-                cursor: "pointer",
-                boxShadow: "5px 5px 0px var(--primary)",
-                backgroundColor: "var(--surface-container)",
-                padding: "12px",
-              }}
-              onClick={() => setSelectedProgram(prog)}
-            >
-              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                <img
-                  src={prog.imageUrl}
-                  alt={prog.title}
-                  style={{ width: "64px", height: "64px", objectFit: "cover", border: "2px solid var(--primary)" }}
-                />
+            const rotations = [0.5, -0.8, 0.3, -0.5];
+            const rot = rotations[idx % rotations.length];
+            return (
+              <div
+                key={prog.id}
+                className="neo-card store-card-hover"
+                style={{
+                  transform: `rotate(${rot}deg)`,
+                  cursor: "pointer",
+                  boxShadow: "5px 5px 0px var(--primary)",
+                  backgroundColor: "var(--surface-container)",
+                  padding: "12px",
+                }}
+                onClick={() => setSelectedProgram(prog)}
+              >
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  <img
+                    src={prog.imageUrl}
+                    alt={prog.title}
+                    style={{ width: "64px", height: "64px", objectFit: "cover", border: "2px solid var(--primary)" }}
+                  />
 
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "4px" }}>
-                    <h4
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "4px" }}>
+                      <h4
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 900,
+                          textTransform: "uppercase",
+                          lineHeight: "1rem",
+                        }}
+                      >
+                        {prog.title}
+                      </h4>
+                      <span
+                        style={{
+                          backgroundColor: "var(--primary-container)",
+                          border: "1px solid var(--primary)",
+                          padding: "1px 4px",
+                          fontSize: "0.55rem",
+                          fontWeight: "bold",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {prog.genre}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: "0.7rem", fontWeight: "bold", opacity: 0.8 }}>
+                      LOCUTOR: {prog.host.toUpperCase()}
+                    </p>
+                    <p style={{ fontSize: "0.65rem", fontWeight: 900, color: "#BA1A1A" }}>
+                      {prog.timeSlot}
+                    </p>
+                    <p
                       style={{
-                        fontSize: "0.85rem",
-                        fontWeight: 900,
-                        textTransform: "uppercase",
-                        lineHeight: "1rem",
+                        fontSize: "0.65rem",
+                        opacity: 0.7,
+                        lineHeight: "0.85rem",
+                        height: "1.7rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
                       }}
                     >
-                      {prog.title}
-                    </h4>
-                    <span
-                      style={{
-                        backgroundColor: "var(--primary-container)",
-                        border: "1px solid var(--primary)",
-                        padding: "1px 4px",
-                        fontSize: "0.55rem",
-                        fontWeight: "bold",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {prog.genre}
-                    </span>
+                      {prog.description}
+                    </p>
                   </div>
-
-                  <p style={{ fontSize: "0.7rem", fontWeight: "bold", opacity: 0.8 }}>
-                    LOCUTOR: {prog.host.toUpperCase()}
-                  </p>
-                  <p style={{ fontSize: "0.65rem", fontWeight: 900, color: "#BA1A1A" }}>
-                    {prog.timeSlot}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "0.65rem",
-                      opacity: 0.7,
-                      lineHeight: "0.85rem",
-                      height: "1.7rem",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
-                    {prog.description}
-                  </p>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </div>
 

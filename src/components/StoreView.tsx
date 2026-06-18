@@ -1,89 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, MouseEvent } from "react";
 import { ShoppingCart, Star, Sparkles } from "lucide-react";
-
-interface Product {
-  id: string;
-  name: string;
-  price: string;
-  imageUrl: string;
-  rotation: number;
-  description: string;
-  colors: string[];
-  sizes: string[];
-  variantImages?: Record<string, string>;
-  badge?: string;
-  isFeatured?: boolean;
-}
+import { Product } from "@/types";
+import { STORE_PRODUCTS } from "@/constants";
 
 interface StoreViewProps {
   addToCart: (product: Product, color: string, size: string) => void;
   onModalToggle?: (isOpen: boolean) => void;
 }
 
-export const StoreView: React.FC<StoreViewProps> = ({ addToCart, onModalToggle }) => {
-  const products: Product[] = [
-    {
-      id: "1",
-      name: "POLO CLÁSICO DOBLE C",
-      price: "$25.00",
-      imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80",
-      rotation: -2,
-      description: "¡EL CLÁSICO INMORTAL DE LA RADIO! Algodón pesado de 240g curtido para aguantar pogos salvajes y el uso diario. Estampado a mano en serigrafía pura con tinta de alta densidad. Llévalo y demuestra que sintonizas la única radio libre.",
-      colors: ["NEGRO CARBON", "CREMA FANZINE", "LIMA PUNK"],
-      sizes: ["S", "M", "L", "XL"],
-      variantImages: {
-        "NEGRO CARBON": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
-        "CREMA FANZINE": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&q=80",
-        "LIMA PUNK": "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=600&q=80",
-      },
-      badge: "🔥 MÁS BUSCADO",
-      isFeatured: true,
-    },
-    {
-      id: "2",
-      name: "POLERA UNDERGROUND",
-      price: "$45.00",
-      imageUrl: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80",
-      rotation: 3,
-      description: "¡PUNK DE INVIERNO! Hoodie de felpa pesada ultra premium con capucha ajustable. Estampado con collage fanzine gigante en la espalda que detona rebeldía. Hecho en tiraje ultra limitado. No te quedes afuera en el frío.",
-      colors: ["NEGRO CARBON", "ROJO CYBER"],
-      sizes: ["M", "L", "XL"],
-      variantImages: {
-        "NEGRO CARBON": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&q=80",
-        "ROJO CYBER": "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=600&q=80",
-      },
-      badge: "⚡ EDICIÓN LIMITADA",
-    },
-    {
-      id: "3",
-      name: "SHORTS DE VERANO",
-      price: "$30.00",
-      imageUrl: "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=500&q=80",
-      rotation: -1,
-      description: "¡COMODIDAD ANTIRASGADURAS! Shorts de gabardina ripstop ultra-resistentes para tus sesiones de skate o festivales bajo el sol. Con bolsillos utilitarios reforzados para guardar tus casetes.",
-      colors: ["CARBON GRIS", "LIMA PUNK"],
-      sizes: ["S", "M", "L"],
-      variantImages: {
-        "CARBON GRIS": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=600&q=80",
-        "LIMA PUNK": "https://images.unsplash.com/photo-1519750157634-b6d493a0f77c?w=600&q=80",
-      },
-      badge: "🌟 NUEVO INGRESO",
-    },
-    {
-      id: "4",
-      name: "STICKER PACK RADIO",
-      price: "$5.00",
-      imageUrl: "https://images.unsplash.com/photo-1582298538104-fe2e74c878f1?w=500&q=80",
-      rotation: 2,
-      description: "¡DECORA TU MUNDO CON ACTITUD! Pack de 6 calcomanías de vinilo mate premium troqueladas de alta adherencia. Aguantan lluvias, sol e incluso el raspón del skate. Diseños fanzine auténticos de la radio.",
-      colors: ["EDICIÓN LIMITADA"],
-      sizes: ["PACK ÚNICO"],
-      variantImages: {
-        "EDICIÓN LIMITADA": "https://images.unsplash.com/photo-1582298538104-fe2e74c878f1?w=600&q=80",
-      },
-      badge: "⭐ IMPRESCINDIBLE",
-    },
-  ];
+export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
+  const products = STORE_PRODUCTS;
 
   // Modal Detail States
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -131,7 +57,7 @@ export const StoreView: React.FC<StoreViewProps> = ({ addToCart, onModalToggle }
     }
   };
 
-  const handlePrevImage = (e: React.MouseEvent) => {
+  const handlePrevImage = (e: MouseEvent) => {
     e.stopPropagation();
     if (activeImages.length <= 1) return;
     const nextIdx = (activeImgIndex - 1 + activeImages.length) % activeImages.length;
@@ -139,7 +65,7 @@ export const StoreView: React.FC<StoreViewProps> = ({ addToCart, onModalToggle }
     syncColorFromImage(nextIdx);
   };
 
-  const handleNextImage = (e: React.MouseEvent) => {
+  const handleNextImage = (e: MouseEvent) => {
     e.stopPropagation();
     if (activeImages.length <= 1) return;
     const nextIdx = (activeImgIndex + 1) % activeImages.length;

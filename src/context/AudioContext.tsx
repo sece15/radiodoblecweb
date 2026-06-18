@@ -1,77 +1,30 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
 import { io, Socket } from "socket.io-client";
-
-// Define Types
-export interface Station {
-  id: string;
-  name: string;
-  frequency: string;
-  description: string;
-  imageUrl: string;
-  isLiked: boolean;
-  style: string;
-}
-
-export interface RadioProgram {
-  id: string;
-  title: string;
-  host: string;
-  timeSlot: string;
-  genre: string;
-  imageUrl: string;
-  description: string;
-}
-
-export interface PastBroadcast {
-  id: string;
-  programId: string;
-  title: string;
-  date: string;
-  duration: string;
-  audioUrl: string;
-}
-
-export interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  albumName: string;
-  imageUrl: string;
-  streamUrl: string;
-  isFavorite: boolean;
-  durationSeconds: number;
-}
-
-export interface Album {
-  id: string;
-  name: string;
-  artist: string;
-  imageUrl: string;
-  releaseYear: string;
-  genre: string;
-}
-
-export interface UserProfile {
-  name: string;
-  role: string;
-  avatarUrl: string;
-  stashHours: number;
-  followersCount: string;
-}
-
-export interface ChatMessage {
-  id: number;
-  senderName: string;
-  senderRole: string;
-  messageText: string;
-  senderUid?: string | null;
-  stationId: string;
-  createdAt: string;
-  isDeleted: boolean;
-}
+import type Hls from "hls.js";
+import {
+  Station,
+  RadioProgram,
+  PastBroadcast,
+  Song,
+  Album,
+  UserProfile,
+  ChatMessage,
+  SocketChatMessage,
+  SocketChatConfig
+} from "@/types";
+import {
+  INITIAL_STATIONS,
+  INITIAL_PROGRAMS,
+  INITIAL_PAST_BROADCASTS,
+  INITIAL_ALBUMS,
+  INITIAL_SONGS,
+  DEFAULT_BANNED_WORDS,
+  DEFAULT_AVATAR,
+  DEFAULT_STREAM
+} from "@/constants";
 
 interface AudioContextType {
   // Audio state
@@ -165,156 +118,14 @@ interface AudioContextType {
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
-// Supabase Init
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+// Central Supabase client is imported at the top
 
-// Initial Lists
-const INITIAL_STATIONS: Station[] = [
-  {
-    id: "subterraneo",
-    name: "Subterraneo Rock",
-    frequency: "99.1 FM",
-    description: "Solo lo que las disqueras odian. 24/7 de distorsión pura.",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAEwx7PRgZwc3Fq5lf-LteMcltfrm-d19hJSZ5AGRSGyOZ7oZxj7sHycotYD7EDmkliWOl0WXEO2kOzVE1mDXM00Uig4z44AZHZoxYfHKE8vfVxzFpkpIW7vdQFGA9piEEDHfoqNYJoOywV4f5QFWHZSs9EvvT3yt9zl_sb4tCcgjY-2PWAOBxxXp_gwAHJvuV6NbXax2Rk49MbXIaFBgKFcgNL9C9xFp8kH_h5qWJJ4GCWcqmJ2Dvb8-TQ9fpEZFNcUiYImzJUOQSH",
-    isLiked: false,
-    style: "ROCK N' ROLL",
-  },
-  {
-    id: "neonpop",
-    name: "Neon Pop",
-    frequency: "102.5 FM",
-    description: "Burbujas, brillo y sintetizadores que te harán vibrar el cráneo.",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHgkKkWI_L4cptOscww4Dqg9x_1l7Emt7I7f7cP8GxYKYJzFfwnp8agBIhRPcjZJzeTgH-zj8nOeiRn7iwvHmoEpiRlSp1Kjb5TTmrMRR_oAUbZKBCZY4iDX3OZoIVLWsBpfKMB4fbJ4WN66-s_w6SyWu1T0VwPmyENDkyz3VVWSRm2UBEuqa-pewg9z6FZLUb-gOuZUtWz13j1vBrHEHV2UoAfLcYLgMRYvBzFCKJ-fFwRueGTkM-KTLbprP3-qLFhpJIIjdgRMKg",
-    isLiked: true,
-    style: "POP TRASH",
-  },
-  {
-    id: "berlin",
-    name: "Berlin Brutal",
-    frequency: "88.8 FM",
-    description: "Ritmos industriales grabados en sótanos abandonados.",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDP5uqy10MAsI_x_MDmv3GUkMl0tbrhB4Ec956sMPCsxdGlc08vXZjcHtzIALHzom5LlwJFu9uaZyI4MDwKrnpzWl-t9Og2VRWKuJqEMWxwOSjXF0jStgRCxict6yaAbmMtaUC_Yh0c_FRU4i9SBx6FiBBN_-QB_f5kAALQEsGI9a7aG9md2Iuugg2BWCVDTSGKaAhJzV7uXZYOlff2WNDjpjVK9XCYM-CIV_zDTNGZiYHu5M7u7L4T6FS2AYz3h5EcCYnBy7m9tI2m",
-    isLiked: false,
-    style: "TECHNO CORE",
-  },
-];
+// Initial lists and defaults are imported from @/constants at the top
 
-const INITIAL_PROGRAMS: RadioProgram[] = [
-  {
-    id: "callejon",
-    title: "El Callejón del Ritmo",
-    host: "DJ Flaco",
-    timeSlot: "SÁBADOS 22:00 - 00:00",
-    genre: "HIP HOP UNDERGROUND",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAEwx7PRgZwc3Fq5lf-LteMcltfrm-d19hJSZ5AGRSGyOZ7oZxj7sHycotYD7EDmkliWOl0WXEO2kOzVE1mDXM00Uig4z44AZHZoxYfHKE8vfVxzFpkpIW7vdQFGA9piEEDHfoqNYJoOywV4f5QFWHZSs9EvvT3yt9zl_sb4tCcgjY-2PWAOBxxXp_gwAHJvuV6NbXax2Rk49MbXIaFBgKFcgNL9C9xFp8kH_h5qWJJ4GCWcqmJ2Dvb8-TQ9fpEZFNcUiYImzJUOQSH",
-    description: "El callejón con los beats analógicos más crudos de la estación. Frecuencia real urbana.",
-  },
-  {
-    id: "berlin_ind",
-    title: "Berlín Industrial",
-    host: "Eva Schatten",
-    timeSlot: "VIERNES 23:00 - 02:00",
-    genre: "HEAVY TECHNO CORE",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDP5uqy10MAsI_x_MDmv3GUkMl0tbrhB4Ec956sMPCsxdGlc08vXZjcHtzIALHzom5LlwJFu9uaZyI4MDwKrnpzWl-t9Og2VRWKuJqEMWxwOSjXF0jStgRCxict6yaAbmMtaUC_Yh0c_FRU4i9SBx6FiBBN_-QB_f5kAALQEsGI9a7aG9md2Iuugg2BWCVDTSGKaAhJzV7uXZYOlff2WNDjpjVK9XCYM-CIV_zDTNGZiYHu5M7u7L4T6FS2AYz3h5EcCYnBy7m9tI2m",
-    description: "Sets directos grabados en sótanos oscuros y búnkeres abandonados. Distorsión maquinal.",
-  },
-  {
-    id: "distorsion_punk",
-    title: "Distorsión Punk",
-    host: "Capitán Doble C",
-    timeSlot: "SÁBADOS 20:00 - 22:00",
-    genre: "ELECTRO PUNK / GARAGE",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
-    description: "Espacio pirata con fanzine sonoro y los ritmos punk sintéticos más rebeldes.",
-  },
-  {
-    id: "cosmico",
-    title: "Sintético Cósmico",
-    host: "Lyra Volt",
-    timeSlot: "JUEVES 21:00 - 23:00",
-    genre: "COSMIC AMBIENT",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHgkKkWI_L4cptOscww4Dqg9x_1l7Emt7I7f7cP8GxYKYJzFfwnp8agBIhRPcjZJzeTgH-zj8nOeiRn7iwvHmoEpiRlSp1Kjb5TTmrMRR_oAUbZKBCZY4iDX3OZoIVLWsBpfKMB4fbJ4WN66-s_w6SyWu1T0VwPmyENDkyz3VVWSRm2UBEuqa-pewg9z6FZLUb-gOuZUtWz13j1vBrHEHV2UoAfLcYLgMRYvBzFCKJ-fFwRueGTkM-KTLbprP3-qLFhpJIIjdgRMKg",
-    description: "Viaje mental guiado por sintetizadores y ondas analógicas espaciales.",
-  },
-];
-
-const INITIAL_PAST_BROADCASTS: PastBroadcast[] = [
-  { id: "callejon_1", programId: "callejon", title: "El Callejón: Beats de Asfalto", date: "Ayer", duration: "01:24:10", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-  { id: "callejon_2", programId: "callejon", title: "El Callejón: Scratching analógico", date: "Hace 3 días", duration: "01:10:45", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-  { id: "berlin_1", programId: "berlin_ind", title: "Berlín Ind: Búnker Subterráneo", date: "Hace 2 días", duration: "01:45:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-  { id: "berlin_2", programId: "berlin_ind", title: "Berlín Ind: Ruido Industrial", date: "Hace 5 days", duration: "01:30:15", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
-  { id: "punk_1", programId: "distorsion_punk", title: "Punk: Fanzine Sonoro", date: "Hace 4 días", duration: "00:58:30", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
-  { id: "cosmico_1", programId: "cosmico", title: "Cósmico: Sintetizadores del Vacío", date: "Hace 1 semana", duration: "02:00:15", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
-];
-
-const INITIAL_ALBUMS: Album[] = [
-  {
-    id: "berlin_set",
-    name: "Berlín Underground",
-    artist: "Schatten DJ",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDP5uqy10MAsI_x_MDmv3GUkMl0tbrhB4Ec956sMPCsxdGlc08vXZjcHtzIALHzom5LlwJFu9uaZyI4MDwKrnpzWl-t9Og2VRWKuJqEMWxwOSjXF0jStgRCxict6yaAbmMtaUC_Yh0c_FRU4i9SBx6FiBBN_-QB_f5kAALQEsGI9a7aG9md2Iuugg2BWCVDTSGKaAhJzV7uXZYOlff2WNDjpjVK9XCYM-CIV_zDTNGZiYHu5M7u7L4T6FS2AYz3h5EcCYnBy7m9tI2m",
-    releaseYear: "2025",
-    genre: "Industrial Techno",
-  },
-  {
-    id: "fanzine_4",
-    name: "Fanzine Vol. 4",
-    artist: "La Banda Rebel",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
-    releaseYear: "2026",
-    genre: "Electro Punk",
-  },
-];
-
-const INITIAL_SONGS: Song[] = [
-  {
-    id: "heartbeat",
-    title: "Cybernetic Heartbeat",
-    artist: "Schatten DJ",
-    albumName: "Berlín Underground",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDP5uqy10MAsI_x_MDmv3GUkMl0tbrhB4Ec956sMPCsxdGlc08vXZjcHtzIALHzom5LlwJFu9uaZyI4MDwKrnpzWl-t9Og2VRWKuJqEMWxwOSjXF0jStgRCxict6yaAbmMtaUC_Yh0c_FRU4i9SBx6FiBBN_-QB_f5kAALQEsGI9a7aG9md2Iuugg2BWCVDTSGKaAhJzV7uXZYOlff2WNDjpjVK9XCYM-CIV_zDTNGZiYHu5M7u7L4T6FS2AYz3h5EcCYnBy7m9tI2m",
-    streamUrl: "https://stream.zeno.fm/4sqc41bg84zuv",
-    isFavorite: true,
-    durationSeconds: 184,
-  },
-  {
-    id: "reverb",
-    title: "Rhythm & Reverb",
-    artist: "La Banda Rebel",
-    albumName: "Fanzine Vol. 4",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
-    streamUrl: "https://stream.zeno.fm/4sqc41bg84zuv",
-    isFavorite: false,
-    durationSeconds: 212,
-  },
-  {
-    id: "acid_dance",
-    title: "Neon Acid Dance",
-    artist: "Schatten DJ",
-    albumName: "Berlín Underground",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDP5uqy10MAsI_x_MDmv3GUkMl0tbrhB4Ec956sMPCsxdGlc08vXZjcHtzIALHzom5LlwJFu9uaZyI4MDwKrnpzWl-t9Og2VRWKuJqEMWxwOSjXF0jStgRCxict6yaAbmMtaUC_Yh0c_FRU4i9SBx6FiBBN_-QB_f5kAALQEsGI9a7aG9md2Iuugg2BWCVDTSGKaAhJzV7uXZYOlff2WNDjpjVK9XCYM-CIV_zDTNGZiYHu5M7u7L4T6FS2AYz3h5EcCYnBy7m9tI2m",
-    streamUrl: "https://stream.zeno.fm/4sqc41bg84zuv",
-    isFavorite: false,
-    durationSeconds: 156,
-  },
-];
-
-const DEFAULT_BANNED_WORDS = [
-  "spam", "toxico", "sonico", "sonica", "hack", "virus", "puta", "puto",
-  "mamahuevo", "hijoeputa", "marica", "maricon", "paja", "pajero", "culo", "coño", "verga"
-];
-
-const DEFAULT_AVATAR = "https://lh3.googleusercontent.com/aida-public/AB6AXuA6srmeb-vk1Q2DfS7yC25Domf9c0kLipds57TXJh5KR9tiwF0baTSxCYrkymfzHxHofWx2YGAQDG57_xmYQtC9MQx8VQPS6a0rLLTKzaPewxsyENt8isBr4H-DAbKm6rLb-w9dsT6EiKYAAbHSbGQA863cyUibAznEG1WcAP_Dj4yODOI3MVpRgwobV6sGpli8fKGgEMGNGPG7wXpGs26dibxLVsd1eiJZvnFe-8M6cXt8AYRNIw6JQ294dBMMJ4TD46rF6izIPJeP";
-
-// SC-07 / V2-03: Sin IPs hardcodeadas. Si la variable de entorno no está definida, no se reproduce nada.
-const DEFAULT_STREAM = process.env.NEXT_PUBLIC_STREAM_URL || "";
-
-export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AudioProvider = ({ children }: { children: ReactNode }) => {
   // Audio Ref & HLS Loader
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const hlsRef = useRef<any>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   // States
   const [isPlaying, setIsPlaying] = useState(false);
@@ -334,29 +145,77 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isMuted, setIsMuted] = useState(false);
 
   // Room DB seed data
-  const [stations, setStations] = useState<Station[]>(INITIAL_STATIONS);
-  const [programs, setPrograms] = useState<RadioProgram[]>(INITIAL_PROGRAMS);
-  const [pastBroadcasts, setPastBroadcasts] = useState<PastBroadcast[]>(INITIAL_PAST_BROADCASTS);
-  const [songs, setSongs] = useState<Song[]>(INITIAL_SONGS);
-  const [albums, setAlbums] = useState<Album[]>(INITIAL_ALBUMS);
-  const [playlistTracks, setPlaylistTracks] = useState<{ id: number; title: string; artist: string; album: string; imageUrl: string }[]>([]);
+  const [stations, setStations] = useState<Station[]>(() => {
+    if (typeof window !== "undefined") {
+      const savedLikes = localStorage.getItem("liked_stations");
+      if (savedLikes) {
+        const parsed = JSON.parse(savedLikes);
+        return INITIAL_STATIONS.map((s) => ({ ...s, isLiked: parsed.includes(s.id) }));
+      }
+    }
+    return INITIAL_STATIONS;
+  });
+  const [programs] = useState<RadioProgram[]>(INITIAL_PROGRAMS);
+  const [pastBroadcasts] = useState<PastBroadcast[]>(INITIAL_PAST_BROADCASTS);
+  const [songs, setSongs] = useState<Song[]>(() => {
+    if (typeof window !== "undefined") {
+      const savedFavorites = localStorage.getItem("fav_songs");
+      if (savedFavorites) {
+        const parsed = JSON.parse(savedFavorites);
+        return INITIAL_SONGS.map((s) => ({ ...s, isFavorite: parsed.includes(s.id) }));
+      }
+    }
+    return INITIAL_SONGS;
+  });
+  const [albums] = useState<Album[]>(INITIAL_ALBUMS);
+  const [playlistTracks, setPlaylistTracks] = useState<{ id: number; title: string; artist: string; album: string; imageUrl: string }[]>(() => {
+    if (typeof window !== "undefined") {
+      const savedPlaylist = localStorage.getItem("playlist_tracks");
+      if (savedPlaylist) {
+        return JSON.parse(savedPlaylist);
+      }
+    }
+    return [];
+  });
   
   // User Profile
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: "PETER ARKWALL",
-    role: "RADIO EXPLORER / VINYL JUNKIE",
-    avatarUrl: DEFAULT_AVATAR,
-    stashHours: 124,
-    followersCount: "1.2K",
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    if (typeof window !== "undefined") {
+      const savedProfile = localStorage.getItem("user_profile");
+      if (savedProfile) {
+        return JSON.parse(savedProfile);
+      }
+    }
+    return {
+      name: "PETER ARKWALL",
+      role: "RADIO EXPLORER / VINYL JUNKIE",
+      avatarUrl: DEFAULT_AVATAR,
+      stashHours: 124,
+      followersCount: "1.2K",
+    };
   });
 
   // Theme Config
-  const [activeTheme, setActiveTheme] = useState("PUNK_NEON");
+  const [activeTheme, setActiveTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("selected_theme");
+      return savedTheme || "PUNK_NEON";
+    }
+    return "PUNK_NEON";
+  });
 
   // Chat/Mod Configuration
   const [isLiveChatModeActive, setLiveChatModeActive] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [bannedWords, setBannedWords] = useState<string[]>(DEFAULT_BANNED_WORDS);
+  const [bannedWords, setBannedWords] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const savedBannedWords = localStorage.getItem("banned_words");
+      if (savedBannedWords) {
+        return JSON.parse(savedBannedWords);
+      }
+    }
+    return DEFAULT_BANNED_WORDS;
+  });
   const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
   const [deletedMessageIds, setDeletedMessageIds] = useState<Set<number>>(new Set());
   const [isSlowMode, setIsSlowMode] = useState(false);
@@ -379,43 +238,115 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // References for WebSocket chat
   const socketRef = useRef<Socket | null>(null);
 
-  // Initialize browser elements
+  const disconnectChatSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+  };
+
+  // Connect Socket.IO
+  const connectChatSocket = (username: string, token: string) => {
+    disconnectChatSocket();
+
+    try {
+      const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8081";
+      console.log(`🔌 Conectando al microservicio de chat en: ${chatUrl}`);
+      const socket = io(chatUrl, {
+        reconnection: true,
+        reconnectionDelay: 2000,
+        auth: { token }, // SC-07 / V2-07: JWT en auth para que no aparezca en logs de URL
+        query: { username },
+      });
+      socketRef.current = socket;
+
+      socket.on("connect", () => {
+        console.log(`WebSocket chat connected to microservice at ${chatUrl}`);
+      });
+
+      socket.on("chat_history", (history: SocketChatMessage[]) => {
+        const formatted = history.map((h, index) => ({
+          id: h.id || index,
+          senderName: h.senderName,
+          senderRole: h.senderRole || "OYENTE",
+          messageText: h.messageText,
+          createdAt: h.timestamp || "",
+          stationId: "general",
+          isDeleted: h.messageText.includes("borrado por moderación"),
+        }));
+        setChatMessages(formatted);
+      });
+
+      socket.on("broadcast_message", (msg: SocketChatMessage) => {
+        setChatMessages(prev => {
+          if (prev.some(m => m.id === msg.id)) return prev;
+          return [
+            ...prev,
+            {
+              id: msg.id || Date.now(),
+              senderName: msg.senderName,
+              senderRole: msg.senderRole || "OYENTE",
+              messageText: msg.messageText,
+              createdAt: msg.timestamp || new Date().toISOString(),
+              stationId: "general",
+              isDeleted: false,
+            },
+          ];
+        });
+      });
+
+      socket.on("message_deleted", ({ messageId }: { messageId: number }) => {
+        setDeletedMessageIds(prev => new Set([...prev, messageId]));
+        setChatMessages(prev =>
+          prev.map(m => (m.id === messageId ? { ...m, messageText: "<Mensaje borrado por moderación>", isDeleted: true } : m))
+        );
+      });
+
+      socket.on("user_banned", ({ username }: { username: string }) => {
+        const upper = username.toUpperCase();
+        setBannedUsers(prev => new Set([...prev, upper]));
+        setChatMessages(prev => prev.filter(m => m.senderName.toUpperCase() !== upper));
+      });
+
+      socket.on("banned_notice", () => {
+        setIsCurrentUserBanned(true);
+      });
+
+      socket.on("chat_config", (config: SocketChatConfig) => {
+        if (config.isSlowMode !== undefined) setIsSlowMode(config.isSlowMode);
+        if (config.isEmoteOnly !== undefined) setIsEmoteOnly(config.isEmoteOnly);
+      });
+    } catch (e) {
+      console.error("Socket chat failed to boot", e);
+    }
+  };
+
+  // Synchronize activeTheme to document element attribute
   useEffect(() => {
-    // 1. Audio element
-    audioRef.current = new Audio();
-    audioRef.current.volume = volume;
+    if (typeof window !== "undefined") {
+      document.documentElement.setAttribute("data-theme", activeTheme);
+    }
+  }, [activeTheme]);
 
-    // Load persisted local-first items
-    const savedLikes = localStorage.getItem("liked_stations");
-    if (savedLikes) {
-      const parsed = JSON.parse(savedLikes);
-      setStations(prev => prev.map(s => ({ ...s, isLiked: parsed.includes(s.id) })));
-    }
-    const savedFavorites = localStorage.getItem("fav_songs");
-    if (savedFavorites) {
-      const parsed = JSON.parse(savedFavorites);
-      setSongs(prev => prev.map(s => ({ ...s, isFavorite: parsed.includes(s.id) })));
-    }
-    const savedPlaylist = localStorage.getItem("playlist_tracks");
-    if (savedPlaylist) {
-      setPlaylistTracks(JSON.parse(savedPlaylist));
-    }
-    const savedProfile = localStorage.getItem("user_profile");
-    if (savedProfile) {
-      setUserProfile(JSON.parse(savedProfile));
-    }
-    const savedTheme = localStorage.getItem("selected_theme");
-    if (savedTheme) {
-      setActiveTheme(savedTheme);
-      document.documentElement.setAttribute("data-theme", savedTheme);
-    } else {
-      document.documentElement.setAttribute("data-theme", "PUNK_NEON");
-    }
-    const savedBannedWords = localStorage.getItem("banned_words");
-    if (savedBannedWords) {
-      setBannedWords(JSON.parse(savedBannedWords));
+  // 1. Initialize Audio element once on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      audioRef.current = new Audio();
+      audioRef.current.volume = volume;
     }
 
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 2. Initialize progress simulator, metadata polling, and auth listeners
+  useEffect(() => {
     // 2. Playback progress ticks simulator
     const progressInterval = setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) {
@@ -458,7 +389,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // 4. AzuraCast Nowplaying metadata poll simulation & fetch attempt
     const pollMetadata = async () => {
       try {
-        // SC-07: No se usa IP hardcodeada. Si la var de entorno no está, se omite el fetch.
         const azuraUrl = process.env.NEXT_PUBLIC_AZURACAST_URL;
         if (!azuraUrl) return;
         const res = await fetch(`${azuraUrl}/api/nowplaying`);
@@ -487,6 +417,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           throw new Error("Local API unavailable");
         }
       } catch (err) {
+        console.warn("AzuraCast metadata poll failed, using mock fallback:", err);
         // Fallback simulated updates
         const mockTracks = [
           { title: "TRANSYLVANIA TECHNO", artist: "DJ BLOODY", album: "TRANSYLVANIA MEGAMIX" },
@@ -504,6 +435,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const metadataInterval = setInterval(pollMetadata, 8000);
 
     // 5. Supabase Auth state collection
+    let subscription: any = null;
     if (supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
@@ -530,7 +462,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           connectChatSocket("Oyente", "guest");
         }
       });
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session) {
           setIsAuthenticated(true);
           const meta = session.user.user_metadata;
@@ -566,111 +498,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           // Connect as guest on logout
           connectChatSocket("Oyente", "guest");
         }
-      });      return () => {
-        subscription.unsubscribe();
-        clearInterval(progressInterval);
-        clearInterval(scanInterval);
-        clearInterval(metadataInterval);
-        disconnectChatSocket();
-      };
+      });
+      subscription = data.subscription;
     } else {
       // Connect as guest if supabase is not initialized
       connectChatSocket("Oyente", "guest");
     }
 
     return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
       clearInterval(progressInterval);
       clearInterval(scanInterval);
       clearInterval(metadataInterval);
       disconnectChatSocket();
     };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack.isLive]);
-
-  // Connect Socket.IO
-  const connectChatSocket = (username: string, token: string) => {
-    disconnectChatSocket();
-
-    try {
-      const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8081";
-      console.log(`🔌 Conectando al microservicio de chat en: ${chatUrl}`);
-      const socket = io(chatUrl, {
-        reconnection: true,
-        reconnectionDelay: 2000,
-        auth: { token }, // SC-07 / V2-07: JWT en auth para que no aparezca en logs de URL
-        query: { username },
-      });
-      socketRef.current = socket;
-
-      socket.on("connect", () => {
-        console.log(`WebSocket chat connected to microservice at ${chatUrl}`);
-      });
-
-      socket.on("chat_history", (history: any[]) => {
-        const formatted = history.map((h, index) => ({
-          id: h.id || index,
-          senderName: h.senderName,
-          senderRole: h.senderRole || "OYENTE",
-          messageText: h.messageText,
-          createdAt: h.timestamp || "",
-          stationId: "general",
-          isDeleted: h.messageText.includes("borrado por moderación"),
-        }));
-        setChatMessages(formatted);
-      });
-
-      socket.on("broadcast_message", (msg: any) => {
-        setChatMessages(prev => {
-          if (prev.some(m => m.id === msg.id)) return prev;
-          return [
-            ...prev,
-            {
-              id: msg.id || Date.now(),
-              senderName: msg.senderName,
-              senderRole: msg.senderRole || "OYENTE",
-              messageText: msg.messageText,
-              createdAt: msg.timestamp || new Date().toISOString(),
-              stationId: "general",
-              isDeleted: false,
-            },
-          ];
-        });
-      });
-
-      socket.on("message_deleted", ({ messageId }: { messageId: number }) => {
-        setDeletedMessageIds(prev => new Set([...prev, messageId]));
-        setChatMessages(prev =>
-          prev.map(m => (m.id === messageId ? { ...m, messageText: "<Mensaje borrado por moderación>", isDeleted: true } : m))
-        );
-      });
-
-      socket.on("user_banned", ({ username }: { username: string }) => {
-        const upper = username.toUpperCase();
-        setBannedUsers(prev => new Set([...prev, upper]));
-        setChatMessages(prev => prev.filter(m => m.senderName.toUpperCase() !== upper));
-      });
-
-      socket.on("banned_notice", () => {
-        setIsCurrentUserBanned(true);
-      });
-
-      socket.on("chat_config", (config: any) => {
-        if (config.isSlowMode !== undefined) setIsSlowMode(config.isSlowMode);
-        if (config.isEmoteOnly !== undefined) setIsEmoteOnly(config.isEmoteOnly);
-      });
-    } catch (e) {
-      console.error("Socket chat failed to boot", e);
-    }
-  };
-
-  const disconnectChatSocket = () => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-  };
-
   // Play audio implementation
-  const playUrl = (url: string, isLive: boolean) => {
+  const playUrl = (url: string) => {
     if (!audioRef.current) return;
 
     // Reset progress tracking states
@@ -732,7 +580,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Si no hay ninguna fuente de audio cargada aún, la cargamos de inmediato.
       // Esto previene que play() falle por fuente vacía y que luego sea bloqueado por políticas de Autoplay.
       if (!audioRef.current.src || audioRef.current.src === window.location.href) {
-        playUrl(currentTrack.streamUrl, currentTrack.isLive);
+        playUrl(currentTrack.streamUrl);
         return;
       }
 
@@ -741,7 +589,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         audioRef.current.muted = isMuted;
         audioRef.current.play().catch(err => {
           console.warn("Autoplay blocked, re-requesting stream:", err);
-          playUrl(currentTrack.streamUrl, true);
+          playUrl(currentTrack.streamUrl);
         });
       } else {
         audioRef.current.play();
@@ -797,7 +645,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const seekToLiveEdge = () => {
     if (!audioRef.current || !currentTrack.isLive) return;
     // Reload live stream to sync live edge
-    playUrl(currentTrack.streamUrl, true);
+    playUrl(currentTrack.streamUrl);
     setCurrentTime(totalTime);
     setProgress(1.0);
   };
@@ -814,7 +662,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setCurrentTrack(track);
     setTotalTime(1);
-    playUrl(track.streamUrl, true);
+    playUrl(track.streamUrl);
   };
 
   const playStation = (station: Station) => {
@@ -828,7 +676,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setCurrentTrack(track);
     setTotalTime(1);
-    playUrl(track.streamUrl, true);
+    playUrl(track.streamUrl);
   };
 
   const playSong = (song: Song) => {
@@ -842,7 +690,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setCurrentTrack(track);
     setTotalTime(song.durationSeconds);
-    playUrl(track.streamUrl, false);
+    playUrl(track.streamUrl);
   };
 
   const playPastBroadcast = (broadcast: PastBroadcast) => {
@@ -865,9 +713,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else if (parts.length === 2) {
         dur = parseInt(parts[0]) * 60 + parseInt(parts[1]);
       }
-    } catch (e) {}
+    } catch {}
     setTotalTime(dur);
-    playUrl(track.streamUrl, false);
+    playUrl(track.streamUrl);
   };
 
   const playRadar = () => {
@@ -889,7 +737,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setCurrentTrack(track);
     setTotalTime(1);
-    playUrl(track.streamUrl, true);
+    playUrl(track.streamUrl);
   };
 
   const skipPrevious = () => {
@@ -904,7 +752,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setCurrentTrack(track);
     setTotalTime(1);
-    playUrl(track.streamUrl, true);
+    playUrl(track.streamUrl);
   };
 
   // Local-First DB toggles

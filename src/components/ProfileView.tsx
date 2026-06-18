@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { useAudio, Song, Station, Album } from "@/context/AudioContext";
+import { useState, CSSProperties } from "react";
+import { useAudio } from "@/context/AudioContext";
 import { Check, Edit, Share2, LogOut, Clock, Users, Star, PlayCircle, X } from "lucide-react";
 
 interface ProfileViewProps {
   onNavigateToPlayer: () => void;
 }
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) => {
+export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
   const {
     userProfile,
     saveProfile,
@@ -18,7 +18,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
     albums,
     toggleSongFavorite,
     playSong,
-    playLiveStream,
     skipNext,
     activeTheme,
     selectTheme,
@@ -45,6 +44,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
     { id: "COSMIC_DARK", name: "Cosmic Slate", colors: ["#00FFCC", "#12141C"] },
     { id: "CYBER_RED", name: "Cyberpunk Red", colors: ["#FF0D43", "#FAE000"] },
     { id: "RETRO_AMBER", name: "Amber CRT", colors: ["#FF8000", "#150F05"] },
+    { id: "TROPICAL", name: "Isla Tropical", colors: ["#EC008C", "#FFB6D9"] },
   ];
 
   return (
@@ -178,8 +178,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
               flex: 1,
               backgroundColor: "var(--primary-container)",
               fontSize: "0.75rem",
-              ["--rest-rot" as any]: "0deg",
-            }}
+              "--rest-rot": "0deg",
+            } as CSSProperties}
           >
             <Edit size={16} style={{ marginRight: "8px" }} />
             {isAuthenticated ? "EDITAR" : "ACCEDER CON GOOGLE"}
@@ -192,8 +192,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
               flex: 1,
               backgroundColor: "white",
               fontSize: "0.75rem",
-              ["--rest-rot" as any]: "0deg",
-            }}
+              "--rest-rot": "0deg",
+            } as CSSProperties}
           >
             <Share2 size={16} style={{ marginRight: "8px" }} />
             SHARE
@@ -211,8 +211,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
               color: "white",
               fontSize: "0.75rem",
               boxShadow: "4px 4px 0px var(--primary)",
-              ["--rest-rot" as any]: "0deg",
-            }}
+              "--rest-rot": "0deg",
+            } as CSSProperties}
           >
             <LogOut size={16} style={{ marginRight: "8px" }} />
             CERRAR SESIÓN
@@ -241,8 +241,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
             padding: "16px",
             transform: "rotate(1deg)",
             boxShadow: "6px 6px 0px var(--primary)",
-            ["--rest-rot" as any]: "1deg",
-          }}
+            "--rest-rot": "1deg",
+          } as CSSProperties}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 900 }}>HORAS SINTONIZADAS</span>
@@ -283,8 +283,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
             padding: "16px",
             transform: "rotate(-1deg)",
             boxShadow: "6px 6px 0px var(--primary)",
-            ["--rest-rot" as any]: "-1deg",
-          }}
+            "--rest-rot": "-1deg",
+          } as CSSProperties}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 900 }}>REPUTACIÓN</span>
@@ -450,17 +450,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
                   backgroundColor: theme.colors[1],
                   borderWidth: "3px",
                   borderColor: "var(--primary)",
-                  boxShadow: isSelected ? "2px 2px 0px var(--primary)" : "6px 6px 0px var(--primary)",
+                  boxShadow: isSelected ? "0px 0px 0px var(--primary)" : "6px 6px 0px var(--primary)",
                   transform: isSelected 
-                    ? `translate(3px, 3px) rotate(${restRotation}deg)` 
+                    ? `translate(6px, 6px) rotate(0deg)` 
                     : `rotate(${restRotation}deg)`,
                   padding: "12px",
                   cursor: "pointer",
                   display: "flex",
                   flexDirection: "column",
                   gap: "8px",
-                  ["--rest-rot" as any]: `${restRotation}deg`,
-                }}
+                  "--rest-rot": `${restRotation}deg`,
+                } as CSSProperties}
               >
                 {/* Previews */}
                 <div style={{ display: "flex", gap: "4px" }}>
@@ -526,8 +526,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
                   backgroundColor: "var(--surface-container)",
                   padding: "8px",
                   boxShadow: "6px 6px 0px var(--primary)",
-                  ["--rest-rot" as any]: "0deg",
-                }}
+                  "--rest-rot": "0deg",
+                } as CSSProperties}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <img
@@ -573,8 +573,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onNavigateToPlayer }) 
                   padding: "10px",
                   backgroundColor: "var(--surface-container)",
                   boxShadow: "4px 4px 0px var(--primary)",
-                  ["--rest-rot" as any]: "0deg",
-                }}
+                  "--rest-rot": "0deg",
+                } as CSSProperties}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>

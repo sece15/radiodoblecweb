@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { useAudio } from "@/context/AudioContext";
 import { Send, User, Ban, X } from "lucide-react";
 
@@ -6,7 +6,7 @@ interface ChatSidebarProps {
   onClose: () => void;
 }
 
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
+export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
   const {
     chatMessages,
     sendChatMessage,
@@ -53,7 +53,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onClose }) => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();

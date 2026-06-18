@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { useAudio, Station, RadioProgram, Song } from "@/context/AudioContext";
-import { ArrowLeft, X, Music, Radio, Star, Play } from "lucide-react";
+import { useState } from "react";
+import { useAudio } from "@/context/AudioContext";
+import { ArrowLeft, X, Music, Radio, Play } from "lucide-react";
 
 interface SearchOverlayProps {
   onClose: () => void;
@@ -8,11 +8,11 @@ interface SearchOverlayProps {
   onNavigateToExploreWithStyle: (style: string) => void;
 }
 
-export const SearchOverlay: React.FC<SearchOverlayProps> = ({
+export const SearchOverlay = ({
   onClose,
   onNavigateToPlayer,
   onNavigateToExploreWithStyle,
-}) => {
+}: SearchOverlayProps) => {
   const {
     stations,
     programs,
@@ -73,8 +73,67 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
         gap: "16px",
       }}
     >
+      {/* BACKGROUND DECORATIONS (PUNK DRIPS & MELTING SMILEYS) */}
+      <img
+        src="/dripping_paint.svg"
+        alt=""
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "min(200px, 35vw)",
+          height: "auto",
+          zIndex: 1,
+          pointerEvents: "none",
+        }}
+      />
+      <img
+        src="/dripping_paint.svg"
+        alt=""
+        style={{
+          position: "fixed",
+          bottom: 0,
+          right: 0,
+          width: "min(200px, 35vw)",
+          height: "auto",
+          zIndex: 1,
+          pointerEvents: "none",
+          transform: "rotate(180deg)",
+        }}
+      />
+      <img
+        src="/melting_smiley.svg"
+        alt=""
+        style={{
+          position: "fixed",
+          top: "120px",
+          left: "20px",
+          width: "min(80px, 15vw)",
+          height: "auto",
+          zIndex: 1,
+          pointerEvents: "none",
+          transform: "rotate(12deg)",
+          opacity: 0.85,
+        }}
+      />
+      <img
+        src="/melting_smiley.svg"
+        alt=""
+        style={{
+          position: "fixed",
+          bottom: "100px",
+          right: "20px",
+          width: "min(80px, 15vw)",
+          height: "auto",
+          zIndex: 1,
+          pointerEvents: "none",
+          transform: "rotate(-15deg)",
+          opacity: 0.85,
+        }}
+      />
+
       {/* Header bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 2 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
             onClick={onClose}
@@ -107,18 +166,20 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           backgroundColor: "var(--primary-container)",
           padding: "12px",
           boxShadow: "4px 4px 0px var(--primary)",
+          position: "relative",
+          zIndex: 2,
         }}
       >
         <h4 style={{ fontWeight: 900, fontSize: "0.75rem", marginBottom: "4px" }}>
           FANZINE RADIAL DOBLE C
         </h4>
         <p style={{ fontSize: "0.7rem", lineHeight: "1rem", opacity: 0.9 }}>
-          Somos una sola radio libre e independiente, pero sintonizamos múltiples programas de autor, locutores piratas, estilos únicos y tracks de archivo.
+          Somos una sola radio libre e independiente, pero sintonizamos múltiples programas de autor, locutores independientes, estilos únicos y tracks de archivo.
         </p>
       </div>
 
       {/* Search Input */}
-      <div style={{ position: "relative" }}>
+      <div style={{ position: "relative", zIndex: 2 }}>
         <input
           type="text"
           value={query}
@@ -155,7 +216,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       </div>
 
       {/* Recommended styles */}
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", position: "relative", zIndex: 2 }}>
         <span style={{ fontSize: "0.7rem", fontWeight: "bold" }}>ESTILOS:</span>
         {recommendationTags.map((tag) => (
           <button
@@ -177,12 +238,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
       </div>
 
       {/* Results area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px", position: "relative", zIndex: 2 }}>
         {query.trim() && !hasResults && (
           <div style={{ textAlign: "center", padding: "40px 20px" }}>
             <h3 style={{ fontWeight: 900, fontSize: "1rem" }}>ONDAS VACÍAS (SIN RASTRO)</h3>
             <p style={{ fontSize: "0.8rem", opacity: 0.7, marginTop: "8px" }}>
-              No se encontraron programas, locutores o frecuencias con "{query}".
+              No se encontraron programas, locutores o frecuencias con &quot;{query}&quot;.
             </p>
           </div>
         )}
@@ -364,7 +425,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   );
 };
 
-const SearchCategoryHeader: React.FC<{ title: string }> = ({ title }) => {
+const SearchCategoryHeader = ({ title }: { title: string }) => {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 0" }}>
       <div style={{ width: "8px", height: "18px", backgroundColor: "var(--primary-container)", border: "1px solid var(--primary)" }}></div>

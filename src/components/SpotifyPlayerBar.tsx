@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import { useRef, MouseEvent, TouchEvent } from "react";
 import { useAudio } from "@/context/AudioContext";
-import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward, FastForward } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward } from "lucide-react";
 
 interface SpotifyPlayerBarProps {
   isChatOpen: boolean;
@@ -8,11 +8,11 @@ interface SpotifyPlayerBarProps {
   onExpand: () => void;
 }
 
-export const SpotifyPlayerBar: React.FC<SpotifyPlayerBarProps> = ({
+export const SpotifyPlayerBar = ({
   isChatOpen,
   onToggleChat,
   onExpand,
-}) => {
+}: SpotifyPlayerBarProps) => {
   const {
     isPlaying,
     currentTrack,
@@ -58,7 +58,7 @@ export const SpotifyPlayerBar: React.FC<SpotifyPlayerBarProps> = ({
   };
 
   // Click & Drag Progress seek
-  const handleProgressAction = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+  const handleProgressAction = (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
     if (!progressTrackRef.current) return;
     const rect = progressTrackRef.current.getBoundingClientRect();
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
@@ -71,6 +71,7 @@ export const SpotifyPlayerBar: React.FC<SpotifyPlayerBarProps> = ({
     <div className="spotify-player-bar">
       {/* 1. LEFT: Track details & Thumbnail */}
       <div
+        className="player-bar-left"
         style={{
           display: "flex",
           alignItems: "center",
@@ -165,6 +166,7 @@ export const SpotifyPlayerBar: React.FC<SpotifyPlayerBarProps> = ({
 
       {/* 2. CENTER: Playback Controls & Progress Timeline */}
       <div
+        className="player-bar-center"
         style={{
           flex: 1,
           maxWidth: "600px",
@@ -276,6 +278,7 @@ export const SpotifyPlayerBar: React.FC<SpotifyPlayerBarProps> = ({
 
       {/* 3. RIGHT: Volume slider & Chat toggle */}
       <div
+        className="player-bar-right"
         style={{
           display: "flex",
           alignItems: "center",

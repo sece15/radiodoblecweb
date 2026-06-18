@@ -11,8 +11,10 @@ const ContentSecurityPolicy = `
   connect-src 'self'
     https://*.supabase.co
     wss://*.supabase.co
-    ${process.env.NEXT_PUBLIC_CHAT_SERVER_URL || ""}
-    ${process.env.NEXT_PUBLIC_AZURACAST_URL || ""};
+    ${process.env.NEXT_PUBLIC_CHAT_URL || ""}
+    ${process.env.NEXT_PUBLIC_CHAT_URL ? process.env.NEXT_PUBLIC_CHAT_URL.replace("https://", "wss://").replace("http://", "ws://") : ""}
+    ${process.env.NEXT_PUBLIC_AZURACAST_URL || ""}
+    ${process.env.NEXT_PUBLIC_AZURACAST_URL ? process.env.NEXT_PUBLIC_AZURACAST_URL.replace("https://", "wss://").replace("http://", "ws://") : ""};
   frame-ancestors 'none';
 `
   .replace(/\n/g, " ")
@@ -36,6 +38,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   async headers() {
     return [
       {

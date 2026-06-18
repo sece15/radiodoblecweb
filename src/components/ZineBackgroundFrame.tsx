@@ -1,10 +1,10 @@
-import React from "react";
+import { ReactNode } from "react";
 
 interface ZineBackgroundFrameProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const ZineBackgroundFrame: React.FC<ZineBackgroundFrameProps> = ({ children }) => {
+export const ZineBackgroundFrame = ({ children }: ZineBackgroundFrameProps) => {
   return (
     <div style={{ position: "relative", width: "100%", minHeight: "100%", zIndex: 1 }}>
       {/* Zine Background Collage Graphics */}
