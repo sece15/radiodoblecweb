@@ -584,9 +584,10 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                     fontSize: "0.7rem",
                     resize: "none",
                     fontFamily: "inherit",
-                    backgroundColor: "var(--card-bg)",
-                    color: "var(--on-background)",
-                    caretColor: "var(--on-background)",
+                    backgroundColor: "#FFFFFF",
+                    color: "#111111",
+                    caretColor: "#111111",
+                    cursor: "text",
                     boxShadow: isChatInputFocused
                       ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
                       : "none",

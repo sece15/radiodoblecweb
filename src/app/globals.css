@@ -591,6 +591,16 @@ button {
   }
 }
 
+/* --- CHAT INPUT CARET FIX --- */
+.chat-input-player {
+  caret-color: #111111 !important;
+  color: #111111 !important;
+  background-color: #FFFFFF !important;
+  -webkit-text-fill-color: #111111 !important;
+}
 
-
+.chat-input-player::placeholder {
+  color: #888888 !important;
+  -webkit-text-fill-color: #888888 !important;
+}
 

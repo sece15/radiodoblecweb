@@ -644,6 +644,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <input
                   type="text"
+                  className="chat-input-player"
                   value={typedMessage}
                   onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
                   onKeyDown={handleKeyPress}
@@ -661,9 +662,10 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                     outline: "none",
                     fontSize: "0.7rem",
                     fontFamily: "inherit",
-                    backgroundColor: "var(--card-bg)",
-                    color: "var(--on-background)",
-                    caretColor: "var(--on-background)",
+                    backgroundColor: "#FFFFFF",
+                    color: "#111111",
+                    caretColor: "#111111",
+                    cursor: "text",
                     boxShadow: isChatInputFocused
                       ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
                       : "none",
