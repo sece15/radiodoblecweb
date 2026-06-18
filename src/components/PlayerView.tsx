@@ -32,6 +32,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
 
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const [typedMessage, setTypedMessage] = useState("");
+  const [isChatInputFocused, setIsChatInputFocused] = useState(false);
   const messageFeedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -646,16 +647,25 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                   value={typedMessage}
                   onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
                   onKeyDown={handleKeyPress}
+                  onFocus={() => setIsChatInputFocused(true)}
+                  onBlur={() => setIsChatInputFocused(false)}
                   maxLength={100}
                   placeholder="Escribe algo..."
                   style={{
                     flex: 1,
                     height: "32px",
                     padding: "4px 8px",
-                    border: "2px solid var(--primary)",
+                    border: isChatInputFocused
+                      ? "2.5px solid var(--primary)"
+                      : "2px solid var(--primary)",
                     outline: "none",
                     fontSize: "0.7rem",
                     fontFamily: "inherit",
+                    caretColor: "var(--primary)",
+                    boxShadow: isChatInputFocused
+                      ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
+                      : "none",
+                    transition: "box-shadow 0.15s ease, border 0.15s ease",
                   }}
                 />
                 <button

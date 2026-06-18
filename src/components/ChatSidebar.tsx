@@ -37,6 +37,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
 
   const [typedMessage, setTypedMessage] = useState("");
   const [newBannedWord, setNewBannedWord] = useState("");
+  const [isChatInputFocused, setIsChatInputFocused] = useState(false);
   const messageFeedRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll chat to bottom when new messages arrive
@@ -565,6 +566,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                   value={typedMessage}
                   onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
                   onKeyDown={handleKeyPress}
+                  onFocus={() => setIsChatInputFocused(true)}
+                  onBlur={() => setIsChatInputFocused(false)}
                   maxLength={150}
                   placeholder="Escribe en la sintonía..."
                   style={{
@@ -573,12 +576,19 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                     minHeight: "36px",
                     maxHeight: "80px",
                     padding: "6px 8px 6px 8px",
-                    paddingRight: "45px", // Leave room for character counter
-                    border: "2px solid var(--primary)",
+                    paddingRight: "45px",
+                    border: isChatInputFocused
+                      ? "2.5px solid var(--primary)"
+                      : "2px solid var(--primary)",
                     outline: "none",
                     fontSize: "0.7rem",
                     resize: "none",
                     fontFamily: "inherit",
+                    caretColor: "var(--primary)",
+                    boxShadow: isChatInputFocused
+                      ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
+                      : "none",
+                    transition: "box-shadow 0.15s ease, border 0.15s ease",
                   }}
                 />
                 <span
