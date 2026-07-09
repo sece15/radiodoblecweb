@@ -1,7 +1,8 @@
 import { CSSProperties, useState } from "react";
 import { Search, ShoppingCart } from "lucide-react";
+import { useAudio } from "@/context/AudioContext";
 
-type ActiveTab = "explore" | "store" | "profile";
+type ActiveTab = "explore" | "store" | "profile" | "vip";
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -21,6 +22,13 @@ export const Header = ({
   cartCount,
 }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { userProfile } = useAudio();
+
+  const isVipUser =
+    userProfile.role.toUpperCase().includes("VIP") ||
+    userProfile.role.toUpperCase().includes("ADMIN") ||
+    userProfile.role.toUpperCase().includes("MOD") ||
+    userProfile.role.toUpperCase().includes("STREAMER");
 
   return (
     <header
@@ -186,6 +194,26 @@ export const Header = ({
         >
           TIENDA
         </button>
+
+        {isVipUser && (
+          <button
+            onClick={() => setActiveTab("vip")}
+            className="neo-button fun-hover-wobble"
+            style={{
+              padding: "6px 12px",
+              fontSize: "0.75rem",
+              fontWeight: 900,
+              backgroundColor: activeTab === "vip" ? "var(--primary-container)" : "var(--card-bg)",
+              boxShadow: activeTab === "vip" ? "0px 0px 0px var(--primary)" : "3px 3px 0px var(--primary)",
+              transform: activeTab === "vip" ? "translate(3px, 3px) rotate(0deg)" : "rotate(2deg)",
+              cursor: "pointer",
+              "--rest-rot": activeTab === "vip" ? "0deg" : "2deg",
+              color: "var(--primary)",
+            } as CSSProperties}
+          >
+            ZONA VIP ⭐
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab("profile")}
@@ -399,6 +427,24 @@ export const Header = ({
         >
           TIENDA
         </button>
+
+        {isVipUser && (
+          <button
+            onClick={() => {
+              setActiveTab("vip");
+              setIsMobileMenuOpen(false);
+            }}
+            className="mobile-nav-link fun-hover-wobble"
+            style={{
+              backgroundColor: activeTab === "vip" ? "var(--primary-container)" : "var(--card-bg)",
+              transform: "rotate(-2deg)",
+              "--rest-rot": "-2deg",
+              color: "var(--primary)",
+            } as CSSProperties}
+          >
+            ZONA VIP ⭐
+          </button>
+        )}
 
         <button
           onClick={() => {

@@ -791,7 +791,12 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setAlbums((prev) => [...prev, newAlbum]);
   };
 
+  // SC-06: Solo disponible en modo desarrollo para evitar manipulación de roles desde la consola del navegador.
   const updateUserRole = (newRole: string) => {
+    if (process.env.NODE_ENV !== "development") {
+      console.warn("🛡️ No puedes cambiar tu rol en producción.");
+      return;
+    }
     setUserProfile(prev => ({ ...prev, role: newRole }));
   };
 

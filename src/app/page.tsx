@@ -7,6 +7,7 @@ import { ExploreView } from "@/components/ExploreView";
 import { PlayerView } from "@/components/PlayerView";
 import { ProfileView } from "@/components/ProfileView";
 import { StoreView } from "@/components/StoreView";
+import { VipView } from "@/components/VipView";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { SpotifyPlayerBar } from "@/components/SpotifyPlayerBar";
@@ -23,7 +24,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { CheckoutModal } from "@/components/CheckoutModal";
 import { Toast } from "@/components/Toast";
 
-type ActiveTab = "explore" | "store" | "profile";
+type ActiveTab = "explore" | "store" | "profile" | "vip";
 
 export default function Home() {
   const { isPlaying, currentTrack, togglePlayPause, isAuthenticated } = useAudio();
@@ -57,6 +58,8 @@ export default function Home() {
         return <ProfileView onNavigateToPlayer={() => setPlayerExpanded(true)} />;
       case "store":
         return <StoreView addToCart={addToCart} onModalToggle={setIsProductModalOpen} />;
+      case "vip":
+        return <VipView onNavigateToPlayer={() => setPlayerExpanded(true)} />;
       default:
         return (
           <ExploreView
