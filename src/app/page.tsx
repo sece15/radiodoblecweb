@@ -77,7 +77,7 @@ export default function Home() {
   return (
     <main
       style={{
-        height: "100vh",
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "var(--background)",

@@ -378,24 +378,22 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 }}
                 onClick={() => setSelectedProgram(prog)}
               >
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                   <img
                     src={prog.imageUrl}
                     alt={prog.title}
                     style={{ width: "64px", height: "64px", objectFit: "cover", border: "2px solid var(--primary)" }}
                   />
 
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px", minWidth: 0 }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px", minWidth: 0 }}>
                       <h4
                         style={{
                           fontSize: "0.85rem",
                           fontWeight: 900,
                           textTransform: "uppercase",
                           lineHeight: "1rem",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          whiteSpace: "normal",
                           flex: 1,
                         }}
                         title={prog.title}
@@ -406,13 +404,14 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                         style={{
                           backgroundColor: "var(--primary-container)",
                           border: "1px solid var(--primary)",
-                          padding: "1px 4px",
+                          padding: "1px 6px",
                           fontSize: "0.55rem",
                           fontWeight: "bold",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          maxWidth: "100px",
+                          maxWidth: "110px",
+                          flexShrink: 0,
                         }}
                         title={prog.genre}
                       >

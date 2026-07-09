@@ -24,6 +24,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [activeImgIndex, setActiveImgIndex] = useState<number>(0);
   const [isSpecsOpen, setSpecsOpen] = useState<boolean>(false);
+  const [isDescriptionExpanded, setDescriptionExpanded] = useState<boolean>(false);
 
   const handleOpenDetail = (product: Product) => {
     setSelectedProduct(product);
@@ -31,6 +32,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
     setSelectedSize(product.sizes[0] || "");
     setActiveImgIndex(0);
     setSpecsOpen(false);
+    setDescriptionExpanded(false);
   };
 
   // Helper to collect all unique images for the carousel
@@ -372,9 +374,10 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
             backdropFilter: "blur(4px)",
             zIndex: 3000,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
-            padding: "16px",
+            padding: "80px 16px 40px 16px",
+            overflowY: "auto",
           }}
           onClick={() => setSelectedProduct(null)}
         >
@@ -391,7 +394,8 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
               maxWidth: "760px",
               padding: "24px",
               position: "relative",
-              transform: "translateY(20px) rotate(0.5deg)",
+              transform: "rotate(0.5deg)",
+              margin: "0 auto",
             }}
             onClick={(e) => e.stopPropagation()} // Prevent click-away
           >
@@ -639,7 +643,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
                 {/* Description */}
                 <div>
                   <button
-                    onClick={() => setSpecsOpen(!isSpecsOpen)}
+                    onClick={() => setDescriptionExpanded(!isDescriptionExpanded)}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -658,18 +662,18 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
                   >
                     <span>Detalles del producto</span>
                     <span style={{ fontSize: "0.85rem", fontWeight: "bold" }}>
-                      {isSpecsOpen ? "▲" : "▼"}
+                      {isDescriptionExpanded ? "▲" : "▼"}
                     </span>
                   </button>
 
                   <div
                     style={{
-                      maxHeight: isSpecsOpen ? "500px" : "0px",
+                      maxHeight: isDescriptionExpanded ? "500px" : "0px",
                       overflow: "hidden",
                       transition: "max-height 0.3s ease, padding 0.3s ease, border 0.3s ease",
-                      border: isSpecsOpen ? "2px solid var(--primary)" : "none",
+                      border: isDescriptionExpanded ? "2px solid var(--primary)" : "none",
                       backgroundColor: "white",
-                      padding: isSpecsOpen ? "10px" : "0 10px",
+                      padding: isDescriptionExpanded ? "10px" : "0 10px",
                       fontSize: "0.7rem",
                       opacity: 0.9,
                       lineHeight: "1.1rem",
