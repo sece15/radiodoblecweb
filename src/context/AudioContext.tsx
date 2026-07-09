@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import type { Subscription } from "@supabase/supabase-js";
 import { io, Socket } from "socket.io-client";
 import type Hls from "hls.js";
 import {
@@ -25,6 +26,7 @@ import {
   DEFAULT_AVATAR,
   DEFAULT_STREAM
 } from "@/constants";
+import { useLocalStorage, useLocalStorageToggle } from "@/hooks/useLocalStorage";
 
 interface AudioContextType {
   // Audio state
@@ -145,77 +147,29 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   const [isMuted, setIsMuted] = useState(false);
 
   // Room DB seed data
-  const [stations, setStations] = useState<Station[]>(() => {
-    if (typeof window !== "undefined") {
-      const savedLikes = localStorage.getItem("liked_stations");
-      if (savedLikes) {
-        const parsed = JSON.parse(savedLikes);
-        return INITIAL_STATIONS.map((s) => ({ ...s, isLiked: parsed.includes(s.id) }));
-      }
-    }
-    return INITIAL_STATIONS;
-  });
+  const [stations, toggleStationLike] = useLocalStorageToggle<Station>("liked_stations", INITIAL_STATIONS, "isLiked");
   const [programs] = useState<RadioProgram[]>(INITIAL_PROGRAMS);
   const [pastBroadcasts] = useState<PastBroadcast[]>(INITIAL_PAST_BROADCASTS);
-  const [songs, setSongs] = useState<Song[]>(() => {
-    if (typeof window !== "undefined") {
-      const savedFavorites = localStorage.getItem("fav_songs");
-      if (savedFavorites) {
-        const parsed = JSON.parse(savedFavorites);
-        return INITIAL_SONGS.map((s) => ({ ...s, isFavorite: parsed.includes(s.id) }));
-      }
-    }
-    return INITIAL_SONGS;
-  });
+  const [songs, toggleSongFavorite] = useLocalStorageToggle<Song>("fav_songs", INITIAL_SONGS, "isFavorite");
   const [albums] = useState<Album[]>(INITIAL_ALBUMS);
-  const [playlistTracks, setPlaylistTracks] = useState<{ id: number; title: string; artist: string; album: string; imageUrl: string }[]>(() => {
-    if (typeof window !== "undefined") {
-      const savedPlaylist = localStorage.getItem("playlist_tracks");
-      if (savedPlaylist) {
-        return JSON.parse(savedPlaylist);
-      }
-    }
-    return [];
-  });
+  const [playlistTracks, setPlaylistTracks] = useLocalStorage<{ id: number; title: string; artist: string; album: string; imageUrl: string }[]>("playlist_tracks", []);
   
   // User Profile
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    if (typeof window !== "undefined") {
-      const savedProfile = localStorage.getItem("user_profile");
-      if (savedProfile) {
-        return JSON.parse(savedProfile);
-      }
-    }
-    return {
-      name: "PETER ARKWALL",
-      role: "RADIO EXPLORER / VINYL JUNKIE",
-      avatarUrl: DEFAULT_AVATAR,
-      stashHours: 124,
-      followersCount: "1.2K",
-    };
+  const [userProfile, setUserProfile] = useLocalStorage<UserProfile>("user_profile", {
+    name: "PETER ARKWALL",
+    role: "RADIO EXPLORER / VINYL JUNKIE",
+    avatarUrl: DEFAULT_AVATAR,
+    stashHours: 124,
+    followersCount: "1.2K",
   });
 
   // Theme Config
-  const [activeTheme, setActiveTheme] = useState(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("selected_theme");
-      return savedTheme || "PUNK_NEON";
-    }
-    return "PUNK_NEON";
-  });
+  const [activeTheme, setActiveTheme] = useLocalStorage<string>("selected_theme", "PUNK_NEON");
 
   // Chat/Mod Configuration
   const [isLiveChatModeActive, setLiveChatModeActive] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [bannedWords, setBannedWords] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const savedBannedWords = localStorage.getItem("banned_words");
-      if (savedBannedWords) {
-        return JSON.parse(savedBannedWords);
-      }
-    }
-    return DEFAULT_BANNED_WORDS;
-  });
+  const [bannedWords, setBannedWords] = useLocalStorage<string[]>("banned_words", DEFAULT_BANNED_WORDS);
   const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
   const [deletedMessageIds, setDeletedMessageIds] = useState<Set<number>>(new Set());
   const [isSlowMode, setIsSlowMode] = useState(false);
@@ -320,6 +274,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       console.error("Socket chat failed to boot", e);
     }
   };
+
+  // LocalStorage is handled dynamically inside custom hooks
 
   // Synchronize activeTheme to document element attribute
   useEffect(() => {
@@ -435,7 +391,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     const metadataInterval = setInterval(pollMetadata, 8000);
 
     // 5. Supabase Auth state collection
-    let subscription: any = null;
+    let subscription: Subscription | null = null;
     if (supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
@@ -755,24 +711,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     playUrl(track.streamUrl);
   };
 
-  // Local-First DB toggles
-  const toggleStationLike = (id: string) => {
-    setStations(prev => {
-      const next = prev.map(s => (s.id === id ? { ...s, isLiked: !s.isLiked } : s));
-      const likedIds = next.filter(s => s.isLiked).map(s => s.id);
-      localStorage.setItem("liked_stations", JSON.stringify(likedIds));
-      return next;
-    });
-  };
-
-  const toggleSongFavorite = (id: string) => {
-    setSongs(prev => {
-      const next = prev.map(s => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s));
-      const favIds = next.filter(s => s.isFavorite).map(s => s.id);
-      localStorage.setItem("fav_songs", JSON.stringify(favIds));
-      return next;
-    });
-  };
+  // Local-First DB toggles are handled directly by custom hook toggle functions (toggleStationLike, toggleSongFavorite)
 
   const addCurrentTrackToPlaylist = () => {
     setPlaylistTracks(prev => {
@@ -784,44 +723,30 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         album: currentTrack.album,
         imageUrl: currentTrack.imageUrl,
       };
-      const next = [...prev, track];
-      localStorage.setItem("playlist_tracks", JSON.stringify(next));
-      return next;
+      return [...prev, track];
     });
   };
 
   const deleteTrackFromPlaylist = (id: number) => {
-    setPlaylistTracks(prev => {
-      const next = prev.filter(t => t.id !== id);
-      localStorage.setItem("playlist_tracks", JSON.stringify(next));
-      return next;
-    });
+    setPlaylistTracks(prev => prev.filter(t => t.id !== id));
   };
 
   const saveProfile = (name: string, role: string, avatarUrl: string, hours: number, followers: string) => {
-    const updated = { name, role, avatarUrl, stashHours: hours, followersCount: followers };
-    setUserProfile(updated);
-    localStorage.setItem("user_profile", JSON.stringify(updated));
+    setUserProfile({ name, role, avatarUrl, stashHours: hours, followersCount: followers });
   };
 
   // SC-06: Solo disponible en modo desarrollo para evitar manipulación de roles desde la consola del navegador.
   const updateUserRole = (newRole: string) => {
     if (process.env.NODE_ENV !== "development") {
-      console.warn("updateUserRole: bloqueada en producción (SC-06).");
+      console.warn("🛡️ No puedes cambiar tu rol en producción.");
       return;
     }
-    setUserProfile(prev => {
-      const updated = { ...prev, role: newRole };
-      localStorage.setItem("user_profile", JSON.stringify(updated));
-      return updated;
-    });
+    setUserProfile(prev => ({ ...prev, role: newRole }));
   };
 
   // Theme settings
   const selectTheme = (themeName: string) => {
     setActiveTheme(themeName);
-    localStorage.setItem("selected_theme", themeName);
-    document.documentElement.setAttribute("data-theme", themeName);
   };
 
   // Banned words & moderation panel actions
@@ -840,16 +765,12 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   const addBannedWord = (word: string) => {
     const trimmed = word.trim().toLowerCase();
     if (trimmed && !bannedWords.includes(trimmed)) {
-      const next = [...bannedWords, trimmed];
-      setBannedWords(next);
-      localStorage.setItem("banned_words", JSON.stringify(next));
+      setBannedWords(prev => [...prev, trimmed]);
     }
   };
 
   const removeBannedWord = (word: string) => {
-    const next = bannedWords.filter(w => w !== word);
-    setBannedWords(next);
-    localStorage.setItem("banned_words", JSON.stringify(next));
+    setBannedWords(prev => prev.filter(w => w !== word));
   };
 
   const banUser = (username: string) => {

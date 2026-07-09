@@ -27,7 +27,6 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
     isCurrentUserBanned,
     bannedUsers,
     deletedMessageIds,
-    userProfile,
   } = useAudio();
 
   const progressTrackRef = useRef<HTMLDivElement>(null);
@@ -480,217 +479,230 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
         </div>
 
         {/* C. LADO DERECHO: CHAT EN VIVO */}
+        {/* Outer frame: rotated for the tilted card look */}
         <div
           className="neo-card player-view-chat-panel"
           style={{
-            backgroundColor: "var(--background)",
             border: "4px solid var(--primary)",
             boxShadow: "8px 8px 0px var(--primary)",
             width: "100%",
             maxWidth: "380px",
             height: "510px",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "clip",
             transform: "rotate(1deg)",
             zIndex: 5,
+            overflow: "visible",
+            backgroundColor: "transparent",
           }}
         >
-          {/* Chat Header */}
+          {/* Inner wrapper: counter-rotates so content is axis-aligned — fixes caret clipping */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "12px 16px",
-              borderBottom: "3px solid var(--primary)",
-              backgroundColor: "var(--primary-container)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <div style={{ width: "8px", height: "8px", backgroundColor: "#BA1A1A", borderRadius: "50%" }}></div>
-              <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
-                CHAT EN VIVO
-              </span>
-              <div
-                style={{
-                  backgroundColor: "var(--primary)",
-                  padding: "1px 6px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "2px",
-                  fontSize: "0.55rem",
-                  color: "var(--on-primary)",
-                  fontWeight: 900,
-                }}
-              >
-                <User size={8} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-                {listenersCount}
-              </div>
-            </div>
-          </div>
-
-          {/* Chat Feed */}
-          <div
-            ref={messageFeedRef}
-            style={{
-              flex: 1,
-              overflowY: "auto",
+              transform: "rotate(-1deg)",
+              width: "100%",
+              height: "100%",
               display: "flex",
               flexDirection: "column",
+              overflow: "hidden",
               backgroundColor: "var(--background)",
             }}
           >
-            {chatMessages.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 20px", opacity: 0.5 }}>
-                <p style={{ fontSize: "0.75rem", fontWeight: "bold" }}>EL SILENCIO DE LAS ONDAS...</p>
-                <p style={{ fontSize: "0.6rem", marginTop: "4px" }}>Haz algo de ruido.</p>
-              </div>
-            ) : (
-              chatMessages.map((msg) => {
-                const isBanned = bannedUsers.has(msg.senderName.toUpperCase());
-                const isDeleted = deletedMessageIds.has(msg.id);
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      padding: "8px 12px",
-                      borderBottom: "1.5px solid var(--primary)",
-                      backgroundColor: "var(--card-bg)",
-                    }}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span
-                          style={{
-                            backgroundColor: getRoleBadgeColor(msg.senderRole),
-                            color: "white",
-                            fontSize: "0.5rem",
-                            fontWeight: "black",
-                            padding: "1px 4px",
-                          }}
-                        >
-                          {getRoleBadgeText(msg.senderRole)}
-                        </span>
-                        <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase" }}>
-                          {msg.senderName}
-                        </span>
-                      </div>
-                      <p
-                        style={{
-                          fontSize: "0.65rem",
-                          marginTop: "2px",
-                          fontWeight: isBanned || isDeleted ? "bold" : "normal",
-                          color: isBanned || isDeleted ? "#BA1A1A" : "var(--primary)",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {isBanned
-                          ? "⚠️ [USUARIO BANEADO]"
-                          : isDeleted
-                          ? "🗑️ [Mensaje borrado]"
-                          : msg.messageText}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Chat Input */}
-          <div
-            style={{
-              padding: "12px",
-              borderTop: "3px solid var(--primary)",
-              backgroundColor: "var(--card-bg)",
-            }}
-          >
-            {!isAuthenticated ? (
-              <button
-                onClick={signInWithGoogle}
-                className="neo-button"
-                style={{
-                  width: "100%",
-                  backgroundColor: "var(--primary-container)",
-                  padding: "8px",
-                  textAlign: "center",
-                  color: "var(--primary)",
-                  fontWeight: 900,
-                  fontSize: "0.65rem",
-                  boxShadow: "2px 2px 0px var(--primary)",
-                  cursor: "pointer",
-                }}
-              >
-                🔑 GOOGLE SIGN-IN PARA CHATEAR
-              </button>
-            ) : isCurrentUserBanned ? (
-              <div
-                style={{
-                  width: "100%",
-                  backgroundColor: "#BA1A1A",
-                  padding: "6px",
-                  textAlign: "center",
-                  color: "white",
-                  fontWeight: 900,
-                  fontSize: "0.65rem",
-                  border: "2px solid var(--primary)",
-                }}
-              >
-                ESTÁS BANEADO
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <input
-                  type="text"
-                  className="chat-input-player"
-                  value={typedMessage}
-                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
-                  onKeyDown={handleKeyPress}
-                  onFocus={() => setIsChatInputFocused(true)}
-                  onBlur={() => setIsChatInputFocused(false)}
-                  maxLength={100}
-                  placeholder="Escribe algo..."
+            {/* Chat Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "12px 16px",
+                borderBottom: "3px solid var(--primary)",
+                backgroundColor: "var(--primary-container)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div style={{ width: "8px", height: "8px", backgroundColor: "#BA1A1A", borderRadius: "50%" }}></div>
+                <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
+                  CHAT EN VIVO
+                </span>
+                <div
                   style={{
-                    flex: 1,
-                    height: "32px",
-                    padding: "4px 8px 4px 12px",
-                    border: isChatInputFocused
-                      ? "2.5px solid var(--primary)"
-                      : "2px solid var(--primary)",
-                    outline: "none",
-                    fontSize: "0.7rem",
-                    fontFamily: "inherit",
-                    backgroundColor: "#FFFFFF",
-                    color: "#111111",
-                    caretColor: "#111111",
-                    cursor: "text",
-                    boxShadow: isChatInputFocused
-                      ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                      : "none",
-                    transition: "box-shadow 0.15s ease, border 0.15s ease",
-                  }}
-                />
-                <button
-                  onClick={handleSend}
-                  className="neo-button"
-                  style={{
-                    height: "32px",
-                    padding: "0 10px",
-                    backgroundColor: "var(--primary-container)",
-                    boxShadow: "2px 2px 0px var(--primary)",
+                    backgroundColor: "var(--primary)",
+                    padding: "1px 6px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
+                    gap: "2px",
+                    fontSize: "0.55rem",
+                    color: "var(--on-primary)",
+                    fontWeight: 900,
                   }}
                 >
-                  <Send size={10} />
-                </button>
+                  <User size={8} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
+                  {listenersCount}
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Chat Feed */}
+            <div
+              ref={messageFeedRef}
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                backgroundColor: "var(--background)",
+              }}
+            >
+              {chatMessages.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", opacity: 0.5 }}>
+                  <p style={{ fontSize: "0.75rem", fontWeight: "bold" }}>EL SILENCIO DE LAS ONDAS...</p>
+                  <p style={{ fontSize: "0.6rem", marginTop: "4px" }}>Haz algo de ruido.</p>
+                </div>
+              ) : (
+                chatMessages.map((msg) => {
+                  const isBanned = bannedUsers.has(msg.senderName.toUpperCase());
+                  const isDeleted = deletedMessageIds.has(msg.id);
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        padding: "8px 12px",
+                        borderBottom: "1.5px solid var(--primary)",
+                        backgroundColor: "var(--card-bg)",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span
+                            style={{
+                              backgroundColor: getRoleBadgeColor(msg.senderRole),
+                              color: "white",
+                              fontSize: "0.5rem",
+                              fontWeight: "black",
+                              padding: "1px 4px",
+                            }}
+                          >
+                            {getRoleBadgeText(msg.senderRole)}
+                          </span>
+                          <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase" }}>
+                            {msg.senderName}
+                          </span>
+                        </div>
+                        <p
+                          style={{
+                            fontSize: "0.65rem",
+                            marginTop: "2px",
+                            fontWeight: isBanned || isDeleted ? "bold" : "normal",
+                            color: isBanned || isDeleted ? "#BA1A1A" : "var(--primary)",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {isBanned
+                            ? "⚠️ [USUARIO BANEADO]"
+                            : isDeleted
+                              ? "🗑️ [Mensaje borrado]"
+                              : msg.messageText}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <div
+              style={{
+                padding: "12px",
+                borderTop: "3px solid var(--primary)",
+                backgroundColor: "var(--card-bg)",
+              }}
+            >
+              {!isAuthenticated ? (
+                <button
+                  onClick={signInWithGoogle}
+                  className="neo-button"
+                  style={{
+                    width: "100%",
+                    backgroundColor: "var(--primary-container)",
+                    padding: "8px",
+                    textAlign: "center",
+                    color: "var(--primary)",
+                    fontWeight: 900,
+                    fontSize: "0.65rem",
+                    boxShadow: "2px 2px 0px var(--primary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔑 GOOGLE SIGN-IN PARA CHATEAR
+                </button>
+              ) : isCurrentUserBanned ? (
+                <div
+                  style={{
+                    width: "100%",
+                    backgroundColor: "#BA1A1A",
+                    padding: "6px",
+                    textAlign: "center",
+                    color: "white",
+                    fontWeight: 900,
+                    fontSize: "0.65rem",
+                    border: "2px solid var(--primary)",
+                  }}
+                >
+                  ESTÁS BANEADO
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <input
+                    type="text"
+                    className="chat-input-player"
+                    value={typedMessage}
+                    onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
+                    onKeyDown={handleKeyPress}
+                    onFocus={() => setIsChatInputFocused(true)}
+                    onBlur={() => setIsChatInputFocused(false)}
+                    maxLength={100}
+                    placeholder="Escribe algo..."
+                    style={{
+                      flex: 1,
+                      height: "32px",
+                      padding: "4px 8px 4px 12px",
+                      border: isChatInputFocused
+                        ? "2.5px solid var(--primary)"
+                        : "2px solid var(--primary)",
+                      outline: "none",
+                      fontSize: "0.7rem",
+                      fontFamily: "inherit",
+                      backgroundColor: "#FFFFFF",
+                      color: "#111111",
+                      caretColor: "#111111",
+                      cursor: "text",
+                      boxShadow: isChatInputFocused
+                        ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
+                        : "none",
+                      transition: "box-shadow 0.15s ease, border 0.15s ease",
+                    }}
+                  />
+                  <button
+                    onClick={handleSend}
+                    className="neo-button"
+                    style={{
+                      height: "32px",
+                      padding: "0 10px",
+                      backgroundColor: "var(--primary-container)",
+                      boxShadow: "2px 2px 0px var(--primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Send size={10} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
+export default PlayerView;

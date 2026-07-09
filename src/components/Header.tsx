@@ -1,4 +1,4 @@
-import { CSSProperties } from "react";
+import { CSSProperties, useState } from "react";
 import { Search, ShoppingCart } from "lucide-react";
 
 type ActiveTab = "explore" | "store" | "profile";
@@ -20,6 +20,8 @@ export const Header = ({
   setCartOpen,
   cartCount,
 }: HeaderProps) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <header
       style={{
@@ -38,7 +40,7 @@ export const Header = ({
       {/* Left Side: BUSCAR button */}
       <button
         onClick={() => setSearchActive(true)}
-        className="neo-button fun-hover-wobble"
+        className="neo-button fun-hover-wobble search-button"
         style={{
           padding: "6px 14px",
           fontSize: "0.75rem",
@@ -54,11 +56,12 @@ export const Header = ({
         } as CSSProperties}
       >
         <Search size={14} />
-        <span>BUSCAR</span>
+        <span className="search-button-text">BUSCAR</span>
       </button>
 
       {/* Center: Logo */}
       <div
+        className="header-logo-container"
         style={{
           position: "absolute",
           left: "50%",
@@ -74,6 +77,7 @@ export const Header = ({
         onClick={() => {
           setFilteredStyle(null);
           setActiveTab("explore");
+          setIsMobileMenuOpen(false);
         }}
       >
         <svg
@@ -144,8 +148,8 @@ export const Header = ({
         </svg>
       </div>
 
-      {/* Right Side: Navigation Links */}
-      <nav style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+      {/* Right Side (Desktop Only): Navigation Links + Cart */}
+      <nav className="desktop-only-flex" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         <button
           onClick={() => {
             setFilteredStyle(null);
@@ -244,6 +248,192 @@ export const Header = ({
           )}
         </button>
       </nav>
+
+      {/* Right Side (Mobile Only): Cart Icon + Radio-Styled Hamburger Button */}
+      <div className="mobile-only-flex" style={{ gap: "8px", alignItems: "center" }}>
+        <button
+          onClick={() => setCartOpen(true)}
+          className="neo-button fun-hover-wobble"
+          style={{
+            padding: "6px 10px",
+            fontSize: "0.75rem",
+            fontWeight: 900,
+            backgroundColor: "var(--card-bg)",
+            boxShadow: "3px 3px 0px var(--primary)",
+            cursor: "pointer",
+            transform: "rotate(-1deg)",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            position: "relative",
+            "--rest-rot": "-1deg",
+          } as CSSProperties}
+        >
+          <ShoppingCart size={14} />
+          {cartCount > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-8px",
+                right: "-8px",
+                backgroundColor: "var(--error)",
+                color: "white",
+                borderRadius: "50%",
+                width: "18px",
+                height: "18px",
+                fontSize: "0.6rem",
+                fontWeight: 900,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid var(--primary)",
+                boxShadow: "1px 1px 0px var(--primary)",
+              }}
+            >
+              {cartCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="neo-button fun-hover-wobble"
+          style={{
+            padding: "6px",
+            backgroundColor: isMobileMenuOpen ? "var(--primary-container)" : "var(--card-bg)",
+            boxShadow: isMobileMenuOpen ? "1px 1px 0px var(--primary)" : "3px 3px 0px var(--primary)",
+            transform: isMobileMenuOpen ? "translate(2px, 2px) rotate(0deg)" : "rotate(1.5deg)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "38px",
+            height: "38px",
+            "--rest-rot": isMobileMenuOpen ? "0deg" : "1.5deg",
+          } as CSSProperties}
+          aria-label="Menú principal"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ display: "block" }}
+          >
+            {/* Tilted Radio Antenna */}
+            <line x1="8" y1="5" x2="16" y2="1.5" />
+            <circle cx="16" cy="1.5" r="1.5" fill="var(--primary)" />
+            
+            {/* Radio Body / Chassis */}
+            <rect x="2" y="5" width="20" height="17" rx="2" fill="var(--card-bg)" stroke="var(--primary)" strokeWidth="2.5" />
+            
+            {/* Speaker Lines / Hamburger or X */}
+            {isMobileMenuOpen ? (
+              <>
+                <line x1="7" y1="10" x2="17" y2="17" />
+                <line x1="17" y1="10" x2="7" y2="17" />
+              </>
+            ) : (
+              <>
+                <line x1="6" y1="10" x2="18" y2="10" />
+                <line x1="6" y1="13.5" x2="18" y2="13.5" />
+                <line x1="6" y1="17" x2="14" y2="17" />
+              </>
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Drawer Navigation Panel */}
+      <div className={`mobile-menu-drawer ${isMobileMenuOpen ? "open" : ""}`}>
+        {/* Decorative Badge */}
+        <div
+          style={{
+            backgroundColor: "var(--primary-container)",
+            color: "var(--primary)",
+            padding: "6px 12px",
+            fontSize: "0.8rem",
+            fontWeight: 900,
+            border: "3px solid var(--primary)",
+            transform: "rotate(-2deg)",
+            boxShadow: "3px 3px 0px var(--primary)",
+            width: "max-content",
+            marginBottom: "16px",
+          }}
+        >
+          📻 RADIO DOBLE C MENU
+        </div>
+
+        {/* Links */}
+        <button
+          onClick={() => {
+            setFilteredStyle(null);
+            setActiveTab("explore");
+            setIsMobileMenuOpen(false);
+          }}
+          className="mobile-nav-link fun-hover-wobble"
+          style={{
+            backgroundColor: activeTab === "explore" ? "var(--primary-container)" : "var(--card-bg)",
+            transform: "rotate(-1.5deg)",
+            "--rest-rot": "-1.5deg",
+          } as CSSProperties}
+        >
+          EXPLORAR
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab("store");
+            setIsMobileMenuOpen(false);
+          }}
+          className="mobile-nav-link fun-hover-wobble"
+          style={{
+            backgroundColor: activeTab === "store" ? "var(--primary-container)" : "var(--card-bg)",
+            transform: "rotate(1.5deg)",
+            "--rest-rot": "1.5deg",
+          } as CSSProperties}
+        >
+          TIENDA
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab("profile");
+            setIsMobileMenuOpen(false);
+          }}
+          className="mobile-nav-link fun-hover-wobble"
+          style={{
+            backgroundColor: activeTab === "profile" ? "var(--primary-container)" : "var(--card-bg)",
+            transform: "rotate(-1deg)",
+            "--rest-rot": "-1deg",
+          } as CSSProperties}
+        >
+          MI PERFIL
+        </button>
+
+        {/* Small radio status sticker at bottom of menu */}
+        <div
+          style={{
+            marginTop: "auto",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            color: "var(--secondary)",
+            opacity: 0.8,
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <div>APOYE A SU RADIO LOCAL</div>
+          <div style={{ fontSize: "0.6rem" }}>FUCKING GOOD SHIT © 2026</div>
+        </div>
+      </div>
     </header>
   );
 };
+

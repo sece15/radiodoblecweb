@@ -44,7 +44,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
   const [djBio, setDjBio] = useState("");
   const [djSubmitted, setDjSubmitted] = useState(false);
 
-  const categories = ["TODOS", "ROCK N' ROLL", "POP TRASH", "TECHNO CORE", "GRUNGE"];
+  const categories = ["TODOS", "ROCK N' ROLL / ALTERNATIVO", "PEDIDOS / INVITADOS", "RAP / REGGAE", "TECHNO / DANCE"];
 
   // Filter stations based on selected style
   const filteredStations = stations.filter((station) => {
@@ -181,8 +181,8 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 className="neo-button fun-hover-wobble"
                 style={{
                   backgroundColor: isSelected ? "var(--primary-container)" : "var(--card-bg)",
-                  transform: isSelected 
-                    ? `translate(3px, 3px) rotate(0deg)` 
+                  transform: isSelected
+                    ? `translate(3px, 3px) rotate(0deg)`
                     : `rotate(${restRotation}deg)`,
                   padding: "8px 12px",
                   fontSize: "0.75rem",
@@ -198,10 +198,10 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
         </div>
       </div>
 
-      {/* 3. ESTACIONES LIST */}
+      {/* 3. PROGRAMAS LIST */}
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         <h3 style={{ fontSize: "1.2rem", fontWeight: 900, textTransform: "uppercase" }}>
-          ESTACIONES C
+          PROGRAMAS DOBLE C
         </h3>
 
         <div
