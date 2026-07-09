@@ -1,7 +1,7 @@
-import { useState, CSSProperties } from "react";
+import { useState } from "react";
 import { useAudio } from "@/context/AudioContext";
 import { Play, Download, Music, Plus, Sparkles, FolderLock } from "lucide-react";
-import { Album, Song } from "@/types";
+import { Song } from "@/types";
 
 interface VipViewProps {
   onNavigateToPlayer: () => void;
@@ -110,7 +110,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
         <p style={{ fontSize: "0.75rem", lineHeight: "1.1rem", opacity: 0.9 }}>
           Sintonizas el fanzine sonoro en alta definición. Como miembro **VIP** de la Radio Doble C, tienes acceso exclusivo a nuestra discografía, streaming a la carta sin publicidad y descargas directas en formato MP3 de alta fidelidad. ¡Gracias por apoyar la radio libre! ⚡
         </p>
-        
+
         {isAdmin && (
           <button
             onClick={() => setShowAddModal(true)}
@@ -224,7 +224,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
                   <span style={{ fontSize: "0.65rem", fontWeight: 900, color: "#BA1A1A", display: "block", marginBottom: "6px" }}>
                     PISTAS EXCLUSIVAS DE DESCARGA:
                   </span>
-                  
+
                   {/* Tracks list */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {tracks.map((track, trackIdx) => {
