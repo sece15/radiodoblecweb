@@ -160,9 +160,10 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          padding: "12px",
+          padding: "12px 12px 0 12px",
           gap: "12px",
-          overflowY: "auto",
+          minHeight: 0,
+          overflow: "hidden",
         }}
       >
         {/* C. MODERATOR SETTINGS PANEL */}
@@ -516,15 +517,21 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
             })
           )}
         </div>
+      </div>
 
-        {/* E. CHAT TEXT INPUT */}
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-          }}
-        >
+      {/* E. CHAT TEXT INPUT */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          alignItems: "center",
+          padding: "12px",
+          borderTop: "3.5px solid var(--primary)",
+          backgroundColor: "var(--background)",
+          position: "relative",
+          zIndex: 5,
+        }}
+      >
           {!isAuthenticated ? (
             <button
               onClick={signInWithGoogle}
@@ -629,7 +636,6 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               </button>
             </>
           )}
-        </div>
       </div>
     </div>
   );

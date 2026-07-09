@@ -260,17 +260,32 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
                   <h4
                     style={{
-                      fontSize: "1.2rem",
+                      fontSize: "1.1rem",
                       fontWeight: 900,
                       textTransform: "uppercase",
-                      width: "max-content",
                       borderBottom: "4px solid var(--primary-container)",
                       paddingBottom: "2px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
                     }}
+                    title={station.name}
                   >
                     {station.name}
                   </h4>
-                  <p style={{ fontSize: "0.75rem", opacity: 0.8, lineHeight: "1.1rem" }}>
+                  <p
+                    style={{
+                      fontSize: "0.75rem",
+                      opacity: 0.8,
+                      lineHeight: "1.1rem",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
                     {station.description}
                   </p>
 
@@ -371,14 +386,19 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   />
 
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px", minWidth: 0 }}>
                       <h4
                         style={{
                           fontSize: "0.85rem",
                           fontWeight: 900,
                           textTransform: "uppercase",
                           lineHeight: "1rem",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
                         }}
+                        title={prog.title}
                       >
                         {prog.title}
                       </h4>
@@ -390,7 +410,11 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                           fontSize: "0.55rem",
                           fontWeight: "bold",
                           whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: "100px",
                         }}
+                        title={prog.genre}
                       >
                         {prog.genre}
                       </span>
@@ -406,8 +430,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                       style={{
                         fontSize: "0.65rem",
                         opacity: 0.7,
-                        lineHeight: "0.85rem",
-                        height: "1.7rem",
+                        lineHeight: "0.9rem",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         display: "-webkit-box",

@@ -658,6 +658,17 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const playSong = (song: Song) => {
+    const isPremiumUser =
+      userProfile.role.toUpperCase().includes("VIP") ||
+      userProfile.role.toUpperCase().includes("ADMIN") ||
+      userProfile.role.toUpperCase().includes("MOD") ||
+      userProfile.role.toUpperCase().includes("STREAMER");
+
+    if (!isPremiumUser) {
+      alert("⭐ Función Premium: Solo los usuarios VIP o Staff de la radio pueden elegir canciones y álbumes a la carta (estilo Spotify Premium). ¡Sigue disfrutando la señal en vivo! 📻");
+      return;
+    }
+
     const track = {
       title: song.title,
       album: song.albumName,
@@ -672,6 +683,17 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const playPastBroadcast = (broadcast: PastBroadcast) => {
+    const isPremiumUser =
+      userProfile.role.toUpperCase().includes("VIP") ||
+      userProfile.role.toUpperCase().includes("ADMIN") ||
+      userProfile.role.toUpperCase().includes("MOD") ||
+      userProfile.role.toUpperCase().includes("STREAMER");
+
+    if (!isPremiumUser) {
+      alert("⭐ Función Premium: Solo los usuarios VIP o Staff de la radio pueden escuchar emisiones pasadas a la carta. ¡Sigue disfrutando la señal en vivo! 📻");
+      return;
+    }
+
     const track = {
       title: broadcast.title,
       album: `Emisión del ${broadcast.date}`,

@@ -638,12 +638,45 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
 
                 {/* Description */}
                 <div>
-                  <h5 style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", marginBottom: "4px" }}>
-                    Detalles del producto:
-                  </h5>
-                  <p style={{ fontSize: "0.7rem", opacity: 0.9, lineHeight: "1.1rem" }}>
+                  <button
+                    onClick={() => setSpecsOpen(!isSpecsOpen)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      backgroundColor: "var(--primary-container)",
+                      border: "2px solid var(--primary)",
+                      padding: "6px 12px",
+                      fontSize: "0.75rem",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      boxShadow: "2px 2px 0px var(--primary)",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    <span>Detalles del producto</span>
+                    <span style={{ fontSize: "0.85rem", fontWeight: "bold" }}>
+                      {isSpecsOpen ? "▲" : "▼"}
+                    </span>
+                  </button>
+
+                  <div
+                    style={{
+                      maxHeight: isSpecsOpen ? "500px" : "0px",
+                      overflow: "hidden",
+                      transition: "max-height 0.3s ease, padding 0.3s ease, border 0.3s ease",
+                      border: isSpecsOpen ? "2px solid var(--primary)" : "none",
+                      backgroundColor: "white",
+                      padding: isSpecsOpen ? "10px" : "0 10px",
+                      fontSize: "0.7rem",
+                      opacity: 0.9,
+                      lineHeight: "1.1rem",
+                    }}
+                  >
                     {selectedProduct.description}
-                  </p>
+                  </div>
                 </div>
 
                 {/* Colors */}

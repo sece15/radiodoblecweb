@@ -340,9 +340,6 @@ button {
 }
 
 .spotify-player-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
   width: 100%;
   height: 96px;
   background-color: var(--background);
@@ -358,7 +355,7 @@ button {
 .chat-sidebar-container {
   width: 360px;
   border-left: 4px solid var(--primary);
-  height: calc(100vh - 88px - 96px); /* below header, above footer */
+  height: 100%; /* fill parent height dynamically */
   background-color: var(--background);
   display: flex;
   flex-direction: column;
@@ -370,11 +367,11 @@ button {
 
 @media (max-width: 768px) {
   .chat-sidebar-container {
-    position: fixed;
-    top: 88px;
+    position: absolute;
+    top: 0;
     right: 0;
     width: 100%;
-    height: calc(100vh - 88px - 96px);
+    height: 100%;
     z-index: 500;
     border-left: none;
     border-top: 4px solid var(--primary);

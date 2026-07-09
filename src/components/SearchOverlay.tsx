@@ -23,7 +23,12 @@ export const SearchOverlay = ({
 
   const [query, setQuery] = useState("");
 
-  const recommendationTags = ["HIP HOP UNDERGROUND", "TECHNO CORE", "ELECTRO PUNK", "COSMIC AMBIENT"];
+  const recommendationTags = Array.from(
+    new Set([
+      ...stations.map((s) => s.style.trim().toUpperCase()),
+      ...programs.map((p) => p.genre.trim().toUpperCase()),
+    ])
+  ).filter(Boolean);
 
   // Filter lists based on query
   const filteredPrograms = query.trim()
