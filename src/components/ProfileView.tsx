@@ -1,6 +1,7 @@
-import { useState, CSSProperties } from "react";
+import { useState, useEffect, CSSProperties } from "react";
 import { useAudio } from "@/context/AudioContext";
 import { Check, Edit, Share2, LogOut, Clock, Users, Star, PlayCircle, X } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface ProfileViewProps {
   onNavigateToPlayer: () => void;
@@ -18,9 +19,14 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
     albums,
     toggleSongFavorite,
     playSong,
-    skipNext,
     activeTheme,
     selectTheme,
+    currentTrack,
+    isPlaying,
+    togglePlayPause,
+    liveStatusText,
+    playlistTracks,
+    addAlbum,
   } = useAudio();
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -28,10 +34,120 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
   const [editRole, setEditRole] = useState(userProfile.role);
   const [editHours, setEditHours] = useState(userProfile.stashHours);
 
+  const [showAddAlbumModal, setShowAddAlbumModal] = useState(false);
+  const [newAlbumName, setNewAlbumName] = useState("");
+  const [newAlbumArtist, setNewAlbumArtist] = useState("");
+  const [newAlbumYear, setNewAlbumYear] = useState("2026");
+  const [newAlbumGenre, setNewAlbumGenre] = useState("ROCK");
+  const [newAlbumImageUrl, setNewAlbumImageUrl] = useState("");
+
+  const isAdmin = userProfile.role.toUpperCase() === "ADMIN";
+
+  const handleAddAlbumSubmit = () => {
+    if (!isAdmin) {
+      alert("Acceso denegado: Solo los administradores pueden añadir álbumes 🛡️");
+      return;
+    }
+    if (!newAlbumName.trim() || !newAlbumArtist.trim()) {
+      alert("Por favor completa el nombre y artista del álbum 📻");
+      return;
+    }
+    addAlbum(newAlbumName, newAlbumArtist, newAlbumYear, newAlbumGenre, newAlbumImageUrl);
+    setNewAlbumName("");
+    setNewAlbumArtist("");
+    setNewAlbumYear("2026");
+    setNewAlbumGenre("ROCK");
+    setNewAlbumImageUrl("");
+    setShowAddAlbumModal(false);
+  };
+
   const savedStations = stations.filter((s) => s.isLiked);
+  const favoriteSongs = songs.filter((s) => s.isFavorite);
+
+  // User list state for admin role management
+  const [usersList, setUsersList] = useState<{ id: string; username: string | null; full_name: string | null; avatar_url: string | null; role: string }[]>([]);
+
+  // Fetch all users/profiles if admin
+  useEffect(() => {
+    if (isAdmin && supabase) {
+      supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url, role")
+        .order("full_name", { ascending: true })
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setUsersList(data as typeof usersList);
+          }
+        });
+    }
+  }, [isAdmin]);
+
+  const handleUpdateUserRole = (userId: string, newRole: string) => {
+    if (!isAdmin) {
+      alert("Acceso denegado: Solo los administradores pueden gestionar roles 🛡️");
+      return;
+    }
+    if (supabase) {
+      supabase
+        .from("profiles")
+        .update({ role: newRole })
+        .eq("id", userId)
+        .then(({ error }) => {
+          if (error) {
+            alert("Error al actualizar el rol: " + error.message);
+          } else {
+            setUsersList((prev) =>
+              prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+            );
+          }
+        });
+    }
+  };
+
+  // Derive unique albums from playlistTracks
+  const playlistAlbums = playlistTracks.reduce((acc, track) => {
+    if (track.album && !acc.some((a) => a.name === track.album)) {
+      acc.push({
+        id: track.album.toLowerCase().replace(/\s+/g, "-"),
+        name: track.album,
+        artist: track.artist,
+        imageUrl: track.imageUrl || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&q=80",
+        releaseYear: "2026",
+        genre: "PLAYLIST",
+      });
+    }
+    return acc;
+  }, [] as typeof albums);
+
+  // Derive unique albums from favorite songs
+  const favoriteAlbums = favoriteSongs.reduce((acc, song) => {
+    if (song.albumName && !acc.some((a) => a.name === song.albumName)) {
+      acc.push({
+        id: song.albumName.toLowerCase().replace(/\s+/g, "-"),
+        name: song.albumName,
+        artist: song.artist,
+        imageUrl: song.imageUrl || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&q=80",
+        releaseYear: "2026",
+        genre: "FAVORITO",
+      });
+    }
+    return acc;
+  }, [] as typeof albums);
+
+  const displayedAlbums = playlistAlbums.length > 0
+    ? playlistAlbums
+    : (favoriteAlbums.length > 0 ? favoriteAlbums : albums);
+
+  const isSongsFallback = favoriteSongs.length === 0;
+  const displayedSongs = isSongsFallback ? songs : favoriteSongs;
+
+  // Calculate reputation dynamically
+  const reputationValue = 1000 + userProfile.stashHours * 8 + savedStations.length * 45 + favoriteSongs.length * 15;
+  const reputationString = (reputationValue / 1000).toFixed(1) + "K";
+  const weeklyGain = Math.floor(userProfile.stashHours * 1.5 + savedStations.length * 8 + favoriteSongs.length * 4);
 
   const handleSave = () => {
-    saveProfile(editName, editRole, userProfile.avatarUrl, editHours, userProfile.followersCount);
+    saveProfile(editName, editRole, userProfile.avatarUrl, editHours, reputationString);
     setShowEditModal(false);
   };
 
@@ -266,10 +382,11 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           >
             <div
               style={{
-                width: "75%",
+                width: `${Math.min(100, (userProfile.stashHours / 300) * 100)}%`,
                 height: "100%",
                 backgroundColor: "var(--primary-container)",
                 borderRight: "1px solid var(--primary)",
+                transition: "width 0.3s ease",
               }}
             ></div>
           </div>
@@ -292,7 +409,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           </div>
 
           <h3 style={{ fontSize: "2.2rem", fontWeight: 900, margin: "10px 0" }}>
-            {userProfile.followersCount}
+            {reputationString}
           </h3>
 
           <div
@@ -306,7 +423,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
               fontFamily: "monospace",
             }}
           >
-            +124 ESTA SEMANA
+            +{weeklyGain} ESTA SEMANA
           </div>
         </div>
       </div>
@@ -365,6 +482,11 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
                     padding: "2px 6px",
                     transform: `rotate(${station.name.length % 2 === 0 ? 1 : -2}deg)`,
                     whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                    display: "block",
+                    maxWidth: "100%",
+                    textAlign: "center",
                     textTransform: "uppercase",
                   }}
                 >
@@ -379,7 +501,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       {/* 6. RECENTLY LISTENED */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "768px", gap: "16px", marginTop: "16px" }}>
         <h3 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>
-          RECIENTEMENTE ESCUCHADA
+          ESCUCHANDO AHORA / RECIENTE
         </h3>
 
         <div
@@ -394,8 +516,9 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div
                 style={{
-                  backgroundColor: "#BA1A1A",
-                  border: "1px solid white",
+                  backgroundColor: currentTrack?.streamUrl?.includes("live") || currentTrack?.title?.toLowerCase().includes("live") ? "#BA1A1A" : "var(--primary-container)",
+                  color: currentTrack?.streamUrl?.includes("live") || currentTrack?.title?.toLowerCase().includes("live") ? "white" : "var(--primary)",
+                  border: "1px solid currentColor",
                   transform: "rotate(2deg)",
                   padding: "2px 6px",
                   fontSize: "0.6rem",
@@ -403,26 +526,67 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
                   fontWeight: "bold",
                 }}
               >
-                LIVE_FEED
+                {currentTrack?.streamUrl?.includes("live") || currentTrack?.title?.toLowerCase().includes("live") ? "LIVE_FEED" : "REPRODUCTOR"}
               </div>
-              <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>1H 45MIN • Hace 2h</span>
+              <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>
+                {liveStatusText}
+              </span>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h4 style={{ fontWeight: 900, fontSize: "0.8rem", letterSpacing: "0.02em" }}>
-                  SESS-089: UNDERGROUND ANTISYSTEM
-                </h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+                <img
+                  src={currentTrack?.imageUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150&q=80"}
+                  alt={currentTrack?.title}
+                  className={isPlaying ? "spinning-vinyl" : ""}
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    objectFit: "cover",
+                    border: "2px solid var(--primary-container)",
+                    flexShrink: 0,
+                    borderRadius: "50%",
+                  }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <h4 style={{ fontWeight: 900, fontSize: "0.85rem", letterSpacing: "0.02em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {currentTrack?.title || "RADIO DOBLE C"}
+                  </h4>
+                  <p style={{ fontSize: "0.65rem", opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {currentTrack?.artist || currentTrack?.album || "SELECCIÓN OFICIAL"}
+                  </p>
+                </div>
               </div>
 
               <button
                 onClick={() => {
-                  skipNext();
-                  onNavigateToPlayer();
+                  togglePlayPause();
                 }}
                 style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                aria-label={isPlaying ? "Pausar" : "Reproducir"}
               >
-                <PlayCircle size={44} style={{ color: "var(--primary-container)" }} />
+                {isPlaying ? (
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "50%",
+                      backgroundColor: "var(--primary-container)",
+                      border: "2.5px solid var(--primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "2px 2px 0px var(--primary)",
+                    }}
+                  >
+                    <span style={{ display: "flex", gap: "3px" }}>
+                      <span style={{ width: "4px", height: "14px", backgroundColor: "var(--primary)" }}></span>
+                      <span style={{ width: "4px", height: "14px", backgroundColor: "var(--primary)" }}></span>
+                    </span>
+                  </div>
+                ) : (
+                  <PlayCircle size={44} style={{ color: "var(--primary-container)" }} />
+                )}
               </button>
             </div>
           </div>
@@ -451,8 +615,8 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
                   borderWidth: "3px",
                   borderColor: "var(--primary)",
                   boxShadow: isSelected ? "0px 0px 0px var(--primary)" : "6px 6px 0px var(--primary)",
-                  transform: isSelected 
-                    ? `translate(6px, 6px) rotate(0deg)` 
+                  transform: isSelected
+                    ? `translate(6px, 6px) rotate(0deg)`
                     : `rotate(${restRotation}deg)`,
                   padding: "12px",
                   cursor: "pointer",
@@ -511,12 +675,34 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       >
         {/* Column 1: Álbumes en Dispositivo */}
         <div style={{ flex: "1 1 450px", display: "flex", flexDirection: "column", gap: "16px", minWidth: "300px" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>
-            ÁLBUMES EN DISPOSITIVO
-          </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>
+              ÁLBUMES EN DISPOSITIVO
+            </h3>
+            {isAdmin && (
+              <button
+                onClick={() => setShowAddAlbumModal(true)}
+                className="neo-button"
+                style={{
+                  padding: "4px 10px",
+                  fontSize: "0.7rem",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  backgroundColor: "var(--primary-container)",
+                  fontWeight: 900,
+                }}
+              >
+                + AÑADIR
+              </button>
+            )}
+          </div>
+          {playlistAlbums.length === 0 && favoriteAlbums.length === 0 && (
+            <p style={{ fontSize: "0.65rem", opacity: 0.6, margin: "-8px 0 0 4px" }}>
+              📡 Mostrando álbumes sugeridos. Añade canciones a tu playlist para ver tus álbumes aquí.
+            </p>
+          )}
 
           <div style={{ display: "flex", gap: "12px", overflowX: "auto", padding: "18px 16px 12px 16px" }}>
-            {albums.map((album) => (
+            {displayedAlbums.map((album) => (
               <div
                 key={album.id}
                 className="neo-card fun-hover-wobble"
@@ -563,9 +749,14 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           <h3 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>
             CANCIONES SINTONIZADAS
           </h3>
+          {isSongsFallback && (
+            <p style={{ fontSize: "0.65rem", opacity: 0.6, margin: "-8px 0 0 4px" }}>
+              📡 Mostrando canciones sugeridas. Marca tus favoritas en el reproductor para verlas aquí.
+            </p>
+          )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {songs.map((song) => (
+            {displayedSongs.map((song) => (
               <div
                 key={song.id}
                 className="neo-card fun-hover-wobble"
@@ -597,6 +788,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
                     <button
                       onClick={() => toggleSongFavorite(song.id)}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: "6px" }}
+                      aria-label="Favorito"
                     >
                       <Star
                         size={20}
@@ -714,6 +906,230 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
             >
               GUARDAR
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Album Modal Overlay */}
+      {showAddAlbumModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            className="neo-card"
+            style={{
+              width: "100%",
+              maxWidth: "340px",
+              backgroundColor: "white",
+              padding: "20px",
+              boxShadow: "6px 6px 0px var(--primary)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>AÑADIR ÁLBUM</h3>
+              <button
+                onClick={() => setShowAddAlbumModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--primary)" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>NOMBRE DEL ÁLBUM *:</label>
+                <input
+                  type="text"
+                  value={newAlbumName}
+                  onChange={(e) => setNewAlbumName(e.target.value)}
+                  placeholder="Ej: Berlín Underground"
+                  style={{ width: "100%", padding: "8px", border: "2px solid var(--primary)", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>ARTISTA / BANDA *:</label>
+                <input
+                  type="text"
+                  value={newAlbumArtist}
+                  onChange={(e) => setNewAlbumArtist(e.target.value)}
+                  placeholder="Ej: Schatten DJ"
+                  style={{ width: "100%", padding: "8px", border: "2px solid var(--primary)", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: "0.75rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>AÑO:</label>
+                  <input
+                    type="text"
+                    value={newAlbumYear}
+                    onChange={(e) => setNewAlbumYear(e.target.value)}
+                    placeholder="Ej: 2026"
+                    style={{ width: "100%", padding: "8px", border: "2px solid var(--primary)", outline: "none", fontSize: "0.85rem" }}
+                  />
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: "0.75rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>GÉNERO:</label>
+                  <input
+                    type="text"
+                    value={newAlbumGenre}
+                    onChange={(e) => setNewAlbumGenre(e.target.value)}
+                    placeholder="Ej: TECHNO"
+                    style={{ width: "100%", padding: "8px", border: "2px solid var(--primary)", outline: "none", fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.75rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>URL DE PORTADA (IMAGEN):</label>
+                <input
+                  type="url"
+                  value={newAlbumImageUrl}
+                  onChange={(e) => setNewAlbumImageUrl(e.target.value)}
+                  placeholder="Dejar vacío para usar predeterminada"
+                  style={{ width: "100%", padding: "8px", border: "2px solid var(--primary)", outline: "none", fontSize: "0.85rem" }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddAlbumSubmit}
+              className="neo-button"
+              style={{
+                backgroundColor: "var(--primary-container)",
+                width: "100%",
+                padding: "10px",
+                fontSize: "0.8rem",
+              }}
+            >
+              CREAR ÁLBUM
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 10. ADMIN USER MANAGEMENT PANEL */}
+      {isAdmin && (
+        <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "768px", gap: "16px", marginTop: "24px" }}>
+          <h3
+            style={{
+              fontSize: "1.1rem",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              borderBottom: "4px solid var(--primary)",
+              paddingBottom: "6px",
+              width: "max-content",
+            }}
+          >
+            🛡️ GESTIÓN DE ROLES DE USUARIOS
+          </h3>
+
+          <div
+            className="neo-card"
+            style={{
+              backgroundColor: "white",
+              padding: "16px",
+              boxShadow: "6px 6px 0px var(--primary)",
+              maxHeight: "350px",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            {usersList.length === 0 ? (
+              <p style={{ fontSize: "0.75rem", opacity: 0.7 }}>Cargando lista de usuarios...</p>
+            ) : (
+              usersList.map((user) => (
+                <div
+                  key={user.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px",
+                    border: "2px solid var(--primary)",
+                    backgroundColor: "var(--surface-container)",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "200px" }}>
+                    <img
+                      src={user.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${user.username}`}
+                      alt={user.username || "Usuario"}
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        objectFit: "cover",
+                        border: "2px solid var(--primary)",
+                        borderRadius: "50%",
+                        backgroundColor: "white",
+                      }}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <h4
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 900,
+                          textTransform: "uppercase",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {user.full_name || user.username || "Usuario"}
+                      </h4>
+                      <p style={{ fontSize: "0.6rem", opacity: 0.7, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        ID: {user.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <label style={{ fontSize: "0.65rem", fontWeight: "bold" }}>ROL:</label>
+                    <select
+                      value={user.role}
+                      onChange={(e) => handleUpdateUserRole(user.id, e.target.value)}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "0.7rem",
+                        fontWeight: 900,
+                        border: "2px solid var(--primary)",
+                        outline: "none",
+                        backgroundColor: "white",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {["OYENTE", "VIP", "MODERADOR", "STREAMER", "ADMIN"].map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

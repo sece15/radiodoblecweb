@@ -96,18 +96,38 @@ export const SpotifyPlayerBar = ({
             transform: isPlaying ? "rotate(1.5deg)" : "none",
             transition: "transform 0.3s ease",
             position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <img
             src={currentTrack.imageUrl}
             alt="Track"
             style={{
-              width: "100%",
-              height: "100%",
+              width: "92%",
+              height: "92%",
               objectFit: "cover",
+              borderRadius: "50%",
               animation: isPlaying ? "spin 20s linear infinite" : "none",
             }}
           />
+          {/* Vinyl center spindle hole */}
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              width: "10px",
+              height: "10px",
+              backgroundColor: "white",
+              border: "2px solid var(--primary)",
+              borderRadius: "50%",
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          ></div>
         </div>
 
         <div style={{ minWidth: 0, overflow: "hidden" }}>

@@ -76,6 +76,7 @@ interface AudioContextType {
   deleteTrackFromPlaylist: (id: number) => void;
   saveProfile: (name: string, role: string, avatarUrl: string, hours: number, followers: string) => void;
   updateUserRole: (newRole: string) => void;
+  addAlbum: (name: string, artist: string, releaseYear: string, genre: string, imageUrl: string) => void;
 
   // Chat socket & moderation configurations
   isLiveChatModeActive: boolean;
@@ -151,7 +152,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   const [programs] = useState<RadioProgram[]>(INITIAL_PROGRAMS);
   const [pastBroadcasts] = useState<PastBroadcast[]>(INITIAL_PAST_BROADCASTS);
   const [songs, toggleSongFavorite] = useLocalStorageToggle<Song>("fav_songs", INITIAL_SONGS, "isFavorite");
-  const [albums] = useState<Album[]>(INITIAL_ALBUMS);
+  const [albums, setAlbums] = useLocalStorage<Album[]>("custom_albums", INITIAL_ALBUMS);
   const [playlistTracks, setPlaylistTracks] = useLocalStorage<{ id: number; title: string; artist: string; album: string; imageUrl: string }[]>("playlist_tracks", []);
   
   // User Profile
@@ -393,22 +394,33 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     // 5. Supabase Auth state collection
     let subscription: Subscription | null = null;
     if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      const client = supabase;
+      client.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           setIsAuthenticated(true);
           const meta = session.user.user_metadata;
           const uName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
           const uAvatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${uName}`;
           
-          setUserProfile(prev => {
-            const updated = {
-              ...prev,
-              name: uName.toUpperCase(),
-              avatarUrl: uAvatar,
-            };
-            localStorage.setItem("user_profile", JSON.stringify(updated));
-            return updated;
-          });
+          // Fetch actual database role from profiles table and set profile
+          client
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single()
+            .then(({ data, error }) => {
+              const dbRole = !error && data?.role ? data.role : "OYENTE";
+              setUserProfile(prev => {
+                const updated = {
+                  ...prev,
+                  name: uName.toUpperCase(),
+                  avatarUrl: uAvatar,
+                  role: dbRole
+                };
+                localStorage.setItem("user_profile", JSON.stringify(updated));
+                return updated;
+              });
+            });
 
           // Connect Socket.IO chat
           connectChatSocket(uName, session.access_token);
@@ -418,22 +430,32 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           connectChatSocket("Oyente", "guest");
         }
       });
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = client.auth.onAuthStateChange((event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session) {
           setIsAuthenticated(true);
           const meta = session.user.user_metadata;
           const uName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
           const uAvatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${uName}`;
           
-          setUserProfile(prev => {
-            const updated = {
-              ...prev,
-              name: uName.toUpperCase(),
-              avatarUrl: uAvatar,
-            };
-            localStorage.setItem("user_profile", JSON.stringify(updated));
-            return updated;
-          });
+          // Fetch actual database role from profiles table and set profile
+          client
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single()
+            .then(({ data, error }) => {
+              const dbRole = !error && data?.role ? data.role : "OYENTE";
+              setUserProfile(prev => {
+                const updated = {
+                  ...prev,
+                  name: uName.toUpperCase(),
+                  avatarUrl: uAvatar,
+                  role: dbRole
+                };
+                localStorage.setItem("user_profile", JSON.stringify(updated));
+                return updated;
+              });
+            });
 
           connectChatSocket(uName, session.access_token);
 
@@ -735,6 +757,18 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile({ name, role, avatarUrl, stashHours: hours, followersCount: followers });
   };
 
+  const addAlbum = (name: string, artist: string, releaseYear: string, genre: string, imageUrl: string) => {
+    const newAlbum: Album = {
+      id: `album-${Date.now()}`,
+      name,
+      artist,
+      releaseYear,
+      genre,
+      imageUrl: imageUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
+    };
+    setAlbums((prev) => [...prev, newAlbum]);
+  };
+
   // SC-06: Solo disponible en modo desarrollo para evitar manipulación de roles desde la consola del navegador.
   const updateUserRole = (newRole: string) => {
     if (process.env.NODE_ENV !== "development") {
@@ -898,6 +932,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         deleteTrackFromPlaylist,
         saveProfile,
         updateUserRole,
+        addAlbum,
         isLiveChatModeActive,
         setLiveChatModeActive,
         sendChatMessage,
