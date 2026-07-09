@@ -29,7 +29,6 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     deleteMessage,
     clearChat,
     userProfile,
-    updateUserRole,
     listenersCount,
     isAuthenticated,
     signInWithGoogle,
@@ -183,35 +182,6 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               overflowY: "auto",
             }}
           >
-            <div>
-              <span style={{ fontWeight: 900, display: "block", marginBottom: "4px" }}>
-                🧪 PROBADOR DE ROLES:
-              </span>
-              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                {["OYENTE", "VIP", "MODERADOR", "STREAMER"].map((role) => {
-                  const isRoleActive = userProfile.role.toUpperCase().includes(role === "MODERADOR" ? "MOD" : role);
-                  return (
-                    <button
-                      key={role}
-                      onClick={() => updateUserRole(role)}
-                      style={{
-                        flex: "1 1 45%",
-                        padding: "2px",
-                        fontSize: "0.55rem",
-                        fontWeight: "bold",
-                        backgroundColor: isRoleActive ? "var(--primary-container)" : "white",
-                        border: "1px solid var(--primary)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {role}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <hr style={{ borderColor: "rgba(0,0,0,0.1)" }} />
 
             <div>
               <span style={{ fontWeight: 900, display: "block", marginBottom: "4px" }}>
