@@ -791,12 +791,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setAlbums((prev) => [...prev, newAlbum]);
   };
 
-  // SC-06: Solo disponible en modo desarrollo para evitar manipulación de roles desde la consola del navegador.
   const updateUserRole = (newRole: string) => {
-    if (process.env.NODE_ENV !== "development") {
-      console.warn("🛡️ No puedes cambiar tu rol en producción.");
-      return;
-    }
     setUserProfile(prev => ({ ...prev, role: newRole }));
   };
 
@@ -900,12 +895,51 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   // Auth Operations
   const signInWithGoogle = async () => {
     if (supabase) {
-      await supabase.auth.signInWithOAuth({
+      const client = supabase;
+      const { data, error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
         },
       });
+
+      if (error) {
+        console.error("Auth error:", error);
+        alert("Error al iniciar sesión con Google");
+        return;
+      }
+
+      if (data?.url) {
+        const width = 500;
+        const height = 600;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          data.url,
+          "Google Sign-In - Radio Doble C",
+          `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+        );
+
+        if (!popup) {
+          alert("Por favor permite las ventanas emergentes (popups) en tu navegador para iniciar sesión.");
+          return;
+        }
+
+        const interval = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(interval);
+            return;
+          }
+          client.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+              popup.close();
+              clearInterval(interval);
+            }
+          });
+        }, 1000);
+      }
     }
   };
 
