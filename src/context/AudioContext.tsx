@@ -309,11 +309,16 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       if (supabase) {
         const checkAndClose = (session: Session | null) => {
           if (session) {
+            console.log("[OAuth Popup] Session found! Sending message to opener...", session);
             try {
               window.opener.postMessage({ type: "SUPABASE_AUTH_SUCCESS", session }, "*");
-              window.close();
+              console.log("[OAuth Popup] Message sent successfully. Closing popup shortly...");
+              setTimeout(() => {
+                window.close();
+              }, 250);
             } catch (e) {
-              console.error("Popup communication error:", e);
+              console.error("[OAuth Popup] Error sending message to opener:", e);
+              window.close();
             }
           }
         };
@@ -426,17 +431,33 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for auth success messages from the popup window
     const handleAuthMessage = (event: MessageEvent) => {
-      const allowedOrigins = [
-        window.location.origin,
-        "https://radiodoblec.com",
-        "https://radiodoblecweb.vercel.app"
-      ];
-      if (!allowedOrigins.includes(event.origin)) return;
+      console.log("[Parent Window] Message received:", event.origin, event.data);
+      const origin = event.origin;
+      const isAllowed = 
+        origin === window.location.origin ||
+        origin.endsWith("radiodoblec.com") ||
+        origin.endsWith("vercel.app") ||
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:");
+
+      if (!isAllowed) {
+        console.warn("[Parent Window] Ignored message from unauthorized origin:", origin);
+        return;
+      }
 
       if (event.data?.type === "SUPABASE_AUTH_SUCCESS" && event.data?.session) {
+        const session = event.data.session;
+        console.log("[Parent Window] Found session in message, setting session in Supabase...");
         if (supabase) {
-          supabase.auth.setSession(event.data.session).then(() => {
-            console.log("Session set from popup postMessage");
+          supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }).then(({ data, error }) => {
+            if (error) {
+              console.error("[Parent Window] Supabase setSession error:", error);
+            } else {
+              console.log("[Parent Window] Supabase session set successfully!", data);
+            }
           });
         }
       }
