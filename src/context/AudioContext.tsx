@@ -28,6 +28,14 @@ import {
 } from "@/constants";
 import { useLocalStorage, useLocalStorageToggle } from "@/hooks/useLocalStorage";
 
+// Mapa de portadas personalizadas para canciones que no se encuentran en iTunes ni se emparejan automáticamente
+const CUSTOM_ARTWORK_MAP: Record<string, string> = {
+  // Formato: "artista - titulo": "URL de la imagen" (todo en minúsculas y sin espacios adicionales)
+  // Ejemplos:
+  // "nombre artista - cancion": "https://url-de-la-imagen.com/portada.jpg",
+  // "grupo amigo - demo track": "/portadas/disco_amigo.jpg",
+};
+
 interface AudioContextType {
   // Audio state
   isPlaying: boolean;
@@ -391,17 +399,64 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
             setIsStreamerLive(np.live?.is_live || false);
             setListenersCount(np.listeners?.current || 0);
             if (np.live?.streamer_name) setLiveShowName(np.live.streamer_name);
-            if (np.now_playing?.song?.title) {
-              setLiveTrackTitle(`${np.now_playing.song.title} - ${np.now_playing.song.artist}`);
+
+            const title = np.now_playing?.song?.title || "";
+            const artist = np.now_playing?.song?.artist || "";
+
+            if (title) {
+              setLiveTrackTitle(`${title} - ${artist}`);
             }
+
+            // Determine cover art URL
+            let artUrl = np.now_playing?.song?.art;
+
+            // If it's a relative URL, prepend the AzuraCast base URL
+            if (artUrl && artUrl.startsWith("/")) {
+              artUrl = `${azuraUrl}${artUrl}`;
+            }
+
+            // Force HTTPS to avoid Mixed Content block in production
+            if (artUrl && artUrl.startsWith("http://") && typeof window !== "undefined" && window.location.protocol === "https:") {
+              artUrl = artUrl.replace("http://", "https://");
+            }
+
+            // Check custom mapping first (case-insensitive)
+            const customKey = `${artist} - ${title}`.toLowerCase().trim();
+            if (CUSTOM_ARTWORK_MAP[customKey]) {
+              artUrl = CUSTOM_ARTWORK_MAP[customKey];
+            } else {
+              // Fallback to iTunes Search API if artUrl is empty or generic/default station image
+              const isDefaultOrMissingArt = !artUrl || artUrl.includes("default") || artUrl.includes("generic") || artUrl.includes("station");
+              if (artist && title && isDefaultOrMissingArt) {
+                try {
+                  // Search iTunes API for artist and title
+                  const iTunesRes = await fetch(
+                    `https://itunes.apple.com/search?term=${encodeURIComponent(artist + " " + title)}&entity=song&limit=1`
+                  );
+                  if (iTunesRes.ok) {
+                    const iTunesData = await iTunesRes.json();
+                    if (iTunesData.results && iTunesData.results.length > 0) {
+                      // Extract the high-res 500x500 artwork instead of the default 100x100
+                      artUrl = iTunesData.results[0].artworkUrl100.replace("100x100bb", "500x500bb");
+                    }
+                  }
+                } catch (e) {
+                  console.warn("[iTunes Search] Artwork lookup failed:", e);
+                }
+              }
+            }
+
+            const defaultStationLogo = "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR";
+            const finalArtUrl = artUrl || defaultStationLogo;
+
             // If current play is live, sync metadata
             if (currentTrack.streamUrl.includes("/live.m3u8") || currentTrack.streamUrl === DEFAULT_STREAM) {
               setCurrentTrack(prev => ({
                 ...prev,
-                title: np.now_playing?.song?.title || prev.title,
+                title: title || prev.title,
                 album: np.now_playing?.song?.album || prev.album,
-                artist: np.now_playing?.song?.artist || prev.artist,
-                imageUrl: np.now_playing?.song?.art || prev.imageUrl,
+                artist: artist || prev.artist,
+                imageUrl: finalArtUrl,
               }));
             }
           }
