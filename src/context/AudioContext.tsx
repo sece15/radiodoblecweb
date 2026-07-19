@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Subscription } from "@supabase/supabase-js";
+import type { Subscription, Session } from "@supabase/supabase-js";
 import { io, Socket } from "socket.io-client";
 import type Hls from "hls.js";
 import {
@@ -304,7 +304,37 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // 2. Initialize progress simulator, metadata polling, and auth listeners
   useEffect(() => {
-    // 2. Playback progress ticks simulator
+    // 2a. Check if this is a popup auth callback (Same Origin or Cross Origin)
+    if (typeof window !== "undefined" && window.opener && window.opener !== window) {
+      if (supabase) {
+        const checkAndClose = (session: Session | null) => {
+          if (session) {
+            try {
+              window.opener.postMessage({ type: "SUPABASE_AUTH_SUCCESS", session }, "*");
+              window.close();
+            } catch (e) {
+              console.error("Popup communication error:", e);
+            }
+          }
+        };
+
+        // Try getting session immediately
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          checkAndClose(session);
+        });
+
+        // Also listen to auth changes in case they haven't settled yet
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          checkAndClose(session);
+        });
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      }
+    }
+
+    // 2b. Playback progress ticks simulator
     const progressInterval = setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) {
         if (currentTrack.isLive) {
@@ -393,6 +423,26 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
     // 5. Supabase Auth state collection
     let subscription: Subscription | null = null;
+
+    // Listen for auth success messages from the popup window
+    const handleAuthMessage = (event: MessageEvent) => {
+      const allowedOrigins = [
+        window.location.origin,
+        "https://radiodoblec.com",
+        "https://radiodoblecweb.vercel.app"
+      ];
+      if (!allowedOrigins.includes(event.origin)) return;
+
+      if (event.data?.type === "SUPABASE_AUTH_SUCCESS" && event.data?.session) {
+        if (supabase) {
+          supabase.auth.setSession(event.data.session).then(() => {
+            console.log("Session set from popup postMessage");
+          });
+        }
+      }
+    };
+    window.addEventListener("message", handleAuthMessage);
+
     if (supabase) {
       const client = supabase;
       client.auth.getSession().then(({ data: { session } }) => {
@@ -487,6 +537,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       if (subscription) {
         subscription.unsubscribe();
       }
+      window.removeEventListener("message", handleAuthMessage);
       clearInterval(progressInterval);
       clearInterval(scanInterval);
       clearInterval(metadataInterval);
