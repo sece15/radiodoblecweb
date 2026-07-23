@@ -1,5 +1,5 @@
 import { useState, CSSProperties } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { RadioProgram, PastBroadcast } from "@/types";
 import { Heart, Share2, Megaphone, Play, X } from "lucide-react";
 
@@ -21,7 +21,6 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
     liveShowName,
     liveTrackTitle,
     liveStatusText,
-    scanState,
     currentTrack,
     isPlaying,
   } = useAudio();
@@ -237,6 +236,8 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   <img
                     src={station.imageUrl}
                     alt={station.name}
+                    loading="lazy"
+                    decoding="async"
                     style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
                   />
 
@@ -384,6 +385,8 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   <img
                     src={prog.imageUrl}
                     alt={prog.title}
+                    loading="lazy"
+                    decoding="async"
                     style={{ width: "64px", height: "64px", objectFit: "cover", border: "2px solid var(--primary)" }}
                   />
 
@@ -514,7 +517,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   zIndex: 2,
                 }}
               >
-                {scanState}
+                SIGNAL OK
               </span>
             </div>
 

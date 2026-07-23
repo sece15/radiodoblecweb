@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { ArrowLeft, X, Music, Radio, Play } from "lucide-react";
 
 interface SearchOverlayProps {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { ZineBackgroundFrame } from "@/components/ZineBackgroundFrame";
 import { ExploreView } from "@/components/ExploreView";
 import { PlayerView } from "@/components/PlayerView";

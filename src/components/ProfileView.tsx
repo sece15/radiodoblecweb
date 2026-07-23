@@ -1,5 +1,5 @@
 import { useState, useEffect, CSSProperties } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { Check, Edit, Share2, LogOut, Clock, Users, Star, PlayCircle, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 

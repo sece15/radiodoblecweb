@@ -1,5 +1,5 @@
 import { useRef, MouseEvent, TouchEvent } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward } from "lucide-react";
 
 interface SpotifyPlayerBarProps {

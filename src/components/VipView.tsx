@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { Play, Download, Music, Plus, Sparkles, FolderLock } from "lucide-react";
 import { Song } from "@/types";
 

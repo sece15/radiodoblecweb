@@ -1,8 +1,10 @@
+"use client";
+
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
 
 /**
- * Custom hook to manage and persist simple state in localStorage.
- * Initializes with the default value (to match SSR) and hydrates on mount.
+ * Hook personalizado para gestionar y persistir estado simple en localStorage.
+ * Se inicializa con el valor por defecto (para coincidir con SSR) y se hidrata al montar.
  */
 export function useLocalStorage<T>(key: string, defaultValue: T): [T, Dispatch<SetStateAction<T>>] {
   const [state, setState] = useState<T>(defaultValue);
@@ -17,7 +19,7 @@ export function useLocalStorage<T>(key: string, defaultValue: T): [T, Dispatch<S
         }, 0);
         return () => clearTimeout(timer);
       } catch {
-        // Fallback for raw non-JSON strings (like activeTheme "PUNK_NEON")
+        // Respaldar cadenas de texto plano que no son JSON (ej. activeTheme "PUNK_NEON")
         const timer = setTimeout(() => {
           setState(saved as unknown as T);
         }, 0);
@@ -29,7 +31,7 @@ export function useLocalStorage<T>(key: string, defaultValue: T): [T, Dispatch<S
   const setPersistedState: Dispatch<SetStateAction<T>> = (value) => {
     setState((prev) => {
       const newValue = value instanceof Function ? value(prev) : value;
-      // If it is a string, store it as a raw string to match existing local storage formats
+      // Si es una cadena, guardar como texto plano para coincidir con formatos existentes
       localStorage.setItem(key, typeof newValue === "string" ? newValue : JSON.stringify(newValue));
       return newValue;
     });
@@ -39,8 +41,8 @@ export function useLocalStorage<T>(key: string, defaultValue: T): [T, Dispatch<S
 }
 
 /**
- * Custom hook to manage a list where items can be toggled (liked, favorited, etc.)
- * and their IDs are saved as an array of strings in localStorage.
+ * Hook personalizado para gestionar una lista donde los elementos se pueden conmutar (me gusta, favoritos, etc.)
+ * y sus IDs se guardan como un arreglo de cadenas en localStorage.
  */
 export function useLocalStorageToggle<T extends { id: string }>(
   key: string,
@@ -64,7 +66,7 @@ export function useLocalStorageToggle<T extends { id: string }>(
         }, 0);
         return () => clearTimeout(timer);
       } catch (e) {
-        console.error(`Error parsing localStorage key "${key}"`, e);
+        console.error(`Error al analizar la clave de localStorage "${key}"`, e);
       }
     }
   }, [key, toggleKey]);

@@ -1,6 +1,6 @@
 import { CSSProperties, useState } from "react";
 import { Search, ShoppingCart } from "lucide-react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 

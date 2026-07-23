@@ -81,11 +81,11 @@ export interface Product {
 }
 
 export interface CartItem {
-  id: string; // combination: productId-color-size
+  id: string; // Combinación: idProducto-color-talla
   product: {
     id: string;
     name: string;
-    price: string; // e.g. "$25.00"
+    price: string; // ej. "$25.00"
     imageUrl: string;
   };
   color: string;

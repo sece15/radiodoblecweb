@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { Send, User, Ban, X } from "lucide-react";
 
 interface ChatSidebarProps {

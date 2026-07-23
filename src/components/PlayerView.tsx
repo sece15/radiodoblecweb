@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, MouseEvent, TouchEvent, KeyboardEvent } from "react";
-import { useAudio } from "@/context/AudioContext";
+import { useAudio } from "@/hooks/useAudio";
 import { Play, Pause, Volume2, VolumeX, FastForward, Send, User } from "lucide-react";
 
 interface PlayerViewProps {
