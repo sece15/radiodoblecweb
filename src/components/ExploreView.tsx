@@ -44,12 +44,14 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
   const [djBio, setDjBio] = useState("");
   const [djSubmitted, setDjSubmitted] = useState(false);
 
-  const categories = ["TODOS", "ROCK N' ROLL / ALTERNATIVO", "PEDIDOS / INVITADOS", "RAP / REGGAE", "TECHNO / DANCE"];
+  const categories = ["TODOS", "MAGAZINE / DISCOS", "ROCK N' ROLL / ALTERNATIVO", "PEDIDOS / INVITADOS", "RAP / REGGAE", "TECHNO / DANCE"];
 
   // Filter stations based on selected style
   const filteredStations = stations.filter((station) => {
     if (selectedStyle === "TODOS") return true;
-    return station.style.toUpperCase() === selectedStyle.toUpperCase();
+    const sStyle = station.style.toUpperCase();
+    const selStyle = selectedStyle.toUpperCase();
+    return sStyle === selStyle || sStyle.includes(selStyle) || selStyle.includes(sStyle);
   });
 
   const getPastBroadcastsForProgram = (programId: string): PastBroadcast[] => {

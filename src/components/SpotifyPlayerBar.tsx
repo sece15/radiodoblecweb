@@ -79,8 +79,6 @@ export const SpotifyPlayerBar = ({
           minWidth: "180px",
         }}
       >
-
-
         <div
           onClick={onExpand}
           style={{

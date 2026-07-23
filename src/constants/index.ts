@@ -30,6 +30,24 @@ export const INITIAL_STATIONS: Station[] = [
     isLiked: true,
     style: "PEDIDOS / INVITADOS /ALL MUSIC",
   },
+  {
+    id: "conversa_time",
+    name: "Conversa Time",
+    frequency: "Viernes 8 PM - 9 PM",
+    description: "Magazine musical nocturno. Primer capítulo: microinformativo playlist y reportaje de noche bohemia en la Plaza San Martín.",
+    imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80",
+    isLiked: false,
+    style: "MAGAZINE MUSICAL",
+  },
+  {
+    id: "entre_discos",
+    name: "Entre discos",
+    frequency: "Sábados 5 PM - 6:30 PM",
+    description: "Programa de los sábados sobre conversación de discos, puntuaciones a discografías y concursos.",
+    imageUrl: "https://images.unsplash.com/photo-1539375665275-f9de415ef9ac?w=600&q=80",
+    isLiked: false,
+    style: "CONVERSACIÓN / DISCOS",
+  },
 ];
 
 export const INITIAL_PROGRAMS: RadioProgram[] = [
@@ -51,11 +69,31 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
     imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHgkKkWI_L4cptOscww4Dqg9x_1l7Emt7I7f7cP8GxYKYJzFfwnp8agBIhRPcjZJzeTgH-zj8nOeiRn7iwvHmoEpiRlSp1Kjb5TTmrMRR_oAUbZKBCZY4iDX3OZoIVLWsBpfKMB4fbJ4WN66-s_w6SyWu1T0VwPmyENDkyz3VVWSRm2UBEuqa-pewg9z6FZLUb-gOuZUtWz13j1vBrHEHV2UoAfLcYLgMRYvBzFCKJ-fFwRueGTkM-KTLbprP3-qLFhpJIIjdgRMKg",
     description: "El programa se trata de pedidos musicales, conversación con invitados.",
   },
+  {
+    id: "conversa_time",
+    title: "Conversa Time",
+    host: "Doble C Team",
+    timeSlot: "VIERNES 20:00 - 21:00 (8 PM - 9 PM)",
+    genre: "MAGAZINE MUSICAL",
+    imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80",
+    description: "Magazine musical nocturno. Primer capítulo: microinformativo playlist y reportaje de noche bohemia en la Plaza San Martín.",
+  },
+  {
+    id: "entre_discos",
+    title: "Entre discos",
+    host: "Doble C Team",
+    timeSlot: "SÁBADOS 17:00 - 18:30 (5 PM - 6:30 PM)",
+    genre: "CONVERSACIÓN / DISCOS",
+    imageUrl: "https://images.unsplash.com/photo-1539375665275-f9de415ef9ac?w=600&q=80",
+    description: "Programa de los sábados de 5 a 6:30 PM sobre conversación de discos, puntuaciones a discografías y concursos.",
+  },
 ];
 
 export const INITIAL_PAST_BROADCASTS: PastBroadcast[] = [
   { id: "hits_beats_1", programId: "subterraneo", title: "Hits and Beats Vol. 1", date: "Hace 2 días", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
   { id: "koyote_1", programId: "neonpop", title: "El Espacio del Koyote: Intro", date: "Hace 1 semana", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { id: "conversa_time_1", programId: "conversa_time", title: "Conversa Time Cap. 1: Noche Bohemia Plaza San Martín", date: "Próximamente", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+  { id: "entre_discos_1", programId: "entre_discos", title: "Entre Discos Cap. 1: Especial Discografías y Concursos", date: "Próximamente", duration: "01:30:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
 ];
 
 export const INITIAL_ALBUMS: Album[] = [
