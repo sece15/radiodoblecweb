@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { Send, User, Ban, X } from "lucide-react";
+import { EmojiPicker } from "./EmojiPicker";
 
 interface ChatSidebarProps {
   onClose: () => void;
@@ -537,74 +538,106 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               ESTÁS BANEADO DEL CHAT
             </div>
           ) : (
-            <>
-              <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
-                <textarea
-                  value={typedMessage}
-                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
-                  onKeyDown={handleKeyPress}
-                  onFocus={() => setIsChatInputFocused(true)}
-                  onBlur={() => setIsChatInputFocused(false)}
-                  maxLength={150}
-                  placeholder="Escribe en la sintonía..."
-                  style={{
-                    width: "100%",
-                    height: "36px",
-                    minHeight: "36px",
-                    maxHeight: "80px",
-                    padding: "6px 8px 6px 8px",
-                    paddingRight: "45px",
-                    border: isChatInputFocused
-                      ? "2.5px solid var(--primary)"
-                      : "2px solid var(--primary)",
-                    outline: "none",
-                    fontSize: "0.7rem",
-                    resize: "none",
-                    fontFamily: "inherit",
-                    backgroundColor: "#FFFFFF",
-                    color: "#111111",
-                    caretColor: "#111111",
-                    cursor: "text",
-                    boxShadow: isChatInputFocused
-                      ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                      : "none",
-                    transition: "box-shadow 0.15s ease, border 0.15s ease",
-                  }}
-                />
-                <span
-                  style={{
-                    position: "absolute",
-                    bottom: "4px",
-                    right: "6px",
-                    fontSize: "0.55rem",
-                    fontWeight: 900,
-                    color: typedMessage.length >= 135 ? "#BA1A1A" : "gray",
-                    pointerEvents: "none",
-                    opacity: typedMessage.length > 0 ? 0.7 : 0,
-                    transition: "opacity 0.2s, color 0.2s",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {typedMessage.length}/150
-                </span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+              {/* Quick Reactions Bar */}
+              <div style={{ display: "flex", gap: "5px", alignItems: "center", overflowX: "auto", paddingBottom: "2px" }}>
+                <span style={{ fontSize: "0.55rem", fontWeight: 900, opacity: 0.7 }}>REACCIÓN:</span>
+                {["🔥", "📻", "🎙️", "⚡", "🤘", "🎧", "🎸", "🖤"].map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setTypedMessage((prev) => (prev + e).slice(0, 150))}
+                    style={{
+                      background: "none",
+                      border: "1.5px solid var(--primary)",
+                      borderRadius: "3px",
+                      padding: "1px 4px",
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      backgroundColor: "var(--card-bg)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {e}
+                  </button>
+                ))}
               </div>
 
-              <button
-                onClick={handleSend}
-                className="neo-button"
-                style={{
-                  height: "36px",
-                  padding: "0 12px",
-                  backgroundColor: "var(--primary-container)",
-                  boxShadow: "2px 2px 0px var(--primary)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Send size={12} />
-              </button>
-            </>
+              <div style={{ display: "flex", gap: "6px", alignItems: "flex-end" }}>
+                <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+                  <textarea
+                    value={typedMessage}
+                    onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
+                    onKeyDown={handleKeyPress}
+                    onFocus={() => setIsChatInputFocused(true)}
+                    onBlur={() => setIsChatInputFocused(false)}
+                    maxLength={150}
+                    placeholder="Escribe en la sintonía..."
+                    style={{
+                      width: "100%",
+                      height: "36px",
+                      minHeight: "36px",
+                      maxHeight: "80px",
+                      padding: "6px 8px 6px 8px",
+                      paddingRight: "45px",
+                      border: isChatInputFocused
+                        ? "2.5px solid var(--primary)"
+                        : "2px solid var(--primary)",
+                      outline: "none",
+                      fontSize: "0.7rem",
+                      resize: "none",
+                      fontFamily: "inherit",
+                      backgroundColor: "#FFFFFF",
+                      color: "#111111",
+                      caretColor: "#111111",
+                      cursor: "text",
+                      boxShadow: isChatInputFocused
+                        ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
+                        : "none",
+                      transition: "box-shadow 0.15s ease, border 0.15s ease",
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      bottom: "4px",
+                      right: "6px",
+                      fontSize: "0.55rem",
+                      fontWeight: 900,
+                      color: typedMessage.length >= 135 ? "#BA1A1A" : "gray",
+                      pointerEvents: "none",
+                      opacity: typedMessage.length > 0 ? 0.7 : 0,
+                      transition: "opacity 0.2s, color 0.2s",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {typedMessage.length}/150
+                  </span>
+                </div>
+
+                <EmojiPicker
+                  onSelectEmoji={(emoji) => setTypedMessage((prev) => (prev + emoji).slice(0, 150))}
+                  dropDirection="up"
+                  buttonSize={14}
+                />
+
+                <button
+                  onClick={handleSend}
+                  className="neo-button"
+                  style={{
+                    height: "32px",
+                    padding: "0 10px",
+                    backgroundColor: "var(--primary-container)",
+                    boxShadow: "2px 2px 0px var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Send size={12} />
+                </button>
+              </div>
+            </div>
           )}
       </div>
     </div>

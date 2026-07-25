@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, MouseEvent, TouchEvent, KeyboardEvent } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { Play, Pause, Volume2, VolumeX, FastForward, Send, User } from "lucide-react";
+import { EmojiPicker } from "./EmojiPicker";
 
 interface PlayerViewProps {
   onClose: () => void;
@@ -650,52 +651,83 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                   ESTÁS BANEADO
                 </div>
               ) : (
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="text"
-                    className="chat-input-player"
-                    value={typedMessage}
-                    onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
-                    onKeyDown={handleKeyPress}
-                    onFocus={() => setIsChatInputFocused(true)}
-                    onBlur={() => setIsChatInputFocused(false)}
-                    maxLength={100}
-                    placeholder="Escribe algo..."
-                    style={{
-                      flex: 1,
-                      height: "32px",
-                      padding: "4px 8px 4px 12px",
-                      border: isChatInputFocused
-                        ? "2.5px solid var(--primary)"
-                        : "2px solid var(--primary)",
-                      outline: "none",
-                      fontSize: "0.7rem",
-                      fontFamily: "inherit",
-                      backgroundColor: "#FFFFFF",
-                      color: "#111111",
-                      caretColor: "#111111",
-                      cursor: "text",
-                      boxShadow: isChatInputFocused
-                        ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                        : "none",
-                      transition: "box-shadow 0.15s ease, border 0.15s ease",
-                    }}
-                  />
-                  <button
-                    onClick={handleSend}
-                    className="neo-button"
-                    style={{
-                      height: "32px",
-                      padding: "0 10px",
-                      backgroundColor: "var(--primary-container)",
-                      boxShadow: "2px 2px 0px var(--primary)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Send size={10} />
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+                  {/* Quick Reactions Bar */}
+                  <div style={{ display: "flex", gap: "4px", alignItems: "center", overflowX: "auto", paddingBottom: "2px" }}>
+                    <span style={{ fontSize: "0.55rem", fontWeight: 900, opacity: 0.7 }}>REACCIÓN:</span>
+                    {["🔥", "📻", "🎙️", "⚡", "🤘", "🎧", "🎸", "🖤"].map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => setTypedMessage((prev) => (prev + e).slice(0, 100))}
+                        style={{
+                          background: "none",
+                          border: "1.5px solid var(--primary)",
+                          borderRadius: "3px",
+                          padding: "1px 4px",
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
+                          backgroundColor: "var(--card-bg)",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <input
+                      type="text"
+                      className="chat-input-player"
+                      value={typedMessage}
+                      onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
+                      onKeyDown={handleKeyPress}
+                      onFocus={() => setIsChatInputFocused(true)}
+                      onBlur={() => setIsChatInputFocused(false)}
+                      maxLength={100}
+                      placeholder="Escribe algo..."
+                      style={{
+                        flex: 1,
+                        height: "32px",
+                        padding: "4px 8px 4px 12px",
+                        border: isChatInputFocused
+                          ? "2.5px solid var(--primary)"
+                          : "2px solid var(--primary)",
+                        outline: "none",
+                        fontSize: "0.7rem",
+                        fontFamily: "inherit",
+                        backgroundColor: "#FFFFFF",
+                        color: "#111111",
+                        caretColor: "#111111",
+                        cursor: "text",
+                        boxShadow: isChatInputFocused
+                          ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
+                          : "none",
+                        transition: "box-shadow 0.15s ease, border 0.15s ease",
+                      }}
+                    />
+                    <EmojiPicker
+                      onSelectEmoji={(emoji) => setTypedMessage((prev) => (prev + emoji).slice(0, 100))}
+                      dropDirection="up"
+                      buttonSize={12}
+                    />
+                    <button
+                      onClick={handleSend}
+                      className="neo-button"
+                      style={{
+                        height: "32px",
+                        padding: "0 10px",
+                        backgroundColor: "var(--primary-container)",
+                        boxShadow: "2px 2px 0px var(--primary)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Send size={10} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
