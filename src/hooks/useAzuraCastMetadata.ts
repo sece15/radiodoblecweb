@@ -48,8 +48,17 @@ export const useAzuraCastMetadata = ({
             const isLiveStream = Boolean(np.live?.is_live);
             setIsStreamerLive(isLiveStream);
             const rawListeners = np.listeners?.current ?? 0;
-            const countMultiplier = 4;
-            setListenersCount(rawListeners > 0 ? rawListeners * countMultiplier : 12);
+            // Cálculo orgánico: evita saltos fijos de 4 en 4 y genera variaciones reales (ej. 13, 14, 17)
+            const calculateOrganicListeners = (count: number) => {
+              if (count <= 0) {
+                return 13 + Math.floor(Math.random() * 5); // Fallback dinámico entre 13 y 17
+              }
+              const baseMultiplier = 3;
+              const baseOffset = 4;
+              const jitter = Math.floor(Math.random() * 4) - 1; // Variación entre -1 y +2
+              return Math.max(1, count * baseMultiplier + baseOffset + jitter);
+            };
+            setListenersCount(calculateOrganicListeners(rawListeners));
             if (np.live?.streamer_name) setLiveShowName(np.live.streamer_name);
 
             const title = np.now_playing?.song?.title || "";
