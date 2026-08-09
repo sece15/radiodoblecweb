@@ -1,4 +1,4 @@
-// Servicio de conexión con Google Drive API (Discos, Carpetas y Streaming de Audio)
+// Servicio de conexión con Google Drive API (Programas, Discos, Carpetas y Streaming)
 export interface DriveFile {
   id: string;
   name: string;
@@ -25,7 +25,59 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/google-drive-api`;
 
-// 1. Obtener la lista de todos los Álbumes (Carpetas de Discos dentro de DISCOS)
+// ID raíz conocido de la carpeta Programas en Google Drive
+export const PROGRAMAS_ROOT_FOLDER_ID = "1_uebi4lDZ8kPcVCk9rNjW7bIXfT5Qf1Y";
+
+// 1. Obtener la lista de subcarpetas de programas dentro de "Programas"
+export async function fetchProgramFolders(): Promise<DriveFile[]> {
+  try {
+    return await fetchDriveFiles(PROGRAMAS_ROOT_FOLDER_ID);
+  } catch (error) {
+    console.error("Error al cargar carpetas de programas:", error);
+    return [];
+  }
+}
+
+// 2. Normalizador de nombres de programas para búsqueda en Google Drive
+function normalizeProgramKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// 3. Obtener las grabaciones/emisiones pasadas de un programa específico
+export async function fetchProgramRecordings(programTitle: string): Promise<DriveFile[]> {
+  try {
+    const folders = await fetchProgramFolders();
+    const targetKey = normalizeProgramKey(programTitle);
+
+    // Buscar coincidencia exacta o parcial
+    const matchedFolder = folders.find((f) => {
+      const folderKey = normalizeProgramKey(f.name);
+      return (
+        folderKey === targetKey ||
+        folderKey.includes(targetKey) ||
+        targetKey.includes(folderKey)
+      );
+    });
+
+    if (!matchedFolder) {
+      console.log(`No se encontró carpeta en Drive para el programa: "${programTitle}"`);
+      return [];
+    }
+
+    // Listar los archivos dentro de la carpeta del programa
+    return await fetchDriveFiles(matchedFolder.id);
+  } catch (error) {
+    console.error(`Error al cargar grabaciones del programa ${programTitle}:`, error);
+    return [];
+  }
+}
+
+// 4. Obtener la lista de todos los Álbumes (Carpetas de Discos dentro de DISCOS)
 export async function fetchDriveAlbums(): Promise<{ discosFolderId: string; albums: DriveAlbum[] }> {
   try {
     const res = await fetch(`${FUNCTION_URL}?action=albums`, {
@@ -39,9 +91,17 @@ export async function fetchDriveAlbums(): Promise<{ discosFolderId: string; albu
     }
 
     const data = await res.json();
+    const albums = ((data.albums || []) as DriveAlbum[]).map((a) => {
+      const coverUrl = a.coverFileId ? getDriveStreamUrl(a.coverFileId) : a.coverUrl ? getDriveStreamUrl(a.coverFileId || "") : null;
+      return {
+        ...a,
+        coverUrl,
+      };
+    });
+
     return {
       discosFolderId: data.discosFolderId || "",
-      albums: (data.albums || []) as DriveAlbum[],
+      albums,
     };
   } catch (error) {
     console.error("Error al cargar álbumes de Google Drive:", error);
@@ -49,7 +109,7 @@ export async function fetchDriveAlbums(): Promise<{ discosFolderId: string; albu
   }
 }
 
-// 2. Obtener las canciones y archivos dentro de un Álbum específico
+// 5. Obtener las canciones y archivos dentro de un Álbum específico
 export async function fetchAlbumTracks(albumId: string): Promise<DriveFile[]> {
   try {
     const res = await fetch(`${FUNCTION_URL}?action=album_tracks&albumId=${encodeURIComponent(albumId)}`, {
@@ -70,7 +130,7 @@ export async function fetchAlbumTracks(albumId: string): Promise<DriveFile[]> {
   }
 }
 
-// 3. Crear una nueva carpeta de Álbum / Disco dentro de DISCOS
+// 6. Crear una nueva carpeta de Álbum / Disco dentro de DISCOS
 export async function createDriveAlbum(albumName: string, parentFolderId?: string): Promise<DriveFile> {
   const url = parentFolderId
     ? `${FUNCTION_URL}?action=create_folder&name=${encodeURIComponent(albumName)}&parentFolderId=${encodeURIComponent(parentFolderId)}`
@@ -91,7 +151,7 @@ export async function createDriveAlbum(albumName: string, parentFolderId?: strin
   return await res.json();
 }
 
-// 4. Subir canción o portada directamente a una carpeta de disco
+// 7. Subir canción o portada directamente a una carpeta de disco o programa
 export async function uploadTrackToAlbum(file: File, albumFolderId: string, customName?: string): Promise<DriveFile> {
   const formData = new FormData();
   formData.append("file", file, customName || file.name);
@@ -106,13 +166,13 @@ export async function uploadTrackToAlbum(file: File, albumFolderId: string, cust
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Error al subir canción al disco (${res.status}): ${errorText}`);
+    throw new Error(`Error al subir archivo (${res.status}): ${errorText}`);
   }
 
   return await res.json();
 }
 
-// 5. Listar archivos genéricos
+// 8. Listar archivos genéricos o de una subcarpeta
 export async function fetchDriveFiles(folderId?: string): Promise<DriveFile[]> {
   try {
     const url = folderId
@@ -137,12 +197,12 @@ export async function fetchDriveFiles(folderId?: string): Promise<DriveFile[]> {
   }
 }
 
-// 6. Generar URL de streaming directo
+// 9. Generar URL de streaming directo
 export function getDriveStreamUrl(fileId: string): string {
   return `${FUNCTION_URL}?action=download&fileId=${encodeURIComponent(fileId)}`;
 }
 
-// 7. Subir archivo a la raíz
+// 10. Subir archivo a la raíz
 export async function uploadDriveFile(file: File, customName?: string): Promise<DriveFile> {
   const formData = new FormData();
   formData.append("file", file, customName || file.name);
@@ -163,7 +223,7 @@ export async function uploadDriveFile(file: File, customName?: string): Promise<
   return await res.json();
 }
 
-// 8. Eliminar archivo o carpeta
+// 11. Eliminar archivo o carpeta
 export async function deleteDriveFile(fileId: string): Promise<boolean> {
   const res = await fetch(`${FUNCTION_URL}?action=delete&fileId=${encodeURIComponent(fileId)}`, {
     method: "DELETE",
@@ -178,4 +238,30 @@ export async function deleteDriveFile(fileId: string): Promise<boolean> {
   }
 
   return true;
+}
+
+// 12. Subir grabación de programa directamente a la carpeta del programa en Google Drive
+export async function uploadProgramRecording(
+  file: File,
+  programTitle: string,
+  customName?: string
+): Promise<DriveFile> {
+  const folders = await fetchProgramFolders();
+  const targetKey = normalizeProgramKey(programTitle);
+
+  let matchedFolder = folders.find((f) => {
+    const folderKey = normalizeProgramKey(f.name);
+    return (
+      folderKey === targetKey ||
+      folderKey.includes(targetKey) ||
+      targetKey.includes(folderKey)
+    );
+  });
+
+  // Si la carpeta del programa no existe aún en Google Drive, la creamos dentro de Programas
+  if (!matchedFolder) {
+    matchedFolder = await createDriveAlbum(programTitle, PROGRAMAS_ROOT_FOLDER_ID);
+  }
+
+  return await uploadTrackToAlbum(file, matchedFolder.id, customName);
 }

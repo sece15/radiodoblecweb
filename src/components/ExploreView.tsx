@@ -1,8 +1,10 @@
 import { useState, CSSProperties } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { RadioProgram, PastBroadcast } from "@/types";
-import { Heart, Share2, Megaphone, Play, X, Clock, User } from "lucide-react";
-import { DriveArchiveSection } from "./DriveArchiveSection";
+import { Heart, Share2, Megaphone, Play, Pause, Clock, User, Disc, Radio } from "lucide-react";
+import { NeoModal } from "./common/NeoModal";
+import { fetchProgramRecordings, getDriveStreamUrl, DriveFile } from "@/services/driveService";
+import { formatFileSize, formatDate, cleanFileName } from "@/lib/formatters";
 
 interface ExploreViewProps {
   onNavigateToPlayer: () => void;
@@ -24,6 +26,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
     liveStatusText,
     currentTrack,
     isPlaying,
+    togglePlayPause,
   } = useAudio();
 
   const [selectedStyle, setSelectedStyle] = useState<string>(filteredStyle || "TODOS");
@@ -35,6 +38,42 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
   }
 
   const [selectedProgram, setSelectedProgram] = useState<RadioProgram | null>(null);
+  const [programRecordings, setProgramRecordings] = useState<DriveFile[]>([]);
+  const [isLoadingRecordings, setIsLoadingRecordings] = useState<boolean>(false);
+
+  const handleOpenProgram = (prog: RadioProgram) => {
+    setSelectedProgram(prog);
+    setIsLoadingRecordings(true);
+    setProgramRecordings([]);
+
+    fetchProgramRecordings(prog.title)
+      .then((files) => {
+        setProgramRecordings(files);
+      })
+      .catch((err) => console.error("Error al cargar emisiones del programa:", err))
+      .finally(() => {
+        setIsLoadingRecordings(false);
+      });
+  };
+
+  const handlePlayRecording = (file: DriveFile, programTitle: string) => {
+    const streamUrl = getDriveStreamUrl(file.id);
+    const isCurrent = currentTrack.streamUrl === streamUrl;
+
+    if (isCurrent) {
+      togglePlayPause();
+      return;
+    }
+
+    playPastBroadcast({
+      id: file.id,
+      programId: "program_recording",
+      title: cleanFileName(file.name),
+      date: `Emisión de ${programTitle}`,
+      duration: formatFileSize(file.size),
+      audioUrl: streamUrl,
+    });
+  };
 
   // DJ Postulation Modal States
   const [isDjModalOpen, setDjModalOpen] = useState(false);
@@ -42,6 +81,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
   const [djEmail, setDjEmail] = useState("");
   const [djDemoUrl, setDjDemoUrl] = useState("");
   const [djBio, setDjBio] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [djSubmitted, setDjSubmitted] = useState(false);
 
   const categories = ["TODOS", "MAGAZINE / DISCOS", "ROCK N' ROLL / ALTERNATIVO", "PEDIDOS / INVITADOS", "RAP / REGGAE", "TECHNO / DANCE"];
@@ -231,7 +271,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   const matchingProg = programs.find(
                     (p) => p.id === station.id || p.title.toLowerCase() === station.name.toLowerCase()
                   );
-                  setSelectedProgram(
+                  handleOpenProgram(
                     matchingProg || {
                       id: station.id,
                       title: station.name,
@@ -393,15 +433,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   padding: "12px",
                 }}
                 onClick={() => {
-                  const matchingStation = stations.find(
-                    (s) => s.id === prog.id || s.name.toLowerCase() === prog.title.toLowerCase()
-                  );
-                  if (matchingStation) {
-                    playStation(matchingStation);
-                  } else {
-                    playLiveStream();
-                  }
-                  onNavigateToPlayer();
+                  handleOpenProgram(prog);
                 }}
               >
                 <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
@@ -474,9 +506,6 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
           })}
         </div>
       </div>
-
-      {/* 3.8 GOOGLE DRIVE ARCHIVE & BROADCASTS FEED */}
-      <DriveArchiveSection />
 
       {/* 4. BOTTOM BANNERS GRID */}
       <div
@@ -574,7 +603,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 ¡HAZ CLICK AQUÍ PARA POSTULAR! 📡
               </p>
               <p style={{ fontSize: "0.6rem", opacity: 0.8, textAlign: "center", fontWeight: "bold" }}>
-                O ENVÍA TU DEMO A PIRATA@DOBLEC.COM
+                O ENVÍA TU DEMO A ANDREALVARADOCAMPOS@GMAIL.COM
               </p>
             </div>
           </div>
@@ -708,530 +737,548 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
         </div>
       )}
 
-      {/* 6. DJ APPLY MODAL */}
-      {isDjModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            zIndex: 2000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-            paddingBottom: "100px", // Pushes the modal up to clear the bottom player area
-          }}
-          onClick={() => {
-            setDjModalOpen(false);
-            setDjSubmitted(false);
-          }}
-        >
+      {/* MODAL 1: ¿QUIERES SER DJ? */}
+      <NeoModal
+        isOpen={isDjModalOpen}
+        onClose={() => {
+          setDjModalOpen(false);
+          setDjSubmitted(false);
+        }}
+        title={!djSubmitted ? "¿Quieres ser DJ?" : "¡Postulación Enviada!"}
+        badgeText="📻 CONVOCATORIA ABIERTA"
+        maxWidth="460px"
+        backgroundColor="var(--background)"
+      >
+        {!djSubmitted ? (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!djName.trim() || !djEmail.trim()) {
+                alert("Por favor completa los campos obligatorios.");
+                return;
+              }
+              setIsSendingEmail(true);
+
+              try {
+                // 1. Enviar vía Supabase Edge Function (send-email)
+                const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://skkwodwxaeajdaukjsqg.supabase.co";
+                const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+                const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    apikey: supabaseAnonKey,
+                    Authorization: `Bearer ${supabaseAnonKey}`,
+                  },
+                  body: JSON.stringify({
+                    name: djName.trim(),
+                    email: djEmail.trim(),
+                    demoUrl: djDemoUrl.trim(),
+                    bio: djBio.trim(),
+                  }),
+                });
+
+                if (!res.ok) {
+                  const errData = await res.json().catch(() => ({}));
+                  console.warn("Supabase send-email Edge Function response:", errData);
+                }
+              } catch (err) {
+                console.error("Error al enviar postulación por API:", err);
+              } finally {
+                setIsSendingEmail(false);
+                setDjSubmitted(true);
+              }
+            }}
+            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+          >
+            <div style={{ textAlign: "center", marginBottom: "2px" }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: "bold", opacity: 0.8, margin: 0 }}>
+                Envíanos tus datos y tu demo para postular a Radio Doble C.
+              </p>
+            </div>
+
+            {/* Nombre y Correo */}
+            <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: "0.68rem", fontWeight: "bold", display: "block", marginBottom: "3px" }}>
+                  NOMBRE / AKAS *
+                </label>
+                <input
+                  type="text"
+                  required
+                  disabled={isSendingEmail}
+                  value={djName}
+                  onChange={(e) => setDjName(e.target.value)}
+                  placeholder="Ej. Carlos"
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    border: "2.5px solid var(--primary)",
+                    outline: "none",
+                    fontSize: "0.78rem",
+                    fontFamily: "inherit",
+                    backgroundColor: "white",
+                  }}
+                />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: "0.68rem", fontWeight: "bold", display: "block", marginBottom: "3px" }}>
+                  TU CORREO *
+                </label>
+                <input
+                  type="email"
+                  required
+                  disabled={isSendingEmail}
+                  value={djEmail}
+                  onChange={(e) => setDjEmail(e.target.value)}
+                  placeholder="tu_correo@gmail.com"
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    border: "2.5px solid var(--primary)",
+                    outline: "none",
+                    fontSize: "0.78rem",
+                    fontFamily: "inherit",
+                    backgroundColor: "white",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: "0.68rem", fontWeight: "bold", display: "block", marginBottom: "3px" }}>
+                ENLACE A DEMO (SOUNDCLOUD / MIXCLOUD / DRIVE / YT)
+              </label>
+              <input
+                type="url"
+                disabled={isSendingEmail}
+                value={djDemoUrl}
+                onChange={(e) => setDjDemoUrl(e.target.value)}
+                placeholder="https://soundcloud.com/... o enlace Drive"
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  border: "2.5px solid var(--primary)",
+                  outline: "none",
+                  fontSize: "0.78rem",
+                  fontFamily: "inherit",
+                  backgroundColor: "white",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: "0.68rem", fontWeight: "bold", display: "block", marginBottom: "3px" }}>
+                PROPUESTA MUSICAL / MENSAJE
+              </label>
+              <textarea
+                disabled={isSendingEmail}
+                value={djBio}
+                onChange={(e) => setDjBio(e.target.value)}
+                placeholder="Cuéntanos qué estilos tocas y tu idea de programa o audios..."
+                rows={2}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  border: "2.5px solid var(--primary)",
+                  outline: "none",
+                  fontSize: "0.78rem",
+                  fontFamily: "inherit",
+                  resize: "none",
+                  backgroundColor: "white",
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSendingEmail}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: isSendingEmail ? "var(--surface-container)" : "var(--primary-container)",
+                width: "100%",
+                padding: "10px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                marginTop: "4px",
+                boxShadow: "3px 3px 0px var(--primary)",
+                cursor: isSendingEmail ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+              }}
+            >
+              {isSendingEmail ? "ENVIANDO POSTULACIÓN..." : "ENVIAR A ANDREALVARADOCAMPOS@GMAIL.COM ⚡"}
+            </button>
+          </form>
+        ) : (
           <div
-            className="neo-card"
             style={{
-              width: "100%",
-              maxWidth: "400px",
-              maxHeight: "calc(100vh - 140px)",
-              overflowY: "auto",
-              backgroundColor: "var(--background)",
-              padding: "20px",
-              boxShadow: "8px 8px 0px var(--primary)",
-              position: "relative",
+              textAlign: "center",
+              padding: "12px 0",
               display: "flex",
               flexDirection: "column",
-              gap: "12px",
+              alignItems: "center",
+              gap: "14px",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                backgroundColor: "var(--primary-container)",
+                border: "3px solid var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Megaphone size={30} style={{ color: "var(--primary)" }} />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <h3 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
+                ¡DEMO ENVIADA! 📻
+              </h3>
+              <p style={{ fontSize: "0.75rem", fontWeight: "bold", opacity: 0.8, margin: 0 }}>
+                Hola <strong>{djName}</strong>, tu postulación ha sido dirigida a <strong>andrealvaradocampos@gmail.com</strong>. Revisaremos tu material en la radio y te contactaremos a <strong>{djEmail}</strong>.
+              </p>
+            </div>
+
             <button
               onClick={() => {
                 setDjModalOpen(false);
                 setDjSubmitted(false);
+                setDjName("");
+                setDjEmail("");
+                setDjDemoUrl("");
+                setDjBio("");
               }}
+              className="neo-button"
               style={{
-                position: "absolute",
-                top: "12px",
-                right: "12px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "var(--primary)",
+                backgroundColor: "white",
+                padding: "8px 18px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                boxShadow: "3px 3px 0px var(--primary)",
               }}
             >
-              <X size={24} />
+              ENTENDIDO, VOLVER 📡
             </button>
-
-            {!djSubmitted ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!djName || !djEmail) {
-                    alert("Por favor completa los campos obligatorios.");
-                    return;
-                  }
-                  setDjSubmitted(true);
-                }}
-                style={{ display: "flex", flexDirection: "column", gap: "10px" }}
-              >
-                <div style={{ textAlign: "center", marginBottom: "4px" }}>
-                  <div
-                    style={{
-                      backgroundColor: "var(--primary-container)",
-                      color: "var(--on-primary-container)",
-                      border: "2px solid var(--primary)",
-                      padding: "3px 8px",
-                      fontSize: "0.7rem",
-                      fontWeight: 900,
-                      width: "max-content",
-                      margin: "0 auto 6px auto",
-                    }}
-                  >
-                    📻 CONVOCATORIA ABIERTA
-                  </div>
-                  <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase" }}>
-                    ¿QUIERES SER DJ?
-                  </h3>
-                  <p style={{ fontSize: "0.68rem", fontWeight: "bold", opacity: 0.8 }}>
-                    Envíanos tus datos y tu set/demo para postular a la parrilla de Doble C.
-                  </p>
-                </div>
-
-                {/* Nombre y Correo en la misma fila */}
-                <div style={{ display: "flex", gap: "12px", width: "100%" }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                      NOMBRE / AKAS *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={djName}
-                      onChange={(e) => setDjName(e.target.value)}
-                      placeholder="Ej. Carlos"
-                      style={{
-                        width: "100%",
-                        padding: "6px",
-                        border: "3px solid var(--primary)",
-                        outline: "none",
-                        fontSize: "0.8rem",
-                        fontFamily: "inherit",
-                        boxShadow: "3px 3px 0px var(--primary)",
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                      CORREO ELECTRÓNICO *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={djEmail}
-                      onChange={(e) => setDjEmail(e.target.value)}
-                      placeholder="pirata@doblec.com"
-                      style={{
-                        width: "100%",
-                        padding: "6px",
-                        border: "3px solid var(--primary)",
-                        outline: "none",
-                        fontSize: "0.8rem",
-                        fontFamily: "inherit",
-                        boxShadow: "3px 3px 0px var(--primary)",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                    ENLACE A TU DEMO (SOUNDCLOUD / MIXCLOUD / YT)
-                  </label>
-                  <input
-                    type="url"
-                    value={djDemoUrl}
-                    onChange={(e) => setDjDemoUrl(e.target.value)}
-                    placeholder="https://soundcloud.com/..."
-                    style={{
-                      width: "100%",
-                      padding: "6px",
-                      border: "3px solid var(--primary)",
-                      outline: "none",
-                      fontSize: "0.8rem",
-                      fontFamily: "inherit",
-                      boxShadow: "3px 3px 0px var(--primary)",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                    PROPUESTA MUSICAL / MENSAJE
-                  </label>
-                  <textarea
-                    value={djBio}
-                    onChange={(e) => setDjBio(e.target.value)}
-                    placeholder="Cuéntanos qué estilos tocas y tu idea de programa..."
-                    rows={2}
-                    style={{
-                      width: "100%",
-                      padding: "6px",
-                      border: "3px solid var(--primary)",
-                      outline: "none",
-                      fontSize: "0.8rem",
-                      fontFamily: "inherit",
-                      resize: "none",
-                      boxShadow: "3px 3px 0px var(--primary)",
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="neo-button"
-                  style={{
-                    backgroundColor: "var(--primary-container)",
-                    width: "100%",
-                    padding: "10px",
-                    fontSize: "0.75rem",
-                    marginTop: "4px",
-                  }}
-                >
-                  ENVIAR CANDIDATURA ⚡
-                </button>
-              </form>
-            ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "16px 0",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "16px",
-                }}
-              >
-                <div
-                  style={{
-                    width: "72px",
-                    height: "72px",
-                    borderRadius: "50%",
-                    backgroundColor: "var(--primary-container)",
-                    border: "3px solid var(--primary)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    animation: "pulse 0.8s infinite alternate ease-in-out",
-                  }}
-                >
-                  <Megaphone size={36} style={{ color: "var(--primary)" }} />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <h3 style={{ fontSize: "1.5rem", fontWeight: 900, textTransform: "uppercase" }}>
-                    ¡DEMO EN COLA! 📻
-                  </h3>
-                  <p style={{ fontSize: "0.75rem", fontWeight: "bold", opacity: 0.8 }}>
-                    Hola <strong>{djName}</strong>, tu postulación ha sido enviada al equipo pirata. Revisaremos tu material en el búnker y te contactaremos a <strong>{djEmail}</strong> si encajas en la grilla.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setDjModalOpen(false);
-                    setDjSubmitted(false);
-                    setDjName("");
-                    setDjEmail("");
-                    setDjDemoUrl("");
-                    setDjBio("");
-                  }}
-                  className="neo-button"
-                  style={{
-                    backgroundColor: "white",
-                    padding: "10px 16px",
-                    fontSize: "0.75rem",
-                    marginTop: "8px",
-                  }}
-                >
-                  ENTENDIDO, VOLVER 📡
-                </button>
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </NeoModal>
 
-      {/* MODAL DE DETALLE DEL PROGRAMA (FOTO A LA IZQUIERDA Y DESCRIPCIÓN DEL LOCUTOR A LA DERECHA) */}
+      {/* MODAL 2: DETALLE DEL PROGRAMA Y GRABACIONES DE GOOGLE DRIVE */}
       {selectedProgram && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0,0,0,0.75)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-            backdropFilter: "blur(4px)",
-          }}
-          onClick={() => setSelectedProgram(null)}
+        <NeoModal
+          isOpen={Boolean(selectedProgram)}
+          onClose={() => setSelectedProgram(null)}
+          title={selectedProgram.title}
+          badgeText="📻 PROGRAMA OFICIAL DOBLE C"
+          maxWidth="880px"
+          bodyOverflow="hidden"
+          backgroundColor="var(--background)"
+          footer={
+            <button
+              onClick={() => setSelectedProgram(null)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "white",
+                padding: "8px 22px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                boxShadow: "3px 3px 0px var(--primary)",
+                border: "2px solid var(--primary)",
+                cursor: "pointer",
+              }}
+            >
+              CERRAR VENTANA
+            </button>
+          }
         >
           <div
-            className="neo-card"
             style={{
-              width: "100%",
-              maxWidth: "680px",
-              backgroundColor: "white",
-              padding: "24px",
-              boxShadow: "8px 8px 0px var(--primary)",
-              border: "3.5px solid var(--primary)",
               display: "flex",
-              flexDirection: "column",
+              flexDirection: "row",
               gap: "20px",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              position: "relative",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* Header con Título del Programa y Botón de Cerrar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span
+            {/* LADO IZQUIERDO: FOTO, GÉNERO, HORARIO Y BOTÓN EN VIVO */}
+            <div
+              style={{
+                flex: "0 0 160px",
+                maxWidth: "180px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                margin: "0 auto",
+                alignItems: "center",
+              }}
+            >
+              <div
+                className="neo-card"
+                style={{
+                  width: "140px",
+                  height: "140px",
+                  overflow: "hidden",
+                  border: "2.5px solid var(--primary)",
+                  boxShadow: "3px 3px 0px var(--primary)",
+                  backgroundColor: "var(--surface-container)",
+                  position: "relative",
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  src={selectedProgram.imageUrl}
+                  alt={selectedProgram.title}
                   style={{
-                    backgroundColor: "var(--primary-container)",
-                    border: "1.5px solid var(--primary)",
-                    padding: "2px 8px",
-                    fontSize: "0.65rem",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "6px",
+                    left: "6px",
+                    backgroundColor: "var(--primary)",
+                    color: "var(--on-primary)",
+                    padding: "1px 5px",
+                    fontSize: "0.55rem",
                     fontWeight: 900,
                     textTransform: "uppercase",
-                    width: "fit-content",
-                    letterSpacing: "0.5px",
                   }}
                 >
-                  📻 PROGRAMA OFICIAL DOBLE C
-                </span>
-                <h3
-                  style={{
-                    fontSize: "1.4rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    lineHeight: "1.2",
-                    fontFamily: "Space Grotesk, sans-serif",
-                  }}
-                >
-                  {selectedProgram.title}
-                </h3>
+                  {selectedProgram.genre}
+                </div>
               </div>
 
-              <button
-                onClick={() => setSelectedProgram(null)}
+              <div
                 style={{
-                  background: "var(--primary)",
-                  color: "var(--on-primary)",
-                  border: "2px solid var(--primary)",
-                  width: "32px",
-                  height: "32px",
+                  width: "100%",
+                  backgroundColor: "var(--surface-container)",
+                  border: "1.5px solid var(--primary)",
+                  padding: "4px 8px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  cursor: "pointer",
-                  fontWeight: 900,
-                  boxShadow: "2px 2px 0px black",
+                  gap: "4px",
+                  boxShadow: "2px 2px 0px var(--primary)",
                 }}
               >
-                <X size={18} />
+                <Clock size={12} style={{ color: "#BA1A1A", flexShrink: 0 }} />
+                <span style={{ fontSize: "0.65rem", fontWeight: 900, color: "#BA1A1A" }}>
+                  {selectedProgram.timeSlot}
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  const matchingStation = stations.find(
+                    (s) => s.id === selectedProgram.id || s.name.toLowerCase() === selectedProgram.title.toLowerCase()
+                  );
+                  if (matchingStation) {
+                    playStation(matchingStation);
+                  } else {
+                    playLiveStream();
+                  }
+                  setSelectedProgram(null);
+                  onNavigateToPlayer();
+                }}
+                className="neo-button fun-hover-wobble"
+                style={{
+                  width: "100%",
+                  backgroundColor: "var(--primary-container)",
+                  padding: "8px 8px",
+                  fontSize: "0.68rem",
+                  fontWeight: 900,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  boxShadow: "3px 3px 0px var(--primary)",
+                }}
+              >
+                <Radio size={13} /> SINTONIZAR VIVO
               </button>
             </div>
 
-            {/* Layout Side-by-side: Foto Izquierda / Información y Descripción Derecha */}
+            {/* LADO DERECHO: LOCUTOR, DESCRIPCIÓN Y GRABACIONES DE GOOGLE DRIVE */}
             <div
               style={{
+                flex: "1 1 340px",
                 display: "flex",
-                flexDirection: "row",
-                gap: "20px",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
+                flexDirection: "column",
+                gap: "12px",
+                minWidth: 0,
               }}
             >
-              {/* LADO IZQUIERDO: FOTO Y BADGE DE GÉNERO / HORARIO */}
+              {/* Cuadro del Locutor */}
               <div
                 style={{
-                  flex: "1 1 240px",
-                  maxWidth: "280px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  margin: "0 auto",
+                  backgroundColor: "var(--primary-container)",
+                  border: "2px solid var(--primary)",
+                  padding: "10px 12px",
+                  boxShadow: "2px 2px 0px var(--primary)",
                 }}
               >
-                <div
-                  className="neo-card"
-                  style={{
-                    width: "100%",
-                    aspectRatio: "1/1",
-                    overflow: "hidden",
-                    border: "3px solid var(--primary)",
-                    boxShadow: "5px 5px 0px var(--primary)",
-                    backgroundColor: "var(--surface-container)",
-                    position: "relative",
-                  }}
-                >
-                  <img
-                    src={selectedProgram.imageUrl}
-                    alt={selectedProgram.title}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "8px",
-                      left: "8px",
-                      backgroundColor: "var(--primary)",
-                      color: "var(--on-primary)",
-                      padding: "3px 8px",
-                      fontSize: "0.65rem",
-                      fontWeight: 900,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    {selectedProgram.genre}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "2px" }}>
+                  <User size={14} style={{ color: "var(--primary)" }} />
+                  <span style={{ fontSize: "0.6rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.8 }}>
+                    LOCUTOR / HOST
+                  </span>
                 </div>
+                <h4 style={{ fontSize: "1rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)", margin: 0 }}>
+                  {selectedProgram.host}
+                </h4>
+              </div>
 
+              {/* Cuadro de Descripción */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
+                  DESCRIPCIÓN DEL PROGRAMA
+                </span>
                 <div
                   style={{
-                    backgroundColor: "var(--surface-container)",
                     border: "2px solid var(--primary)",
-                    padding: "8px 10px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
+                    backgroundColor: "var(--surface-container)",
+                    padding: "10px",
+                    fontSize: "0.75rem",
+                    lineHeight: "1.25rem",
+                    color: "var(--primary)",
                     boxShadow: "2px 2px 0px var(--primary)",
                   }}
                 >
-                  <Clock size={16} style={{ color: "#BA1A1A", flexShrink: 0 }} />
-                  <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#BA1A1A" }}>
-                    {selectedProgram.timeSlot}
-                  </span>
+                  <p style={{ margin: 0 }}>{selectedProgram.description}</p>
                 </div>
               </div>
 
-              {/* LADO DERECHO: LOCUTOR Y DESCRIPCIÓN DEL PROGRAMA */}
-              <div
-                style={{
-                  flex: "1 1 280px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
-                  minWidth: 0,
-                }}
-              >
-                {/* Cuadro de Información del Locutor */}
-                <div
-                  style={{
-                    backgroundColor: "var(--primary-container)",
-                    border: "2px solid var(--primary)",
-                    padding: "12px",
-                    boxShadow: "3px 3px 0px var(--primary)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                    <User size={16} style={{ color: "var(--primary)" }} />
-                    <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.8 }}>
-                      LOCUTOR / HOST DEL PROGRAMA
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
-                    {selectedProgram.host}
-                  </h4>
+              {/* SECCIÓN DE GRABACIONES Y EMISIONES DE GOOGLE DRIVE */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <Disc size={13} style={{ color: "var(--primary)" }} /> EMISIONES PASADAS EN DRIVE
+                  </span>
+                  <span
+                    style={{
+                      backgroundColor: "#FFDE82",
+                      border: "1px solid var(--primary)",
+                      padding: "1px 6px",
+                      fontSize: "0.58rem",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {programRecordings.length} {programRecordings.length === 1 ? "GRABACIÓN" : "GRABACIONES"}
+                  </span>
                 </div>
 
-                {/* Cuadro de Descripción */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
-                    DESCRIPCIÓN DEL PROGRAMA
-                  </span>
+                {isLoadingRecordings ? (
                   <div
                     style={{
-                      border: "2px solid var(--primary)",
+                      padding: "16px",
+                      textAlign: "center",
                       backgroundColor: "var(--surface-container)",
-                      padding: "12px",
-                      fontSize: "0.8rem",
-                      lineHeight: "1.35rem",
-                      color: "var(--primary)",
-                      boxShadow: "3px 3px 0px var(--primary)",
+                      border: "2px dashed var(--primary)",
                     }}
                   >
-                    <p style={{ margin: 0 }}>
-                      {selectedProgram.description}
+                    <Disc size={20} className="animate-spin" style={{ margin: "0 auto 4px auto", color: "var(--primary)" }} />
+                    <p style={{ fontSize: "0.72rem", fontWeight: "bold", margin: 0 }}>
+                      Sincronizando emisiones desde Google Drive...
                     </p>
                   </div>
-                </div>
+                ) : programRecordings.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "14px",
+                      textAlign: "center",
+                      backgroundColor: "var(--surface-container)",
+                      border: "2px dashed var(--primary)",
+                    }}
+                  >
+                    <p style={{ fontSize: "0.72rem", fontWeight: "bold", margin: 0, opacity: 0.8 }}>
+                      📁 Aún no hay archivos de audio subidos en la carpeta de Drive de este programa.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
+                    {programRecordings.map((recording, rIdx) => {
+                      const streamUrl = getDriveStreamUrl(recording.id);
+                      const isPlayingThis = isPlaying && currentTrack.streamUrl === streamUrl;
 
-                {/* Botones de Acción */}
-                <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
-                  <button
-                    onClick={() => {
-                      const matchingStation = stations.find(
-                        (s) => s.id === selectedProgram.id || s.name.toLowerCase() === selectedProgram.title.toLowerCase()
+                      return (
+                        <div
+                          key={recording.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "6px 10px",
+                            backgroundColor: isPlayingThis ? "var(--primary-container)" : "var(--surface-container)",
+                            border: "2px solid var(--primary)",
+                            boxShadow: isPlayingThis ? "2px 2px 0px var(--primary)" : "none",
+                            gap: "8px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 900, opacity: 0.6 }}>
+                              #{rIdx + 1}
+                            </span>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <p
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 900,
+                                  textTransform: "uppercase",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  margin: 0,
+                                }}
+                                title={recording.name}
+                              >
+                                {cleanFileName(recording.name)}
+                              </p>
+                              <span style={{ fontSize: "0.58rem", opacity: 0.7 }}>
+                                {formatDate(recording.createdTime)} • {formatFileSize(recording.size)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handlePlayRecording(recording, selectedProgram.title)}
+                            style={{
+                              backgroundColor: isPlayingThis ? "var(--primary)" : "var(--primary-container)",
+                              color: isPlayingThis ? "var(--on-primary)" : "var(--primary)",
+                              border: "1.5px solid var(--primary)",
+                              padding: "5px 8px",
+                              cursor: "pointer",
+                              fontSize: "0.68rem",
+                              fontWeight: 900,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isPlayingThis ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" />}
+                            {isPlayingThis ? "PAUSAR" : "REPRODUCIR"}
+                          </button>
+                        </div>
                       );
-                      if (matchingStation) {
-                        playStation(matchingStation);
-                      } else {
-                        playLiveStream();
-                      }
-                      setSelectedProgram(null);
-                      onNavigateToPlayer();
-                    }}
-                    className="neo-button fun-hover-wobble"
-                    style={{
-                      flex: 1,
-                      backgroundColor: "var(--primary-container)",
-                      padding: "10px 14px",
-                      fontSize: "0.75rem",
-                      fontWeight: 900,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      boxShadow: "3px 3px 0px var(--primary)",
-                    }}
-                  >
-                    <Play size={14} fill="currentColor" /> SINTONIZAR EN VIVO
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedProgram(null)}
-                    className="neo-button"
-                    style={{
-                      backgroundColor: "white",
-                      padding: "10px 14px",
-                      fontSize: "0.75rem",
-                      fontWeight: 900,
-                      boxShadow: "3px 3px 0px var(--primary)",
-                    }}
-                  >
-                    CERRAR
-                  </button>
-                </div>
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        </NeoModal>
       )}
     </div>
   );

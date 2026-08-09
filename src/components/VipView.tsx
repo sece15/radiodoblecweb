@@ -64,7 +64,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
           </div>
 
           <p style={{ fontSize: "0.75rem", lineHeight: "1.15rem", opacity: 0.9, margin: 0 }}>
-            Como miembro **VIP**, tienes acceso desbloqueado a las producciones discográficas oficiales alojadas en Google Drive, streaming en alta definición y descarga directa de archivos MP3 en alta fidelidad. ¡Gracias por apoyar la radio libre! ⚡
+            Como miembro **VIP**, tienes acceso desbloqueado a las producciones discográficas oficiales alojadas en la radio doble c, streaming en alta definición y descarga directa de archivos MP3 en alta fidelidad. ¡Gracias por apoyar la radio libre! ⚡
           </p>
         </div>
       ) : (

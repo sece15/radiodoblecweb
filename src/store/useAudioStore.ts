@@ -37,6 +37,7 @@ export interface AudioStoreState {
   totalTime: number;
   volume: number;
   isMuted: boolean;
+  listenedSeconds: number;
 
   // Acciones de Audio
   playLiveStream: () => void;
@@ -125,6 +126,7 @@ export const initialStoreState: AudioStoreState = {
   totalTime: 1,
   volume: 1.0,
   isMuted: false,
+  listenedSeconds: 5400,
 
   playLiveStream: noop,
   playStation: noop,

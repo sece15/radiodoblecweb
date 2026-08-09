@@ -50,6 +50,7 @@ export interface Album {
 export interface UserProfile {
   name: string;
   role: string;
+  bio?: string;
   avatarUrl: string;
   stashHours: number;
   followersCount: string;

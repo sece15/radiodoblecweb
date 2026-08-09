@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import {
   fetchDriveAlbums,
   fetchAlbumTracks,
   createDriveAlbum,
-  uploadTrackToAlbum,
   deleteDriveFile,
   getDriveStreamUrl,
   DriveAlbum,
@@ -20,13 +19,10 @@ import {
   Play,
   Pause,
   FolderPlus,
-  Upload,
   Trash2,
   RefreshCw,
   Music,
   ExternalLink,
-  CheckCircle,
-  AlertCircle,
   Download,
   Lock,
   Unlock,
@@ -39,7 +35,6 @@ export interface DriveAlbumsSectionProps {
 
 export const DriveAlbumsSection = ({
   requireVip = false,
-  onNavigateToPlayer,
 }: DriveAlbumsSectionProps) => {
   const { userProfile, currentTrack, isPlaying, togglePlayPause, playPastBroadcast } = useAudio();
 
@@ -58,14 +53,6 @@ export const DriveAlbumsSection = ({
   const [isNewAlbumModalOpen, setNewAlbumModalOpen] = useState<boolean>(false);
   const [newAlbumName, setNewAlbumName] = useState<string>("");
   const [isCreatingAlbum, setIsCreatingAlbum] = useState<boolean>(false);
-
-  const [isUploadTrackModalOpen, setUploadTrackModalOpen] = useState<boolean>(false);
-  const [trackFile, setTrackFile] = useState<File | null>(null);
-  const [trackCustomTitle, setTrackCustomTitle] = useState<string>("");
-  const [isUploadingTrack, setIsUploadingTrack] = useState<boolean>(false);
-  const [uploadMessage, setUploadMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const trackFileInputRef = useRef<HTMLInputElement>(null);
-
   const [isSubscribeModalOpen, setSubscribeModalOpen] = useState<boolean>(false);
 
   // Initial Fetch
@@ -111,9 +98,31 @@ export const DriveAlbumsSection = ({
 
     setSelectedAlbum(album);
     setIsLoadingTracks(true);
+    setAlbumTracks([]);
+
     try {
       const tracks = await fetchAlbumTracks(album.id);
       setAlbumTracks(tracks);
+
+      // Search for portada / cover image in album files
+      const coverFile = tracks.find((t) => {
+        const lower = t.name.toLowerCase();
+        return (
+          lower.includes("portada") ||
+          lower.includes("cover") ||
+          lower.includes("folder") ||
+          t.mimeType.startsWith("image/") ||
+          Boolean(lower.match(/\.(jpg|jpeg|png|webp)$/i))
+        );
+      });
+
+      if (coverFile) {
+        const coverUrl = getDriveStreamUrl(coverFile.id);
+        setSelectedAlbum((prev) => (prev ? { ...prev, coverUrl, coverFileId: coverFile.id } : null));
+        setAlbums((prev) =>
+          prev.map((a) => (a.id === album.id ? { ...a, coverUrl, coverFileId: coverFile.id } : a))
+        );
+      }
     } catch (err) {
       console.error("Error al cargar canciones del disco:", err);
     } finally {
@@ -144,10 +153,6 @@ export const DriveAlbumsSection = ({
       duration: formatFileSize(track.size),
       audioUrl: streamUrl,
     });
-
-    if (onNavigateToPlayer) {
-      onNavigateToPlayer();
-    }
   };
 
   // Play full album
@@ -158,10 +163,14 @@ export const DriveAlbumsSection = ({
       return;
     }
 
+    const playableTracks = albumTracks.filter(
+      (t) => !t.mimeType.startsWith("image/") && !Boolean(t.name.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)$/i))
+    );
+
     const firstAudio =
-      albumTracks.find((t) =>
+      playableTracks.find((t) =>
         t.mimeType.startsWith("audio/") || t.name.endsWith(".mp3") || t.name.endsWith(".wav") || t.name.endsWith(".m4a")
-      ) || albumTracks[0];
+      ) || playableTracks[0];
 
     if (firstAudio) {
       handlePlayTrack(firstAudio, selectedAlbum.name);
@@ -194,37 +203,6 @@ export const DriveAlbumsSection = ({
       alert(`No se pudo crear el disco: ${msg}`);
     } finally {
       setIsCreatingAlbum(false);
-    }
-  };
-
-  // Upload Track to Album (Admin)
-  const handleUploadTrackSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackFile || !selectedAlbum) return;
-
-    setIsUploadingTrack(true);
-    setUploadMessage(null);
-
-    try {
-      const uploaded = await uploadTrackToAlbum(trackFile, selectedAlbum.id, trackCustomTitle.trim() || undefined);
-      setUploadMessage({ type: "success", text: `¡"${uploaded.name || trackFile.name}" subida con éxito!` });
-      setTrackFile(null);
-      setTrackCustomTitle("");
-      if (trackFileInputRef.current) trackFileInputRef.current.value = "";
-
-      const updatedTracks = await fetchAlbumTracks(selectedAlbum.id);
-      setAlbumTracks(updatedTracks);
-      await reloadAlbums();
-
-      setTimeout(() => {
-        setUploadTrackModalOpen(false);
-        setUploadMessage(null);
-      }, 1600);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al subir la pista";
-      setUploadMessage({ type: "error", text: msg });
-    } finally {
-      setIsUploadingTrack(false);
     }
   };
 
@@ -287,7 +265,7 @@ export const DriveAlbumsSection = ({
                 fontWeight: 900,
               }}
             >
-              GOOGLE DRIVE CLOUD ☁️
+              RADIO DOBLE C 📻
             </span>
           </div>
           <h3 style={{ fontSize: "1.2rem", fontWeight: 900, textTransform: "uppercase" }}>
@@ -296,7 +274,7 @@ export const DriveAlbumsSection = ({
           <p style={{ fontSize: "0.75rem", opacity: 0.75 }}>
             {requireVip
               ? "Producciones discográficas completas para miembros VIP con descarga en alta fidelidad."
-              : "Producciones discográficas completas organizadas por carpetas en Google Drive."}
+              : "Producciones discográficas completas organizadas en la discoteca de Radio Doble C."}
           </p>
         </div>
 
@@ -410,12 +388,13 @@ export const DriveAlbumsSection = ({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-            gap: "20px",
+            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+            gap: "16px",
           }}
         >
           {albums.map((album, idx) => {
             const rot = getCardRotation(idx);
+            const coverImage = album.coverUrl || "/hitsandbeats.jpg";
 
             return (
               <div
@@ -424,19 +403,19 @@ export const DriveAlbumsSection = ({
                 style={{
                   transform: `rotate(${rot}deg)`,
                   backgroundColor: "var(--surface-container)",
-                  boxShadow: "6px 6px 0px var(--primary)",
-                  border: "3px solid var(--primary)",
-                  padding: "16px",
+                  boxShadow: "4px 4px 0px var(--primary)",
+                  border: "2.5px solid var(--primary)",
+                  padding: "10px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  gap: "12px",
+                  gap: "10px",
                   cursor: "pointer",
                   position: "relative",
                 }}
                 onClick={() => handleOpenAlbum(album)}
               >
-                {/* Vinyl Art */}
+                {/* Album Cover Art */}
                 <div
                   style={{
                     position: "relative",
@@ -450,54 +429,27 @@ export const DriveAlbumsSection = ({
                     justifyContent: "center",
                   }}
                 >
-                  {album.coverUrl ? (
-                    <img
-                      src={album.coverUrl}
-                      alt={album.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "70px",
-                          height: "70px",
-                          borderRadius: "50%",
-                          backgroundColor: "#0A0A0A",
-                          border: "3px solid #FFDE82",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Disc size={34} style={{ color: "#FFDE82" }} />
-                      </div>
-                      <span style={{ fontSize: "0.6rem", fontWeight: 900, color: "white", textTransform: "uppercase" }}>
-                        VINILO OFICIAL
-                      </span>
-                    </div>
-                  )}
+                  <img
+                    src={coverImage}
+                    alt={album.name}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/hitsandbeats.jpg";
+                    }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
 
                   {/* VIP Access Badge */}
                   {requireVip && (
                     <div
                       style={{
                         position: "absolute",
-                        top: "8px",
-                        right: "8px",
+                        top: "6px",
+                        right: "6px",
                         backgroundColor: hasAccess ? "var(--primary-container)" : "#BA1A1A",
                         color: hasAccess ? "var(--primary)" : "white",
                         border: "1.5px solid var(--primary)",
-                        padding: "2px 6px",
-                        fontSize: "0.6rem",
+                        padding: "2px 5px",
+                        fontSize: "0.55rem",
                         fontWeight: 900,
                         display: "flex",
                         alignItems: "center",
@@ -513,14 +465,15 @@ export const DriveAlbumsSection = ({
                   <div
                     style={{
                       position: "absolute",
-                      bottom: "8px",
-                      left: "8px",
-                      backgroundColor: "var(--primary-container)",
-                      border: "1.5px solid var(--primary)",
-                      padding: "2px 6px",
-                      fontSize: "0.6rem",
+                      bottom: "6px",
+                      left: "6px",
+                      backgroundColor: "rgba(0, 0, 0, 0.75)",
+                      color: "white",
+                      border: "1px solid var(--primary)",
+                      padding: "1px 5px",
+                      fontSize: "0.55rem",
                       fontWeight: 900,
-                      color: "var(--primary)",
+                      backdropFilter: "blur(2px)",
                     }}
                   >
                     🎵 {album.trackCount} {album.trackCount === 1 ? "PISTA" : "PISTAS"}
@@ -528,44 +481,43 @@ export const DriveAlbumsSection = ({
                 </div>
 
                 {/* Info & Button */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <h4
                     style={{
-                      fontSize: "0.95rem",
+                      fontSize: "0.8rem",
                       fontWeight: 900,
                       textTransform: "uppercase",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
+                      lineHeight: "1rem",
+                      margin: 0,
                     }}
                     title={album.name}
                   >
                     {album.name}
                   </h4>
 
-                  <div style={{ display: "flex", gap: "6px" }}>
+                  <div style={{ display: "flex", gap: "4px" }}>
                     <button
                       className="neo-button fun-hover-wobble"
                       style={{
                         flex: 1,
-                        backgroundColor: hasAccess ? "var(--primary-container)" : "#FFF",
-                        padding: "8px 10px",
-                        fontSize: "0.75rem",
+                        backgroundColor: "var(--primary-container)",
+                        padding: "6px 8px",
+                        fontSize: "0.65rem",
                         fontWeight: 900,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "6px",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenAlbum(album);
+                        gap: "4px",
+                        boxShadow: "2px 2px 0px var(--primary)",
                       }}
                     >
-                      {hasAccess ? <Play size={12} fill="currentColor" /> : <Lock size={12} />}
-                      {hasAccess ? "VER DISCO 📂" : "DESBLOQUEAR VIP"}
+                      <Play size={11} fill="currentColor" /> EXPLORAR
                     </button>
 
+                    {/* Admin Delete Album */}
                     {userIsAdmin && (
                       <button
                         onClick={(e) => {
@@ -573,15 +525,19 @@ export const DriveAlbumsSection = ({
                           handleDeleteItem(album.id, album.name, true);
                         }}
                         style={{
-                          backgroundColor: "#FFDAD6",
-                          color: "#BA1A1A",
-                          border: "2px solid #BA1A1A",
+                          backgroundColor: "#BA1A1A",
+                          color: "white",
+                          border: "1.5px solid var(--primary)",
                           padding: "6px 8px",
                           cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "2px 2px 0px var(--primary)",
                         }}
                         title="Eliminar disco"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={11} />
                       </button>
                     )}
                   </div>
@@ -599,7 +555,26 @@ export const DriveAlbumsSection = ({
           onClose={() => setSelectedAlbum(null)}
           title={selectedAlbum.name}
           badgeText={requireVip ? "👑 DISCO VIP EXCLUSIVO" : "💽 DISCO OFICIAL"}
-          maxWidth="760px"
+          maxWidth="960px"
+          bodyOverflow="hidden"
+          backgroundColor="var(--background)"
+          footer={
+            <button
+              onClick={() => setSelectedAlbum(null)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "white",
+                padding: "8px 22px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                boxShadow: "3px 3px 0px var(--primary)",
+                border: "2px solid var(--primary)",
+                cursor: "pointer",
+              }}
+            >
+              CERRAR VENTANA
+            </button>
+          }
         >
           <div
             style={{
@@ -607,56 +582,46 @@ export const DriveAlbumsSection = ({
               flexDirection: "row",
               gap: "24px",
               alignItems: "flex-start",
-              flexWrap: "wrap",
+              height: "100%",
+              overflow: "hidden",
             }}
           >
-            {/* Left: Vinyl & Play Button */}
+            {/* Left: Fixed Cover Art & Play Button (Inmóvil, no hace scroll) */}
             <div
               style={{
-                flex: "1 1 240px",
-                maxWidth: "280px",
+                flex: "0 0 180px",
+                maxWidth: "180px",
                 display: "flex",
                 flexDirection: "column",
                 gap: "12px",
-                margin: "0 auto",
+                alignItems: "center",
+                marginTop: "8px",
+                flexShrink: 0,
               }}
             >
               <div
                 className="neo-card"
                 style={{
-                  width: "100%",
-                  aspectRatio: "1/1",
+                  width: "180px",
+                  height: "180px",
                   backgroundColor: "#0A0A0A",
-                  border: "3px solid var(--primary)",
-                  boxShadow: "5px 5px 0px var(--primary)",
+                  border: "2.5px solid var(--primary)",
+                  boxShadow: "3px 3px 0px var(--primary)",
                   overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  flexShrink: 0,
                 }}
               >
-                {selectedAlbum.coverUrl ? (
-                  <img
-                    src={selectedAlbum.coverUrl}
-                    alt={selectedAlbum.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "100px",
-                      height: "100px",
-                      borderRadius: "50%",
-                      backgroundColor: "#151515",
-                      border: "4px solid #FFDE82",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Disc size={50} style={{ color: "#FFDE82" }} />
-                  </div>
-                )}
+                <img
+                  src={selectedAlbum.coverUrl || "/hitsandbeats.jpg"}
+                  alt={selectedAlbum.name}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/hitsandbeats.jpg";
+                  }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </div>
 
               <button
@@ -664,178 +629,207 @@ export const DriveAlbumsSection = ({
                 disabled={albumTracks.length === 0}
                 className="neo-button fun-hover-wobble"
                 style={{
+                  width: "100%",
                   backgroundColor: "var(--primary-container)",
-                  padding: "12px",
-                  fontSize: "0.8rem",
+                  padding: "8px 8px",
+                  fontSize: "0.68rem",
                   fontWeight: 900,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "8px",
-                  boxShadow: "4px 4px 0px var(--primary)",
+                  gap: "5px",
+                  boxShadow: "3px 3px 0px var(--primary)",
                   opacity: albumTracks.length === 0 ? 0.6 : 1,
                   cursor: albumTracks.length === 0 ? "not-allowed" : "pointer",
                 }}
               >
-                <Play size={16} fill="currentColor" /> REPRODUCIR DISCO COMPLETO
+                <Play size={13} fill="currentColor" /> REPRODUCIR DISCO
               </button>
-
-              {userIsAdmin && (
-                <button
-                  onClick={() => setUploadTrackModalOpen(true)}
-                  className="neo-button"
-                  style={{
-                    backgroundColor: "#FFB000",
-                    color: "black",
-                    padding: "10px",
-                    fontSize: "0.75rem",
-                    fontWeight: 900,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    border: "2px solid var(--primary)",
-                  }}
-                >
-                  <Upload size={14} /> SUBIR CANCIÓN AL DISCO
-                </button>
-              )}
             </div>
 
-            {/* Right: Tracklist */}
-            <div style={{ flex: "1 1 340px", display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.8 }}>
-                LISTA DE CANCIONES ({albumTracks.length})
-              </span>
+            {/* Right: Tracklist (Única sección con Scroll Independiente) */}
+            <div
+              style={{
+                flex: "1 1 540px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                minWidth: "280px",
+                marginTop: "8px",
+                height: "100%",
+                minHeight: 0,
+                overflow: "hidden",
+              }}
+            >
+              {(() => {
+                const playableTracks = albumTracks.filter(
+                  (t) =>
+                    !t.mimeType.startsWith("image/") &&
+                    !Boolean(t.name.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)$/i))
+                );
 
-              {isLoadingTracks ? (
-                <div style={{ padding: "24px", textAlign: "center" }}>
-                  <Disc size={24} className="animate-spin" />
-                  <p style={{ fontSize: "0.75rem", marginTop: "8px", fontWeight: "bold" }}>
-                    Cargando canciones de Google Drive...
-                  </p>
-                </div>
-              ) : albumTracks.length === 0 ? (
-                <div
-                  style={{
-                    padding: "24px",
-                    backgroundColor: "var(--surface-container)",
-                    border: "2px dashed var(--primary)",
-                    textAlign: "center",
-                  }}
-                >
-                  <Music size={28} style={{ opacity: 0.5 }} />
-                  <p style={{ fontSize: "0.75rem", fontWeight: "bold", marginTop: "6px" }}>
-                    Aún no hay canciones en este disco.
-                  </p>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "320px", overflowY: "auto" }}>
-                  {albumTracks.map((track, trackIdx) => {
-                    const streamUrl = getDriveStreamUrl(track.id);
-                    const isPlayingThis = isPlaying && currentTrack.streamUrl === streamUrl;
-
-                    return (
-                      <div
-                        key={track.id}
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px", flexShrink: 0 }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Disc size={14} style={{ color: "var(--primary)" }} /> LISTA DE CANCIONES ({playableTracks.length})
+                      </span>
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "8px 12px",
-                          backgroundColor: isPlayingThis ? "var(--primary-container)" : "var(--surface-container)",
-                          border: "2px solid var(--primary)",
-                          boxShadow: isPlayingThis ? "2px 2px 0px var(--primary)" : "none",
-                          gap: "10px",
+                          backgroundColor: "#FFDE82",
+                          border: "1px solid var(--primary)",
+                          padding: "1px 6px",
+                          fontSize: "0.6rem",
+                          fontWeight: 900,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
-                          <span style={{ fontSize: "0.75rem", fontWeight: 900, opacity: 0.6, width: "20px" }}>
-                            {String(trackIdx + 1).padStart(2, "0")}
-                          </span>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <p
-                              style={{
-                                fontSize: "0.8rem",
-                                fontWeight: 900,
-                                textTransform: "uppercase",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                margin: 0,
-                              }}
-                              title={track.name}
-                            >
-                              {cleanFileName(track.name)}
-                            </p>
-                            {track.size && (
-                              <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>
-                                {formatFileSize(track.size)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        DISCOGRAFÍA
+                      </span>
+                    </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <button
-                            onClick={() => handlePlayTrack(track, selectedAlbum.name)}
-                            style={{
-                              backgroundColor: isPlayingThis ? "var(--primary)" : "var(--primary-container)",
-                              color: isPlayingThis ? "var(--on-primary)" : "var(--primary)",
-                              border: "1.5px solid var(--primary)",
-                              padding: "6px 10px",
-                              cursor: "pointer",
-                              fontSize: "0.7rem",
-                              fontWeight: 900,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "4px",
-                            }}
-                          >
-                            {isPlayingThis ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-                          </button>
+                    {isLoadingTracks ? (
+                      <div style={{ padding: "28px", textAlign: "center", backgroundColor: "var(--surface-container)", border: "2px dashed var(--primary)" }}>
+                        <Disc size={24} className="animate-spin" style={{ margin: "0 auto 8px auto", color: "var(--primary)" }} />
+                        <p style={{ fontSize: "0.75rem", fontWeight: "bold", margin: 0 }}>
+                          Cargando canciones de Google Drive...
+                        </p>
+                      </div>
+                    ) : playableTracks.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "24px",
+                          backgroundColor: "var(--surface-container)",
+                          border: "2px dashed var(--primary)",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Music size={28} style={{ opacity: 0.5, margin: "0 auto 6px auto" }} />
+                        <p style={{ fontSize: "0.75rem", fontWeight: "bold", margin: 0 }}>
+                          Aún no hay canciones subidas en este disco.
+                        </p>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "7px",
+                          overflowY: "auto",
+                          maxHeight: "310px",
+                          paddingRight: "6px",
+                        }}
+                      >
+                        {playableTracks.map((track, trackIdx) => {
+                          const streamUrl = getDriveStreamUrl(track.id);
+                          const isPlayingThis = isPlaying && currentTrack.streamUrl === streamUrl;
 
-                          {requireVip && (
-                            <button
-                              onClick={() => handleDownloadTrack(track)}
+                          return (
+                            <div
+                              key={track.id}
                               style={{
-                                backgroundColor: "white",
-                                border: "1.5px solid var(--primary)",
-                                padding: "6px 10px",
-                                cursor: "pointer",
-                                fontSize: "0.7rem",
-                                fontWeight: 900,
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "4px",
+                                justifyContent: "space-between",
+                                padding: "8px 12px",
+                                backgroundColor: isPlayingThis ? "var(--primary-container)" : "var(--surface-container)",
+                                border: "2px solid var(--primary)",
+                                boxShadow: isPlayingThis ? "2px 2px 0px var(--primary)" : "none",
+                                gap: "10px",
                               }}
-                              title="Descargar MP3"
                             >
-                              <Download size={12} />
-                            </button>
-                          )}
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
+                                <span style={{ fontSize: "0.7rem", fontWeight: 900, opacity: 0.6, width: "20px", flexShrink: 0 }}>
+                                  {String(trackIdx + 1).padStart(2, "0")}
+                                </span>
+                                <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+                                  <p
+                                    style={{
+                                      fontSize: "0.68rem",
+                                      fontWeight: 900,
+                                      textTransform: "uppercase",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      margin: 0,
+                                      lineHeight: "1.25",
+                                      letterSpacing: "0.2px",
+                                    }}
+                                    title={track.name}
+                                  >
+                                    {cleanFileName(track.name)}
+                                  </p>
+                                  {track.size && (
+                                    <span style={{ fontSize: "0.58rem", opacity: 0.7 }}>
+                                      {formatFileSize(track.size)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
 
-                          {userIsAdmin && (
-                            <button
-                              onClick={() => handleDeleteItem(track.id, track.name, false)}
-                              style={{
-                                backgroundColor: "#FFDAD6",
-                                color: "#BA1A1A",
-                                border: "1.5px solid #BA1A1A",
-                                padding: "6px",
-                                cursor: "pointer",
-                              }}
-                              title="Eliminar pista"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          )}
-                        </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                                <button
+                                  onClick={() => handlePlayTrack(track, selectedAlbum.name)}
+                                  style={{
+                                    backgroundColor: isPlayingThis ? "var(--primary)" : "var(--primary-container)",
+                                    color: isPlayingThis ? "var(--on-primary)" : "var(--primary)",
+                                    border: "1.5px solid var(--primary)",
+                                    padding: "5px 9px",
+                                    cursor: "pointer",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 900,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  {isPlayingThis ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" />}
+                                  {isPlayingThis ? "PAUSAR" : "REPRODUCIR"}
+                                </button>
+
+                                {requireVip && (
+                                  <button
+                                    onClick={() => handleDownloadTrack(track)}
+                                    style={{
+                                      backgroundColor: "white",
+                                      border: "1.5px solid var(--primary)",
+                                      padding: "5px 8px",
+                                      cursor: "pointer",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 900,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                    }}
+                                    title="Descargar MP3"
+                                  >
+                                    <Download size={11} />
+                                  </button>
+                                )}
+
+                                {userIsAdmin && (
+                                  <button
+                                    onClick={() => handleDeleteItem(track.id, track.name, false)}
+                                    style={{
+                                      backgroundColor: "#FFDAD6",
+                                      color: "#BA1A1A",
+                                      border: "1.5px solid #BA1A1A",
+                                      padding: "5px 7px",
+                                      cursor: "pointer",
+                                    }}
+                                    title="Eliminar pista"
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </NeoModal>
@@ -893,113 +887,6 @@ export const DriveAlbumsSection = ({
               type="button"
               disabled={isCreatingAlbum}
               onClick={() => setNewAlbumModalOpen(false)}
-              className="neo-button"
-              style={{
-                backgroundColor: "white",
-                padding: "10px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-              }}
-            >
-              CANCELAR
-            </button>
-          </div>
-        </form>
-      </NeoModal>
-
-      {/* MODAL 3: ADMIN UPLOAD TRACK */}
-      <NeoModal
-        isOpen={isUploadTrackModalOpen && userIsAdmin && Boolean(selectedAlbum)}
-        onClose={() => !isUploadingTrack && setUploadTrackModalOpen(false)}
-        title="Subir Canción al Disco"
-        badgeText={`DISCO: ${selectedAlbum?.name || ""}`}
-        maxWidth="480px"
-      >
-        <form onSubmit={handleUploadTrackSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div>
-            <label style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "6px" }}>
-              SELECCIONAR ARCHIVO (.MP3, .WAV, .M4A O COVER.JPG)
-            </label>
-            <input
-              ref={trackFileInputRef}
-              type="file"
-              accept="audio/*,image/*,video/mp4"
-              required
-              disabled={isUploadingTrack}
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setTrackFile(e.target.files[0]);
-                }
-              }}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "2px solid var(--primary)",
-                backgroundColor: "var(--surface-container)",
-                fontSize: "0.75rem",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "6px" }}>
-              TÍTULO DE LA CANCIÓN / NOMBRE (OPCIONAL)
-            </label>
-            <input
-              type="text"
-              placeholder={trackFile ? trackFile.name : "Ej: 01 - Fauces del Ritmo"}
-              value={trackCustomTitle}
-              disabled={isUploadingTrack}
-              onChange={(e) => setTrackCustomTitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "2px solid var(--primary)",
-                fontSize: "0.8rem",
-                outline: "none",
-              }}
-            />
-          </div>
-
-          {uploadMessage && (
-            <div
-              style={{
-                backgroundColor: uploadMessage.type === "success" ? "#C4EED0" : "#FFDAD6",
-                border: `2px solid ${uploadMessage.type === "success" ? "#00522B" : "#BA1A1A"}`,
-                padding: "8px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                color: uploadMessage.type === "success" ? "#00522B" : "#BA1A1A",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              {uploadMessage.type === "success" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
-              {uploadMessage.text}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-            <button
-              type="submit"
-              disabled={isUploadingTrack || !trackFile}
-              className="neo-button"
-              style={{
-                flex: 1,
-                backgroundColor: "var(--primary-container)",
-                padding: "10px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-              }}
-            >
-              {isUploadingTrack ? "SUBIENDO AL DISCO..." : "SUBIR CANCIÓN 🎵"}
-            </button>
-
-            <button
-              type="button"
-              disabled={isUploadingTrack}
-              onClick={() => setUploadTrackModalOpen(false)}
               className="neo-button"
               style={{
                 backgroundColor: "white",

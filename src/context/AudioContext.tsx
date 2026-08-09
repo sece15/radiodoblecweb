@@ -67,6 +67,9 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     followersCount: "1.2K",
   });
 
+  // Tiempo real sintonizado en segundos
+  const [listenedSeconds, setListenedSeconds] = useLocalStorage<number>("doblec_listened_seconds", 4800);
+
   // Configuración de Tema Visual
   const [activeTheme, setActiveTheme] = useLocalStorage<string>("selected_theme", "PUNK_NEON");
 
@@ -110,10 +113,12 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTheme]);
 
-  // Simulador de avance de reproducción
+  // Simulador de avance de reproducción y contador de tiempo real
   useEffect(() => {
     const progressInterval = setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) {
+        setListenedSeconds((prev) => (prev || 0) + 1);
+
         if (currentTrack.isLive) {
           setTotalTime((prev) => {
             const nextTotal = prev + 1;
@@ -269,58 +274,102 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       import("hls.js").then((HlsPackage) => {
         const Hls = HlsPackage.default;
         if (Hls.isSupported()) {
-          const hls = new Hls();
+          const hls = new Hls({
+            liveSyncDurationCount: 1, // Mantener sincronización en tiempo real exacto
+            liveMaxLatencyDurationCount: 3,
+          });
           hlsRef.current = hls;
           hls.loadSource(url);
           hls.attachMedia(audioRef.current!);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             audioRef.current!.muted = isMuted;
-            audioRef.current!.play();
+            audioRef.current!.play().catch((err) => console.warn("Playback error:", err));
             setIsPlaying(true);
           });
         } else if (audioRef.current!.canPlayType("application/vnd.apple.mpegurl")) {
           audioRef.current!.src = url;
           audioRef.current!.muted = isMuted;
-          audioRef.current!.play();
+          audioRef.current!.play().catch((err) => console.warn("Playback error:", err));
           setIsPlaying(true);
         }
       });
     } else {
       audioRef.current.src = url;
+      audioRef.current.load();
       audioRef.current.muted = isMuted;
-      audioRef.current.play();
+      audioRef.current.play().catch((err) => console.warn("Playback error:", err));
       setIsPlaying(true);
     }
   }, [isMuted]);
 
-  // Controles del reproductor
+  const playLiveStream = useCallback(() => {
+    const track = {
+      title: liveTrackTitle,
+      album: liveShowName,
+      artist: "Doble C Live",
+      imageUrl:
+        "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
+      streamUrl: DEFAULT_STREAM,
+      isLive: true,
+    };
+    setCurrentTrack(track);
+    setTotalTime(1);
+    playUrl(track.streamUrl);
+  }, [liveTrackTitle, liveShowName, playUrl]);
+
+  // Al terminar una canción o emisión a la carta de Google Drive, volver automáticamente a la radio en vivo
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleEnded = () => {
+      if (!currentTrack.isLive) {
+        playLiveStream();
+      }
+    };
+
+    audio.addEventListener("ended", handleEnded);
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [currentTrack.isLive, playLiveStream]);
+
+  // Controles del reproductor (Opción 2: Reconexión Live Edge garantizada)
   const togglePlayPause = useCallback(() => {
     if (!audioRef.current) return;
+
     if (isPlaying) {
-      if (currentTrack.isLive) {
-        audioRef.current.muted = true;
+      if (!currentTrack.isLive) {
+        // Al pausar una canción o emisión a la carta, vuelve automáticamente a la radio online de AzuraCast
+        playLiveStream();
+        return;
       } else {
+        // Al pausar la radio en vivo: detenemos descarga y limpiamos el buffer para ahorrar datos y batería
         audioRef.current.pause();
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
+        audioRef.current.src = "";
       }
       setIsPlaying(false);
     } else {
-      if (!audioRef.current.src || audioRef.current.src === window.location.href) {
-        playUrl(currentTrack.streamUrl);
-        return;
-      }
-
       if (currentTrack.isLive) {
-        audioRef.current.muted = isMuted;
-        audioRef.current.play().catch((err) => {
-          console.warn("Autoplay blocked, re-requesting stream:", err);
-          playUrl(currentTrack.streamUrl);
-        });
+        // Al despausar la radio en vivo: reconectamos de inmediato al momento exacto en vivo sin buffer viejo
+        playUrl(currentTrack.streamUrl);
       } else {
-        audioRef.current.play();
+        if (!audioRef.current.src || audioRef.current.src === window.location.href) {
+          playUrl(currentTrack.streamUrl);
+        } else {
+          audioRef.current.play().catch((err) => {
+            console.warn("Autoplay blocked, re-requesting stream:", err);
+            playUrl(currentTrack.streamUrl);
+          });
+        }
       }
       setIsPlaying(true);
     }
-  }, [isPlaying, currentTrack, isMuted, playUrl]);
+  }, [isPlaying, currentTrack, playUrl, playLiveStream]);
 
   const toggleMute = useCallback(() => {
     if (!audioRef.current) return;
@@ -370,21 +419,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTime(totalTime);
     setProgress(1.0);
   }, [currentTrack.isLive, currentTrack.streamUrl, playUrl, totalTime]);
-
-  const playLiveStream = useCallback(() => {
-    const track = {
-      title: liveTrackTitle,
-      album: liveShowName,
-      artist: "Doble C Live",
-      imageUrl:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
-      streamUrl: DEFAULT_STREAM,
-      isLive: true,
-    };
-    setCurrentTrack(track);
-    setTotalTime(1);
-    playUrl(track.streamUrl);
-  }, [liveTrackTitle, liveShowName, playUrl]);
 
   const playStation = useCallback((station: Station) => {
     const track = {
@@ -495,14 +529,15 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [setPlaylistTracks]);
 
   const saveProfile = useCallback(
-    async (name: string, role: string, avatarUrl: string, hours: number, followers: string) => {
+    async (name: string, bio: string, avatarUrl: string, hours: number, followers: string) => {
       const trimmedName = name.trim();
       if (!trimmedName) return;
 
       const upperName = trimmedName.toUpperCase();
       const updatedProfile: UserProfile = {
         name: upperName,
-        role,
+        role: userProfile.role, // Seguridad: el rol real se preserva y no puede autoelevarse
+        bio: bio.trim(),
         avatarUrl,
         stashHours: hours,
         followersCount: followers,
@@ -522,24 +557,13 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
               data: { full_name: trimmedName },
             });
 
-            // 2. Update Supabase public.profiles table
-            const updatePayload: {
-              full_name: string;
-              username: string;
-              avatar_url: string;
-              updated_at: string;
-              role?: string;
-            } = {
+            // 2. Update Supabase public.profiles table (Seguridad: role NO es editable por el usuario)
+            const updatePayload = {
               full_name: trimmedName,
               username: trimmedName.toLowerCase().replace(/\s+/g, "_"),
               avatar_url: avatarUrl,
               updated_at: new Date().toISOString(),
             };
-
-            const currentRoleUpper = role.toUpperCase();
-            if (["ADMIN", "MODERADOR", "STREAMER"].includes(currentRoleUpper)) {
-              updatePayload.role = role;
-            }
 
             const { error: profileError } = await supabase
               .from("profiles")
@@ -560,7 +584,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [setUserProfile, chatSocket]
+    [userProfile.role, setUserProfile, chatSocket]
   );
 
   const addAlbum = useCallback((name: string, artist: string, releaseYear: string, genre: string, imageUrl: string) => {
@@ -653,6 +677,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       totalTime,
       volume,
       isMuted,
+      listenedSeconds,
       playLiveStream,
       playStation,
       playSong,
@@ -721,6 +746,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     totalTime,
     volume,
     isMuted,
+    listenedSeconds,
     playLiveStream,
     playStation,
     playSong,
