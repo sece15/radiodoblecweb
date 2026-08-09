@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { create } from "zustand";
 import {
   Station,
   RadioProgram,
@@ -68,7 +68,7 @@ export interface AudioStoreState {
   toggleSongFavorite: (songId: string) => void;
   addCurrentTrackToPlaylist: () => void;
   deleteTrackFromPlaylist: (id: number) => void;
-  saveProfile: (name: string, role: string, avatarUrl: string, hours: number, followers: string) => void;
+  saveProfile: (name: string, role: string, avatarUrl: string, hours: number, followers: string) => void | Promise<void>;
   updateUserRole: (newRole: string) => void;
   addAlbum: (name: string, artist: string, releaseYear: string, genre: string, imageUrl: string) => void;
 
@@ -107,8 +107,6 @@ export interface AudioStoreState {
   activeTheme: string;
   selectTheme: (themeName: string) => void;
 }
-
-type Listener = () => void;
 
 const noop = () => {};
 
@@ -199,38 +197,8 @@ export const initialStoreState: AudioStoreState = {
   selectTheme: noop,
 };
 
-export type AudioStoreApi = {
-  getState: () => AudioStoreState;
-  setState: (partial: Partial<AudioStoreState> | ((prev: AudioStoreState) => Partial<AudioStoreState>)) => void;
-  subscribe: (listener: Listener) => () => void;
-};
+export const useAudioStore = create<AudioStoreState>(() => ({
+  ...initialStoreState,
+}));
 
-export function createAudioStore(initial: AudioStoreState = initialStoreState): AudioStoreApi {
-  let currentState = initial;
-  const listeners = new Set<Listener>();
-
-  return {
-    getState: () => currentState,
-    setState: (partial) => {
-      const nextPartial = typeof partial === "function" ? partial(currentState) : partial;
-      currentState = { ...currentState, ...nextPartial };
-      listeners.forEach((listener) => listener());
-    },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
-}
-
-export const audioStore = createAudioStore();
-
-export function useAudioStore<U>(selector: (state: AudioStoreState) => U): U {
-  return useSyncExternalStore(
-    audioStore.subscribe,
-    () => selector(audioStore.getState()),
-    () => selector(initialStoreState)
-  );
-}
+export const audioStore = useAudioStore;

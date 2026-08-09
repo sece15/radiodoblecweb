@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { ChatMessage, SocketChatMessage, SocketChatConfig, UserProfile } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -23,6 +23,11 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
   const [isModPanelVisible, setModPanelVisible] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
+  const userProfileRef = useRef<UserProfile>(userProfile);
+
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
 
   const disconnectChatSocket = () => {
     if (socketRef.current) {
@@ -127,10 +132,11 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
   };
 
   const banUser = (username: string) => {
+    const currentProfile = userProfileRef.current || userProfile;
     const upper = username.toUpperCase();
     setBannedUsers((prev) => new Set([...prev, upper]));
     if (socketRef.current) {
-      socketRef.current.emit("ban_user", { username, moderatorName: userProfile.name });
+      socketRef.current.emit("ban_user", { username, moderatorName: currentProfile.name });
     }
   };
 
@@ -144,9 +150,10 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
   };
 
   const deleteMessage = (messageId: number) => {
+    const currentProfile = userProfileRef.current || userProfile;
     setDeletedMessageIds((prev) => new Set([...prev, messageId]));
     if (socketRef.current) {
-      socketRef.current.emit("delete_message", { messageId, moderatorName: userProfile.name });
+      socketRef.current.emit("delete_message", { messageId, moderatorName: currentProfile.name });
     }
   };
 
@@ -157,35 +164,38 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
   const sendChatMessage = (text: string) => {
     if (!text.trim()) return;
 
-    const upperName = userProfile.name.toUpperCase();
+    const currentProfile = userProfileRef.current || userProfile;
+    const currentName = currentProfile.name || "Oyente";
+    const currentRole = currentProfile.role || "OYENTE";
+    const upperName = currentName.toUpperCase();
     if (isCurrentUserBanned || bannedUsers.has(upperName)) return;
 
     const cleanText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[._\-* ]/g, "");
     const containsBanned = bannedWords.some((w) => cleanText.includes(w));
 
     const isImmune =
-      userProfile.role.includes("VIP") ||
-      userProfile.role.includes("MOD") ||
-      userProfile.role.includes("STREAMER") ||
-      userProfile.role.includes("ADMIN");
+      currentRole.includes("VIP") ||
+      currentRole.includes("MOD") ||
+      currentRole.includes("STREAMER") ||
+      currentRole.includes("ADMIN");
     if (containsBanned && !isImmune) {
       return;
     }
 
     if (socketRef.current) {
       socketRef.current.emit("send_message", {
-        senderName: userProfile.name,
-        senderRole: userProfile.role,
+        senderName: currentName,
+        senderRole: currentRole,
         messageText: text,
-        avatarUrl: userProfile.avatarUrl,
+        avatarUrl: currentProfile.avatarUrl,
       });
     } else {
       setChatMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
-          senderName: userProfile.name,
-          senderRole: userProfile.role,
+          senderName: currentName,
+          senderRole: currentRole,
           messageText: text,
           createdAt: new Date().toISOString(),
           stationId: "general",

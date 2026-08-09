@@ -62,5 +62,5 @@ export function useCart() {
     clearCart,
   };
 }
-export type { CartItem };
 
+export type { CartItem };

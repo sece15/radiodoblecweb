@@ -33,6 +33,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
   const [editName, setEditName] = useState(userProfile.name);
   const [editRole, setEditRole] = useState(userProfile.role);
   const [editHours, setEditHours] = useState(userProfile.stashHours);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [showAddAlbumModal, setShowAddAlbumModal] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
@@ -146,9 +147,17 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
   const reputationString = (reputationValue / 1000).toFixed(1) + "K";
   const weeklyGain = Math.floor(userProfile.stashHours * 1.5 + savedStations.length * 8 + favoriteSongs.length * 4);
 
-  const handleSave = () => {
-    saveProfile(editName, editRole, userProfile.avatarUrl, editHours, reputationString);
-    setShowEditModal(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveProfile(editName, editRole, userProfile.avatarUrl, editHours, reputationString);
+      setShowEditModal(false);
+    } catch (e) {
+      console.error("Error al guardar perfil:", e);
+      alert("Hubo un error al guardar los cambios en el perfil.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleShareProfile = () => {
@@ -896,15 +905,18 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
 
             <button
               onClick={handleSave}
+              disabled={isSaving}
               className="neo-button"
               style={{
-                backgroundColor: "var(--primary-container)",
+                backgroundColor: isSaving ? "var(--surface-container)" : "var(--primary-container)",
                 width: "100%",
                 padding: "10px",
                 fontSize: "0.8rem",
+                cursor: isSaving ? "not-allowed" : "pointer",
+                opacity: isSaving ? 0.7 : 1,
               }}
             >
-              GUARDAR
+              {isSaving ? "GUARDANDO..." : "GUARDAR"}
             </button>
           </div>
         </div>

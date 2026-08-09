@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Subscription } from "@supabase/supabase-js";
+import type { Subscription, Session } from "@supabase/supabase-js";
 import type Hls from "hls.js";
 import {
   Station,
@@ -163,79 +163,76 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     };
     window.addEventListener("message", handleAuthMessage);
 
+    const syncUserSession = async (session: Session | null) => {
+      if (session && session.user) {
+        setIsAuthenticated(true);
+        const meta = session.user.user_metadata || {};
+        const fallbackName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
+        const fallbackAvatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${fallbackName}`;
+
+        let dbRole = "OYENTE";
+        let dbName = fallbackName;
+        let dbAvatar = fallbackAvatar;
+
+        if (supabase) {
+          try {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("role, username, full_name, avatar_url")
+              .eq("id", session.user.id)
+              .single();
+
+            if (!error && data) {
+              if (data.role) dbRole = data.role;
+              if (data.full_name || data.username) dbName = data.full_name || data.username;
+              if (data.avatar_url) dbAvatar = data.avatar_url;
+            }
+          } catch (e) {
+            console.error("Error reading profile data from Supabase:", e);
+          }
+        }
+
+        setUserProfile((prev) => {
+          const updated = {
+            ...prev,
+            name: dbName.toUpperCase(),
+            avatarUrl: dbAvatar,
+            role: dbRole,
+          };
+          if (typeof window !== "undefined") {
+            localStorage.setItem("user_profile", JSON.stringify(updated));
+          }
+          return updated;
+        });
+
+        chatSocket.connectChatSocket(dbName, session.access_token);
+      } else {
+        setIsAuthenticated(false);
+        setUserProfile({
+          name: "PETER ARKWALL",
+          role: "RADIO EXPLORER / VINYL JUNKIE",
+          avatarUrl: DEFAULT_AVATAR,
+          stashHours: 124,
+          followersCount: "1.2K",
+        });
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("user_profile");
+        }
+        chatSocket.connectChatSocket("Oyente", "guest");
+      }
+    };
+
     if (supabase) {
       const client = supabase;
       client.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setIsAuthenticated(true);
-          const meta = session.user.user_metadata;
-          const uName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
-          const uAvatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${uName}`;
-
-          client
-            .from("profiles")
-            .select("role")
-            .eq("id", session.user.id)
-            .single()
-            .then(({ data, error }) => {
-              const dbRole = !error && data?.role ? data.role : "OYENTE";
-              setUserProfile((prev) => {
-                const updated = {
-                  ...prev,
-                  name: uName.toUpperCase(),
-                  avatarUrl: uAvatar,
-                  role: dbRole,
-                };
-                localStorage.setItem("user_profile", JSON.stringify(updated));
-                return updated;
-              });
-            });
-
-          chatSocket.connectChatSocket(uName, session.access_token);
-        } else {
-          setIsAuthenticated(false);
-          chatSocket.connectChatSocket("Oyente", "guest");
-        }
+        syncUserSession(session);
       });
 
       const { data } = client.auth.onAuthStateChange((event, session) => {
-        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session) {
-          setIsAuthenticated(true);
-          const meta = session.user.user_metadata;
-          const uName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
-          const uAvatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${uName}`;
-
-          client
-            .from("profiles")
-            .select("role")
-            .eq("id", session.user.id)
-            .single()
-            .then(({ data, error }) => {
-              const dbRole = !error && data?.role ? data.role : "OYENTE";
-              setUserProfile((prev) => {
-                const updated = {
-                  ...prev,
-                  name: uName.toUpperCase(),
-                  avatarUrl: uAvatar,
-                  role: dbRole,
-                };
-                localStorage.setItem("user_profile", JSON.stringify(updated));
-                return updated;
-              });
-            });
-
-          chatSocket.connectChatSocket(uName, session.access_token);
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+          syncUserSession(session);
         } else if (event === "SIGNED_OUT") {
-          setIsAuthenticated(false);
-          setUserProfile({
-            name: "PETER ARKWALL",
-            role: "RADIO EXPLORER / VINYL JUNKIE",
-            avatarUrl: DEFAULT_AVATAR,
-            stashHours: 124,
-            followersCount: "1.2K",
-          });
-          localStorage.removeItem("user_profile");
-          chatSocket.connectChatSocket("Oyente", "guest");
+          syncUserSession(null);
         }
       });
       subscription = data.subscription;
@@ -504,9 +501,74 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setPlaylistTracks((prev) => prev.filter((t) => t.id !== id));
   }, [setPlaylistTracks]);
 
-  const saveProfile = useCallback((name: string, role: string, avatarUrl: string, hours: number, followers: string) => {
-    setUserProfile({ name, role, avatarUrl, stashHours: hours, followersCount: followers });
-  }, [setUserProfile]);
+  const saveProfile = useCallback(
+    async (name: string, role: string, avatarUrl: string, hours: number, followers: string) => {
+      const trimmedName = name.trim();
+      if (!trimmedName) return;
+
+      const upperName = trimmedName.toUpperCase();
+      const updatedProfile: UserProfile = {
+        name: upperName,
+        role,
+        avatarUrl,
+        stashHours: hours,
+        followersCount: followers,
+      };
+
+      setUserProfile(updatedProfile);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user_profile", JSON.stringify(updatedProfile));
+      }
+
+      if (supabase) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            // 1. Update Supabase Auth user_metadata
+            await supabase.auth.updateUser({
+              data: { full_name: trimmedName },
+            });
+
+            // 2. Update Supabase public.profiles table
+            const updatePayload: {
+              full_name: string;
+              username: string;
+              avatar_url: string;
+              updated_at: string;
+              role?: string;
+            } = {
+              full_name: trimmedName,
+              username: trimmedName.toLowerCase().replace(/\s+/g, "_"),
+              avatar_url: avatarUrl,
+              updated_at: new Date().toISOString(),
+            };
+
+            const currentRoleUpper = role.toUpperCase();
+            if (["ADMIN", "MODERADOR", "STREAMER"].includes(currentRoleUpper)) {
+              updatePayload.role = role;
+            }
+
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .update(updatePayload)
+              .eq("id", session.user.id);
+
+            if (profileError) {
+              console.error("Error al actualizar la tabla profiles en Supabase:", profileError);
+            }
+
+            // 3. Re-sync chat socket with the updated username
+            if (session.access_token) {
+              chatSocket.connectChatSocket(trimmedName, session.access_token);
+            }
+          }
+        } catch (err) {
+          console.error("Error al guardar el perfil en Supabase:", err);
+        }
+      }
+    },
+    [setUserProfile, chatSocket]
+  );
 
   const addAlbum = useCallback((name: string, artist: string, releaseYear: string, genre: string, imageUrl: string) => {
     const newAlbum: Album = {
