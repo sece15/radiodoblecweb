@@ -1,6 +1,7 @@
 import { CSSProperties, useState } from "react";
 import { Search, ShoppingCart } from "lucide-react";
 import { useAudio } from "@/hooks/useAudio";
+import { isVip } from "@/lib/permissions";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
@@ -24,11 +25,7 @@ export const Header = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { userProfile } = useAudio();
 
-  const isVipUser =
-    userProfile.role.toUpperCase().includes("VIP") ||
-    userProfile.role.toUpperCase().includes("ADMIN") ||
-    userProfile.role.toUpperCase().includes("MOD") ||
-    userProfile.role.toUpperCase().includes("STREAMER");
+  const isVipUser = isVip(userProfile.role);
 
   return (
     <header

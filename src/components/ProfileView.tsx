@@ -2,6 +2,7 @@ import { useState, useEffect, CSSProperties } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { Check, Edit, Share2, LogOut, Clock, Users, Star, PlayCircle, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { isAdmin, getRoleBadgeInfo } from "@/lib/permissions";
 
 interface ProfileViewProps {
   onNavigateToPlayer: () => void;
@@ -42,10 +43,10 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
   const [newAlbumGenre, setNewAlbumGenre] = useState("ROCK");
   const [newAlbumImageUrl, setNewAlbumImageUrl] = useState("");
 
-  const isAdmin = userProfile.role.toUpperCase() === "ADMIN";
+  const userIsAdmin = isAdmin(userProfile.role);
 
   const handleAddAlbumSubmit = () => {
-    if (!isAdmin) {
+    if (!userIsAdmin) {
       alert("Acceso denegado: Solo los administradores pueden añadir álbumes 🛡️");
       return;
     }
@@ -70,7 +71,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
 
   // Fetch all users/profiles if admin
   useEffect(() => {
-    if (isAdmin && supabase) {
+    if (userIsAdmin && supabase) {
       supabase
         .from("profiles")
         .select("id, username, full_name, avatar_url, role")
@@ -81,10 +82,10 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           }
         });
     }
-  }, [isAdmin]);
+  }, [userIsAdmin]);
 
   const handleUpdateUserRole = (userId: string, newRole: string) => {
-    if (!isAdmin) {
+    if (!userIsAdmin) {
       alert("Acceso denegado: Solo los administradores pueden gestionar roles 🛡️");
       return;
     }
@@ -271,18 +272,25 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           </h2>
 
           {/* Dynamic Badge Role */}
-          <div
-            style={{
-              transform: "rotate(-2deg)",
-              backgroundColor: "var(--primary)",
-              color: "var(--on-primary)",
-              padding: "6px 14px",
-              fontSize: "0.75rem",
-              fontWeight: 900,
-            }}
-          >
-            {userProfile.role.toUpperCase()}
-          </div>
+          {(() => {
+            const badge = getRoleBadgeInfo(userProfile.role);
+            return (
+              <div
+                style={{
+                  transform: "rotate(-2deg)",
+                  backgroundColor: badge.bg,
+                  color: badge.color,
+                  border: `2px solid ${badge.border}`,
+                  padding: "6px 14px",
+                  fontSize: "0.75rem",
+                  fontWeight: 900,
+                  boxShadow: "2px 2px 0px var(--primary)",
+                }}
+              >
+                {badge.badge}
+              </div>
+            );
+          })()}
         </div>
 
         {/* 3. EDIT & SHARE BUTTONS */}
@@ -688,7 +696,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
             <h3 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>
               ÁLBUMES EN DISPOSITIVO
             </h3>
-            {isAdmin && (
+            {userIsAdmin && (
               <button
                 onClick={() => setShowAddAlbumModal(true)}
                 className="neo-button"
@@ -1040,7 +1048,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       )}
 
       {/* 10. ADMIN USER MANAGEMENT PANEL */}
-      {isAdmin && (
+      {userIsAdmin && (
         <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "768px", gap: "16px", marginTop: "24px" }}>
           <h3
             style={{
@@ -1147,7 +1155,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       )}
 
       {/* 11. ADMIN GOOGLE DRIVE CLOUD STORAGE SHORTCUT */}
-      {isAdmin && (
+      {userIsAdmin && (
         <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "768px", gap: "12px", marginTop: "16px" }}>
           <h3
             style={{

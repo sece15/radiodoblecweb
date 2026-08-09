@@ -23,6 +23,7 @@ import {
 } from "@/constants";
 import { useLocalStorage, useLocalStorageToggle } from "@/hooks/useLocalStorage";
 import { useMediaSession } from "@/hooks/useMediaSession";
+import { isVip } from "@/lib/permissions";
 import { useAzuraCastMetadata } from "@/hooks/useAzuraCastMetadata";
 import { useChatSocket } from "@/hooks/useChatSocket";
 import { audioStore } from "@/store/useAudioStore";
@@ -400,11 +401,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [playUrl]);
 
   const playSong = useCallback((song: Song) => {
-    const isPremiumUser =
-      userProfile.role.toUpperCase().includes("VIP") ||
-      userProfile.role.toUpperCase().includes("ADMIN") ||
-      userProfile.role.toUpperCase().includes("MOD") ||
-      userProfile.role.toUpperCase().includes("STREAMER");
+    const isPremiumUser = isVip(userProfile.role);
 
     if (!isPremiumUser) {
       alert("⭐ Función Premium: Solo los usuarios VIP o Staff de la radio pueden elegir canciones a la carta. ¡Sigue disfrutando la señal en vivo! 📻");
@@ -425,11 +422,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [userProfile.role, playUrl]);
 
   const playPastBroadcast = useCallback((broadcast: PastBroadcast) => {
-    const isPremiumUser =
-      userProfile.role.toUpperCase().includes("VIP") ||
-      userProfile.role.toUpperCase().includes("ADMIN") ||
-      userProfile.role.toUpperCase().includes("MOD") ||
-      userProfile.role.toUpperCase().includes("STREAMER");
+    const isPremiumUser = isVip(userProfile.role);
 
     if (!isPremiumUser) {
       alert("⭐ Función Premium: Solo los usuarios VIP o Staff de la radio pueden escuchar emisiones pasadas a la carta. ¡Sigue disfrutando la señal en vivo! 📻");
