@@ -1,4 +1,4 @@
-import { useState, useEffect, MouseEvent } from "react";
+import { useState, useEffect, useMemo, MouseEvent } from "react";
 import { ShoppingCart, Star, Sparkles } from "lucide-react";
 import { Product } from "@/types";
 import { STORE_PRODUCTS } from "@/constants";
@@ -35,22 +35,27 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
     setDescriptionExpanded(false);
   };
 
-  // Helper to collect all unique images for the carousel
-  const activeImages: string[] = [];
-  if (selectedProduct) {
-    activeImages.push(selectedProduct.imageUrl);
+  // Memoized array of unique images for the carousel
+  const activeImages = useMemo(() => {
+    if (!selectedProduct) return [];
+    const imgs: string[] = [];
+    if (selectedProduct.imageUrl) {
+      imgs.push(selectedProduct.imageUrl);
+    }
     if (selectedProduct.variantImages) {
       Object.values(selectedProduct.variantImages).forEach((url) => {
-        if (!activeImages.includes(url)) {
-          activeImages.push(url);
+        if (url && !imgs.includes(url)) {
+          imgs.push(url);
         }
       });
     }
-  }
+    return imgs;
+  }, [selectedProduct]);
 
   const syncColorFromImage = (index: number) => {
     if (!selectedProduct || !selectedProduct.variantImages) return;
     const url = activeImages[index];
+    if (!url) return;
     const matchingColor = Object.keys(selectedProduct.variantImages).find(
       (color) => selectedProduct.variantImages?.[color] === url
     );
@@ -60,6 +65,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
   };
 
   const handlePrevImage = (e: MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (activeImages.length <= 1) return;
     const nextIdx = (activeImgIndex - 1 + activeImages.length) % activeImages.length;
@@ -68,6 +74,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
   };
 
   const handleNextImage = (e: MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (activeImages.length <= 1) return;
     const nextIdx = (activeImgIndex + 1) % activeImages.length;
@@ -473,7 +480,9 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
                   {activeImages.length > 1 && (
                     <>
                       <button
+                        type="button"
                         onClick={handlePrevImage}
+                        aria-label="Foto anterior"
                         className="neo-button"
                         style={{
                           position: "absolute",
@@ -487,17 +496,20 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: "var(--card-bg)",
-                          border: "2px solid var(--primary)",
+                          backgroundColor: "white",
+                          border: "2.5px solid var(--primary)",
                           boxShadow: "2px 2px 0px var(--primary)",
                           cursor: "pointer",
-                          zIndex: 5,
+                          zIndex: 20,
+                          fontWeight: 900,
                         }}
                       >
                         ◀
                       </button>
                       <button
+                        type="button"
                         onClick={handleNextImage}
+                        aria-label="Foto siguiente"
                         className="neo-button"
                         style={{
                           position: "absolute",
@@ -511,11 +523,12 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: "var(--card-bg)",
-                          border: "2px solid var(--primary)",
+                          backgroundColor: "white",
+                          border: "2.5px solid var(--primary)",
                           boxShadow: "2px 2px 0px var(--primary)",
                           cursor: "pointer",
-                          zIndex: 5,
+                          zIndex: 20,
+                          fontWeight: 900,
                         }}
                       >
                         ▶
