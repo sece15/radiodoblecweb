@@ -113,7 +113,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
         id: track.album.toLowerCase().replace(/\s+/g, "-"),
         name: track.album,
         artist: track.artist,
-        imageUrl: track.imageUrl || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&q=80",
+        imageUrl: track.imageUrl || "/hitsandbeats.jpg",
         releaseYear: "2026",
         genre: "PLAYLIST",
       });
@@ -128,7 +128,7 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
         id: song.albumName.toLowerCase().replace(/\s+/g, "-"),
         name: song.albumName,
         artist: song.artist,
-        imageUrl: song.imageUrl || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&q=80",
+        imageUrl: song.imageUrl || "/hitsandbeats.jpg",
         releaseYear: "2026",
         genre: "FAVORITO",
       });
