@@ -1,7 +1,8 @@
 import { useState, CSSProperties } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { RadioProgram, PastBroadcast } from "@/types";
-import { Heart, Share2, Megaphone, Play, X } from "lucide-react";
+import { Heart, Share2, Megaphone, Play, X, Clock, User } from "lucide-react";
+import { DriveArchiveSection } from "./DriveArchiveSection";
 
 interface ExploreViewProps {
   onNavigateToPlayer: () => void;
@@ -227,8 +228,20 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   backgroundColor: isCurrent ? "var(--primary-container)" : "var(--card-bg)",
                 }}
                 onClick={() => {
-                  playStation(station);
-                  onNavigateToPlayer();
+                  const matchingProg = programs.find(
+                    (p) => p.id === station.id || p.title.toLowerCase() === station.name.toLowerCase()
+                  );
+                  setSelectedProgram(
+                    matchingProg || {
+                      id: station.id,
+                      title: station.name,
+                      host: "Locutor Doble C",
+                      timeSlot: station.frequency,
+                      genre: station.style,
+                      imageUrl: station.imageUrl,
+                      description: station.description,
+                    }
+                  );
                 }}
               >
                 {/* Cover Photo */}
@@ -379,7 +392,17 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   backgroundColor: "var(--surface-container)",
                   padding: "12px",
                 }}
-                onClick={() => setSelectedProgram(prog)}
+                onClick={() => {
+                  const matchingStation = stations.find(
+                    (s) => s.id === prog.id || s.name.toLowerCase() === prog.title.toLowerCase()
+                  );
+                  if (matchingStation) {
+                    playStation(matchingStation);
+                  } else {
+                    playLiveStream();
+                  }
+                  onNavigateToPlayer();
+                }}
               >
                 <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                   <img
@@ -451,6 +474,9 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
           })}
         </div>
       </div>
+
+      {/* 3.8 GOOGLE DRIVE ARCHIVE & BROADCASTS FEED */}
+      <DriveArchiveSection />
 
       {/* 4. BOTTOM BANNERS GRID */}
       <div
@@ -935,6 +961,275 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DETALLE DEL PROGRAMA (FOTO A LA IZQUIERDA Y DESCRIPCIÓN DEL LOCUTOR A LA DERECHA) */}
+      {selectedProgram && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.75)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+            backdropFilter: "blur(4px)",
+          }}
+          onClick={() => setSelectedProgram(null)}
+        >
+          <div
+            className="neo-card"
+            style={{
+              width: "100%",
+              maxWidth: "680px",
+              backgroundColor: "white",
+              padding: "24px",
+              boxShadow: "8px 8px 0px var(--primary)",
+              border: "3.5px solid var(--primary)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header con Título del Programa y Botón de Cerrar */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span
+                  style={{
+                    backgroundColor: "var(--primary-container)",
+                    border: "1.5px solid var(--primary)",
+                    padding: "2px 8px",
+                    fontSize: "0.65rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    width: "fit-content",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  📻 PROGRAMA OFICIAL DOBLE C
+                </span>
+                <h3
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    lineHeight: "1.2",
+                    fontFamily: "Space Grotesk, sans-serif",
+                  }}
+                >
+                  {selectedProgram.title}
+                </h3>
+              </div>
+
+              <button
+                onClick={() => setSelectedProgram(null)}
+                style={{
+                  background: "var(--primary)",
+                  color: "var(--on-primary)",
+                  border: "2px solid var(--primary)",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  boxShadow: "2px 2px 0px black",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Layout Side-by-side: Foto Izquierda / Información y Descripción Derecha */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: "20px",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+              }}
+            >
+              {/* LADO IZQUIERDO: FOTO Y BADGE DE GÉNERO / HORARIO */}
+              <div
+                style={{
+                  flex: "1 1 240px",
+                  maxWidth: "280px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  margin: "0 auto",
+                }}
+              >
+                <div
+                  className="neo-card"
+                  style={{
+                    width: "100%",
+                    aspectRatio: "1/1",
+                    overflow: "hidden",
+                    border: "3px solid var(--primary)",
+                    boxShadow: "5px 5px 0px var(--primary)",
+                    backgroundColor: "var(--surface-container)",
+                    position: "relative",
+                  }}
+                >
+                  <img
+                    src={selectedProgram.imageUrl}
+                    alt={selectedProgram.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: "8px",
+                      left: "8px",
+                      backgroundColor: "var(--primary)",
+                      color: "var(--on-primary)",
+                      padding: "3px 8px",
+                      fontSize: "0.65rem",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    {selectedProgram.genre}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "var(--surface-container)",
+                    border: "2px solid var(--primary)",
+                    padding: "8px 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "2px 2px 0px var(--primary)",
+                  }}
+                >
+                  <Clock size={16} style={{ color: "#BA1A1A", flexShrink: 0 }} />
+                  <span style={{ fontSize: "0.7rem", fontWeight: 900, color: "#BA1A1A" }}>
+                    {selectedProgram.timeSlot}
+                  </span>
+                </div>
+              </div>
+
+              {/* LADO DERECHO: LOCUTOR Y DESCRIPCIÓN DEL PROGRAMA */}
+              <div
+                style={{
+                  flex: "1 1 280px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  minWidth: 0,
+                }}
+              >
+                {/* Cuadro de Información del Locutor */}
+                <div
+                  style={{
+                    backgroundColor: "var(--primary-container)",
+                    border: "2px solid var(--primary)",
+                    padding: "12px",
+                    boxShadow: "3px 3px 0px var(--primary)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <User size={16} style={{ color: "var(--primary)" }} />
+                    <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.8 }}>
+                      LOCUTOR / HOST DEL PROGRAMA
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
+                    {selectedProgram.host}
+                  </h4>
+                </div>
+
+                {/* Cuadro de Descripción */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
+                    DESCRIPCIÓN DEL PROGRAMA
+                  </span>
+                  <div
+                    style={{
+                      border: "2px solid var(--primary)",
+                      backgroundColor: "var(--surface-container)",
+                      padding: "12px",
+                      fontSize: "0.8rem",
+                      lineHeight: "1.35rem",
+                      color: "var(--primary)",
+                      boxShadow: "3px 3px 0px var(--primary)",
+                    }}
+                  >
+                    <p style={{ margin: 0 }}>
+                      {selectedProgram.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botones de Acción */}
+                <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+                  <button
+                    onClick={() => {
+                      const matchingStation = stations.find(
+                        (s) => s.id === selectedProgram.id || s.name.toLowerCase() === selectedProgram.title.toLowerCase()
+                      );
+                      if (matchingStation) {
+                        playStation(matchingStation);
+                      } else {
+                        playLiveStream();
+                      }
+                      setSelectedProgram(null);
+                      onNavigateToPlayer();
+                    }}
+                    className="neo-button fun-hover-wobble"
+                    style={{
+                      flex: 1,
+                      backgroundColor: "var(--primary-container)",
+                      padding: "10px 14px",
+                      fontSize: "0.75rem",
+                      fontWeight: 900,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      boxShadow: "3px 3px 0px var(--primary)",
+                    }}
+                  >
+                    <Play size={14} fill="currentColor" /> SINTONIZAR EN VIVO
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedProgram(null)}
+                    className="neo-button"
+                    style={{
+                      backgroundColor: "white",
+                      padding: "10px 14px",
+                      fontSize: "0.75rem",
+                      fontWeight: 900,
+                      boxShadow: "3px 3px 0px var(--primary)",
+                    }}
+                  >
+                    CERRAR
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

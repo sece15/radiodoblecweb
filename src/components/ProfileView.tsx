@@ -1145,6 +1145,66 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           </div>
         </div>
       )}
+
+      {/* 11. ADMIN GOOGLE DRIVE CLOUD STORAGE SHORTCUT */}
+      {isAdmin && (
+        <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "768px", gap: "12px", marginTop: "16px" }}>
+          <h3
+            style={{
+              fontSize: "1.1rem",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              borderBottom: "4px solid var(--primary)",
+              paddingBottom: "6px",
+              width: "max-content",
+            }}
+          >
+            ☁️ ALMACENAMIENTO GOOGLE DRIVE (SUPABASE EDGE API)
+          </h3>
+          <div
+            className="neo-card"
+            style={{
+              backgroundColor: "var(--surface-container)",
+              padding: "16px",
+              boxShadow: "6px 6px 0px var(--primary)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 900, textTransform: "uppercase" }}>
+                Carpeta Compartida: Supabase Drive Storage
+              </span>
+              <p style={{ fontSize: "0.7rem", opacity: 0.75 }}>
+                Sube audios (.mp3 / .mp4) desde la sección Explorar o directamente en Drive para que se sincronicen en la web.
+              </p>
+            </div>
+
+            <a
+              href="https://drive.google.com/drive/folders/1OhBEPm-sb3L5ITUXi_5YkOVbRe42Acmk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="neo-button"
+              style={{
+                backgroundColor: "var(--primary-container)",
+                padding: "8px 14px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              ABRIR GOOGLE DRIVE ↗
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
