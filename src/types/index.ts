@@ -79,6 +79,9 @@ export interface Product {
   variantImages?: Record<string, string>;
   badge?: string;
   isFeatured?: boolean;
+  driveFileId?: string;
+  specs?: string;
+  careInstructions?: string;
 }
 
 export interface CartItem {

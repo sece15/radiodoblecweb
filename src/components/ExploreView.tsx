@@ -597,13 +597,10 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", color: "var(--primary)" }}>
               <Megaphone style={{ width: "56px", height: "56px" }} />
               <h4 style={{ fontWeight: 900, fontSize: "1.3rem", letterSpacing: "-0.02em", textAlign: "center" }}>
-                ¿QUIERES SER DJ?
+                ¿QUIERES SER LOCUTOR O DJ?
               </h4>
               <p style={{ fontWeight: "bold", fontSize: "0.75rem", textAlign: "center", color: "#BA1A1A" }}>
                 ¡HAZ CLICK AQUÍ PARA POSTULAR! 📡
-              </p>
-              <p style={{ fontSize: "0.6rem", opacity: 0.8, textAlign: "center", fontWeight: "bold" }}>
-                O ENVÍA TU DEMO A ANDREALVARADOCAMPOS@GMAIL.COM
               </p>
             </div>
           </div>
@@ -744,7 +741,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
           setDjModalOpen(false);
           setDjSubmitted(false);
         }}
-        title={!djSubmitted ? "¿Quieres ser DJ?" : "¡Postulación Enviada!"}
+        title={!djSubmitted ? "¿Quieres ser Locutor o DJ?" : "¡Postulación Enviada!"}
         badgeText="📻 CONVOCATORIA ABIERTA"
         maxWidth="460px"
         backgroundColor="var(--background)"
@@ -910,7 +907,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 gap: "6px",
               }}
             >
-              {isSendingEmail ? "ENVIANDO POSTULACIÓN..." : "ENVIAR A ANDREALVARADOCAMPOS@GMAIL.COM ⚡"}
+              ENVIAR
             </button>
           </form>
         ) : (
@@ -944,7 +941,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 ¡DEMO ENVIADA! 📻
               </h3>
               <p style={{ fontSize: "0.75rem", fontWeight: "bold", opacity: 0.8, margin: 0 }}>
-                Hola <strong>{djName}</strong>, tu postulación ha sido dirigida a <strong>andrealvaradocampos@gmail.com</strong>. Revisaremos tu material en la radio y te contactaremos a <strong>{djEmail}</strong>.
+                Hola <strong>{djName}</strong>, tu postulación ha sido enviada a la bandeja de la radio. Revisaremos tu material y te contactaremos a <strong>{djEmail}</strong>.
               </p>
             </div>
 

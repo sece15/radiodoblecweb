@@ -229,24 +229,19 @@ serve(async (req) => {
         parents: [folderId],
       };
 
-      // Multipart upload format
+      // Standard RFC 2046 Multipart upload format for Google Drive
       const boundary = "-------314159265358979323846";
-      const delimiter = "\r\n--" + boundary + "\r\n";
-      const close_delim = "\r\n--" + boundary + "--";
-
-      const metadataPart = delimiter +
-        "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
-        JSON.stringify(metadata);
+      const metadataStr = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
+      const fileHeaderStr = `--${boundary}\r\nContent-Type: ${file.type || "application/octet-stream"}\r\n\r\n`;
+      const closeStr = `\r\n--${boundary}--`;
 
       const fileBuffer = await file.arrayBuffer();
-      const filePartHeader = delimiter +
-        `Content-Type: ${file.type || "application/octet-stream"}\r\n\r\n`;
 
       const encoder = new TextEncoder();
-      const part1 = encoder.encode(metadataPart);
-      const part2 = encoder.encode(filePartHeader);
+      const part1 = encoder.encode(metadataStr);
+      const part2 = encoder.encode(fileHeaderStr);
       const part3 = new Uint8Array(fileBuffer);
-      const part4 = encoder.encode(close_delim);
+      const part4 = encoder.encode(closeStr);
 
       const fullBody = new Uint8Array(part1.length + part2.length + part3.length + part4.length);
       fullBody.set(part1, 0);

@@ -28,6 +28,9 @@ const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/google-drive-api`;
 // ID raíz conocido de la carpeta Programas en Google Drive
 export const PROGRAMAS_ROOT_FOLDER_ID = "1_uebi4lDZ8kPcVCk9rNjW7bIXfT5Qf1Y";
 
+// ID directo de la carpeta STORE en Google Drive (compartida con la Service Account)
+export const STORE_FOLDER_ID = "1Dx8Dl7VyE4SaJU78VoCMv2RQkX94adfs";
+
 // 1. Obtener la lista de subcarpetas de programas dentro de "Programas"
 export async function fetchProgramFolders(): Promise<DriveFile[]> {
   try {
@@ -265,3 +268,28 @@ export async function uploadProgramRecording(
 
   return await uploadTrackToAlbum(file, matchedFolder.id, customName);
 }
+
+// 13. Obtener o crear la carpeta STORE en Google Drive
+export async function getOrCreateStoreFolder(): Promise<DriveFile> {
+  const rootFiles = await fetchDriveFiles();
+  const storeFolder = rootFiles.find(
+    (f) =>
+      f.mimeType === "application/vnd.google-apps.folder" &&
+      (f.name.toUpperCase() === "STORE" || f.name.toUpperCase() === "TIENDA" || f.name.toUpperCase() === "ROPA")
+  );
+
+  if (storeFolder) {
+    return storeFolder;
+  }
+
+  return await createDriveAlbum("STORE");
+}
+
+// 14. Subir imagen de prenda/producto directamente a la carpeta STORE de Google Drive
+export async function uploadStoreProductImage(file: File, productName: string): Promise<DriveFile> {
+  const cleanExtension = file.name.split(".").pop() || "png";
+  const safeName = `${productName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.${cleanExtension}`;
+  // Usamos el folder ID directo de la carpeta Store (que debe estar compartida con la Service Account como Editor)
+  return await uploadTrackToAlbum(file, STORE_FOLDER_ID, safeName);
+}
+

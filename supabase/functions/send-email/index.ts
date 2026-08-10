@@ -47,7 +47,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Radio Doble C <onboarding@resend.dev>",
-        to: ["andrealvaradocampos@gmail.com"],
+        to: ["radiodoblec@gmail.com"],
         reply_to: email,
         subject: `📻 Nueva Postulación / Audios de ${name}`,
         html: `
