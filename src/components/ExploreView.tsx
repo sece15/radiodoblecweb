@@ -977,7 +977,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
           title={selectedProgram.title}
           badgeText="📻 PROGRAMA OFICIAL DOBLE C"
           maxWidth="880px"
-          bodyOverflow="hidden"
+          bodyOverflow="auto"
           backgroundColor="var(--background)"
           footer={
             <button
@@ -1057,25 +1057,26 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 </div>
               </div>
 
+              {/* Horario */}
               <div
                 style={{
                   width: "100%",
-                  backgroundColor: "var(--surface-container)",
                   border: "1.5px solid var(--primary)",
-                  padding: "4px 8px",
+                  backgroundColor: "var(--surface-container)",
+                  padding: "6px",
+                  textAlign: "center",
+                  fontSize: "0.65rem",
+                  fontWeight: 900,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "4px",
-                  boxShadow: "2px 2px 0px var(--primary)",
                 }}
               >
-                <Clock size={12} style={{ color: "#BA1A1A", flexShrink: 0 }} />
-                <span style={{ fontSize: "0.65rem", fontWeight: 900, color: "#BA1A1A" }}>
-                  {selectedProgram.timeSlot}
-                </span>
+                <Clock size={12} /> {selectedProgram.timeSlot}
               </div>
 
+              {/* Botón Escuchar Vivo */}
               <button
                 onClick={() => {
                   const matchingStation = stations.find(
@@ -1089,12 +1090,13 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   setSelectedProgram(null);
                   onNavigateToPlayer();
                 }}
-                className="neo-button fun-hover-wobble"
+                className="neo-button"
                 style={{
                   width: "100%",
-                  backgroundColor: "var(--primary-container)",
-                  padding: "8px 8px",
-                  fontSize: "0.68rem",
+                  backgroundColor: "#FF5E5B",
+                  color: "white",
+                  padding: "8px 6px",
+                  fontSize: "0.72rem",
                   fontWeight: 900,
                   display: "flex",
                   alignItems: "center",
@@ -1107,7 +1109,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               </button>
             </div>
 
-            {/* LADO DERECHO: LOCUTOR, DESCRIPCIÓN Y GRABACIONES DE GOOGLE DRIVE */}
+            {/* LADO DERECHO: LOCUTOR, DESCRIPCIÓN Y GRABACIONES */}
             <div
               style={{
                 flex: "1 1 340px",
@@ -1157,11 +1159,11 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 </div>
               </div>
 
-              {/* SECCIÓN DE GRABACIONES Y EMISIONES DE GOOGLE DRIVE */}
+              {/* SECCIÓN DE GRABACIONES Y EMISIONES */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "5px" }}>
-                    <Disc size={13} style={{ color: "var(--primary)" }} /> EMISIONES PASADAS EN DRIVE
+                    <Disc size={13} style={{ color: "var(--primary)" }} /> EMISIONES PASADAS
                   </span>
                   <span
                     style={{
@@ -1187,7 +1189,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   >
                     <Disc size={20} className="animate-spin" style={{ margin: "0 auto 4px auto", color: "var(--primary)" }} />
                     <p style={{ fontSize: "0.72rem", fontWeight: "bold", margin: 0 }}>
-                      Sincronizando emisiones desde Google Drive...
+                      Cargando emisiones...
                     </p>
                   </div>
                 ) : programRecordings.length === 0 ? (
@@ -1200,76 +1202,103 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                     }}
                   >
                     <p style={{ fontSize: "0.72rem", fontWeight: "bold", margin: 0, opacity: 0.8 }}>
-                      📁 Aún no hay archivos de audio subidos en la carpeta de Drive de este programa.
+                      📁 Aún no hay grabaciones o emisiones subidas para este programa.
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "180px", overflowY: "auto" }}>
-                    {programRecordings.map((recording, rIdx) => {
-                      const streamUrl = getDriveStreamUrl(recording.id);
-                      const isPlayingThis = isPlaying && currentTrack.streamUrl === streamUrl;
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      maxHeight: "260px",
+                      overflowY: "auto",
+                      paddingRight: "4px",
+                    }}
+                  >
+                    {(() => {
+                      // Ordenar: el último/más reciente primero, y el primero/más antiguo al final
+                      const orderedRecordings = (() => {
+                        const hasValidTimes = programRecordings.some((r) => Boolean(r.createdTime));
+                        if (hasValidTimes) {
+                          return [...programRecordings].sort((a, b) => {
+                            const timeA = a.createdTime ? new Date(a.createdTime).getTime() : 0;
+                            const timeB = b.createdTime ? new Date(b.createdTime).getTime() : 0;
+                            if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+                              return timeB - timeA; // Más reciente primero
+                            }
+                            return 0;
+                          });
+                        }
+                        return [...programRecordings].reverse();
+                      })();
 
-                      return (
-                        <div
-                          key={recording.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "6px 10px",
-                            backgroundColor: isPlayingThis ? "var(--primary-container)" : "var(--surface-container)",
-                            border: "2px solid var(--primary)",
-                            boxShadow: isPlayingThis ? "2px 2px 0px var(--primary)" : "none",
-                            gap: "8px",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
-                            <span style={{ fontSize: "0.68rem", fontWeight: 900, opacity: 0.6 }}>
-                              #{rIdx + 1}
-                            </span>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <p
-                                style={{
-                                  fontSize: "0.72rem",
-                                  fontWeight: 900,
-                                  textTransform: "uppercase",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  margin: 0,
-                                }}
-                                title={recording.name}
-                              >
-                                {cleanFileName(recording.name)}
-                              </p>
-                              <span style={{ fontSize: "0.58rem", opacity: 0.7 }}>
-                                {formatDate(recording.createdTime)} • {formatFileSize(recording.size)}
-                              </span>
-                            </div>
-                          </div>
+                      return orderedRecordings.map((recording, rIdx) => {
+                        const streamUrl = getDriveStreamUrl(recording.id);
+                        const isPlayingThis = isPlaying && currentTrack.streamUrl === streamUrl;
 
-                          <button
-                            onClick={() => handlePlayRecording(recording, selectedProgram.title)}
+                        return (
+                          <div
+                            key={recording.id}
                             style={{
-                              backgroundColor: isPlayingThis ? "var(--primary)" : "var(--primary-container)",
-                              color: isPlayingThis ? "var(--on-primary)" : "var(--primary)",
-                              border: "1.5px solid var(--primary)",
-                              padding: "5px 8px",
-                              cursor: "pointer",
-                              fontSize: "0.68rem",
-                              fontWeight: 900,
                               display: "flex",
                               alignItems: "center",
-                              gap: "4px",
-                              flexShrink: 0,
+                              justifyContent: "space-between",
+                              padding: "6px 10px",
+                              backgroundColor: isPlayingThis ? "var(--primary-container)" : "var(--surface-container)",
+                              border: "2px solid var(--primary)",
+                              boxShadow: isPlayingThis ? "2px 2px 0px var(--primary)" : "none",
+                              gap: "8px",
                             }}
                           >
-                            {isPlayingThis ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" />}
-                            {isPlayingThis ? "PAUSAR" : "REPRODUCIR"}
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+                              <span style={{ fontSize: "0.68rem", fontWeight: 900, opacity: 0.6 }}>
+                                #{rIdx + 1}
+                              </span>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <p
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: 900,
+                                    textTransform: "uppercase",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    margin: 0,
+                                  }}
+                                  title={recording.name}
+                                >
+                                  {cleanFileName(recording.name)}
+                                </p>
+                                <span style={{ fontSize: "0.58rem", opacity: 0.7 }}>
+                                  {formatDate(recording.createdTime)} • {formatFileSize(recording.size)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handlePlayRecording(recording, selectedProgram.title)}
+                              style={{
+                                backgroundColor: isPlayingThis ? "var(--primary)" : "var(--primary-container)",
+                                color: isPlayingThis ? "var(--on-primary)" : "var(--primary)",
+                                border: "1.5px solid var(--primary)",
+                                padding: "5px 8px",
+                                cursor: "pointer",
+                                fontSize: "0.68rem",
+                                fontWeight: 900,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isPlayingThis ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" />}
+                              {isPlayingThis ? "PAUSAR" : "REPRODUCIR"}
+                            </button>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </div>

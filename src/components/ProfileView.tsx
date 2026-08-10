@@ -2,11 +2,9 @@
 
 import { useState, useEffect, CSSProperties } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { Check, Edit, Share2, LogOut, Clock, Star, PlayCircle, Mic, Upload, Disc } from "lucide-react";
+import { Check, Edit, Share2, LogOut, Clock, Star, PlayCircle, Mic, ExternalLink } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { isAdmin, getRoleBadgeInfo } from "@/lib/permissions";
-import { INITIAL_PROGRAMS } from "@/constants";
-import { uploadProgramRecording } from "@/services/driveService";
 import { NeoModal } from "@/components/common/NeoModal";
 
 interface ProfileViewProps {
@@ -40,14 +38,6 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
   const [editBio, setEditBio] = useState(userProfile.bio || "");
   const [isSaving, setIsSaving] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
-
-  // Streamer Upload Recording Modal State
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedProgramTitle, setSelectedProgramTitle] = useState(INITIAL_PROGRAMS[0]?.title || "NOCHE DE CUMBIA");
-  const [recordingTitle, setRecordingTitle] = useState("");
-  const [recordingFile, setRecordingFile] = useState<File | null>(null);
-  const [isUploadingRecording, setIsUploadingRecording] = useState(false);
-  const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
 
   // Permissions: Solo STREAMER y ADMIN tienen acceso al panel de subir programas
   const normRole = (userProfile.role || "").trim().toUpperCase();
@@ -139,33 +129,6 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       setTimeout(() => setCopiedShare(false), 3000);
     } else {
       alert(`Enlace copiado al portapapeles: ${shareUrl}`);
-    }
-  };
-
-  // Streamer Upload Recording Submission
-  const handleUploadRecordingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recordingFile) {
-      alert("Por favor selecciona un archivo de audio MP3 para subir.");
-      return;
-    }
-
-    setIsUploadingRecording(true);
-    setUploadSuccessMsg(null);
-
-    try {
-      const cleanCustomName = recordingTitle.trim() ? `${recordingTitle.trim()}.mp3` : recordingFile.name;
-      await uploadProgramRecording(recordingFile, selectedProgramTitle, cleanCustomName);
-
-      setUploadSuccessMsg(`¡Emisión "${recordingTitle || recordingFile.name}" subida con éxito a la carpeta de ${selectedProgramTitle} en Google Drive! 📻☁️`);
-      setRecordingTitle("");
-      setRecordingFile(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error desconocido al subir emisión";
-      console.error("Error al subir emisión:", err);
-      alert(`No se pudo subir la grabación del programa: ${msg}`);
-    } finally {
-      setIsUploadingRecording(false);
     }
   };
 
@@ -461,19 +424,10 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
         </div>
       </div>
 
-      {/* 3. STREAMERS & ADMINS SECTION: SUBIR EMISIONES DE PROGRAMAS */}
+      {/* 3. STREAMER / ADMIN NOTICE & DRIVE SHORTCUT */}
       {canUploadPrograms && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            maxWidth: "800px",
-            gap: "12px",
-            marginTop: "12px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+        <div style={{ display: "flex", flexDirection: "column", width: "100%", maxWidth: "800px", gap: "12px", marginTop: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3
               style={{
                 fontSize: "1.1rem",
@@ -505,18 +459,17 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
           >
             <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: "1 1 320px" }}>
               <span style={{ fontSize: "0.9rem", fontWeight: 900, textTransform: "uppercase" }}>
-                🎙️ Subir Grabación de Programa Emitido
+                🎙️ Emisiones y Grabaciones de Programas
               </span>
               <p style={{ fontSize: "0.72rem", opacity: 0.8, margin: 0, lineHeight: "1.3" }}>
-                Sube el archivo de audio (.mp3) de tu programa emitido para que aparezca automáticamente en la <strong>Guía Oficial de Programas</strong> para que todos los oyentes puedan escucharlo.
+                Para publicar un nuevo capítulo, arrastra el archivo de audio (.mp3) dentro de la carpeta compartida de tu programa en Google Drive (<strong>Programas</strong>). La web lo sincronizará y publicará automáticamente en <strong>Emisiones Pasadas</strong>.
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setShowUploadModal(true);
-                setUploadSuccessMsg(null);
-              }}
+            <a
+              href="https://drive.google.com/drive/my-drive"
+              target="_blank"
+              rel="noopener noreferrer"
               className="neo-button fun-hover-wobble"
               style={{
                 backgroundColor: "var(--primary-container)",
@@ -527,10 +480,12 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
                 alignItems: "center",
                 gap: "8px",
                 boxShadow: "3px 3px 0px var(--primary)",
+                textDecoration: "none",
+                color: "var(--primary)",
               }}
             >
-              <Upload size={16} /> SUBIR A LA RADIO
-            </button>
+              <ExternalLink size={16} /> ABRIR GOOGLE DRIVE
+            </a>
           </div>
         </div>
       )}
@@ -1050,138 +1005,6 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
               {isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
             </button>
           </div>
-        </NeoModal>
-      )}
-
-      {/* MODAL 2: SUBIR GRABACIÓN DE PROGRAMA (STREAMERS & LOCUTORES) */}
-      {showUploadModal && (
-        <NeoModal
-          isOpen={showUploadModal}
-          onClose={() => {
-            if (!isUploadingRecording) setShowUploadModal(false);
-          }}
-          title="SUBIR EMISIÓN DE PROGRAMA"
-          badgeText="RADIO DOBLE C 📻"
-          maxWidth="460px"
-        >
-          <form onSubmit={handleUploadRecordingSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div>
-              <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                SELECCIONA EL PROGRAMA OFICIAL:
-              </label>
-              <select
-                value={selectedProgramTitle}
-                onChange={(e) => setSelectedProgramTitle(e.target.value)}
-                disabled={isUploadingRecording}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  border: "2.5px solid var(--primary)",
-                  outline: "none",
-                  fontSize: "0.78rem",
-                  fontWeight: 900,
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                }}
-              >
-                {INITIAL_PROGRAMS.map((prog) => (
-                  <option key={prog.id} value={prog.title}>
-                    📻 {prog.title} ({prog.host})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                TÍTULO O EPISODIO DE LA EMISIÓN (OPCIONAL):
-              </label>
-              <input
-                type="text"
-                value={recordingTitle}
-                onChange={(e) => setRecordingTitle(e.target.value)}
-                disabled={isUploadingRecording}
-                placeholder="Ej: Emisión #42 - Especial de Cumbia Psicodélica"
-                style={{
-                  width: "100%",
-                  padding: "7px 10px",
-                  border: "2.5px solid var(--primary)",
-                  outline: "none",
-                  fontSize: "0.78rem",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: "0.7rem", fontWeight: "bold", display: "block", marginBottom: "4px" }}>
-                ARCHIVO DE AUDIO MP3 *:
-              </label>
-              <input
-                type="file"
-                accept="audio/*,.mp3,.m4a,.wav,.aac"
-                required
-                disabled={isUploadingRecording}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setRecordingFile(e.target.files[0]);
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  border: "2px dashed var(--primary)",
-                  backgroundColor: "var(--surface-container)",
-                  fontSize: "0.72rem",
-                  cursor: "pointer",
-                }}
-              />
-            </div>
-
-            {uploadSuccessMsg && (
-              <div
-                style={{
-                  backgroundColor: "var(--primary-container)",
-                  border: "2px solid var(--primary)",
-                  padding: "8px 10px",
-                  fontSize: "0.72rem",
-                  fontWeight: 900,
-                }}
-              >
-                {uploadSuccessMsg}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isUploadingRecording || !recordingFile}
-              className="neo-button fun-hover-wobble"
-              style={{
-                backgroundColor: isUploadingRecording ? "var(--surface-container)" : "var(--primary-container)",
-                width: "100%",
-                padding: "10px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                marginTop: "4px",
-                cursor: isUploadingRecording || !recordingFile ? "not-allowed" : "pointer",
-                boxShadow: "3px 3px 0px var(--primary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-              }}
-            >
-              {isUploadingRecording ? (
-                <>
-                  <Disc size={16} className="animate-spin" /> SUBIENDO A LA RADIO...
-                </>
-              ) : (
-                <>
-                  <Upload size={16} /> SUBIR A LA RADIO 📻
-                </>
-              )}
-            </button>
-          </form>
         </NeoModal>
       )}
     </div>

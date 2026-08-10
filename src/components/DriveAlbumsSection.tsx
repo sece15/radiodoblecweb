@@ -691,7 +691,7 @@ export const DriveAlbumsSection = ({
                       <div style={{ padding: "28px", textAlign: "center", backgroundColor: "var(--surface-container)", border: "2px dashed var(--primary)" }}>
                         <Disc size={24} className="animate-spin" style={{ margin: "0 auto 8px auto", color: "var(--primary)" }} />
                         <p style={{ fontSize: "0.75rem", fontWeight: "bold", margin: 0 }}>
-                          Cargando canciones de Google Drive...
+                          Cargando canciones...
                         </p>
                       </div>
                     ) : playableTracks.length === 0 ? (

@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Product } from "@/types";
 import { STORE_PRODUCTS } from "@/constants";
-import { uploadStoreProductImage, deleteDriveFile, getDriveStreamUrl } from "./driveService";
 
 export interface CreateProductInput {
   name: string;
@@ -83,33 +82,24 @@ export async function fetchStoreProducts(): Promise<Product[]> {
   }
 }
 
-export async function uploadProductImageFile(file: File, namePrefix: string): Promise<{ url: string; driveId?: string; storagePath?: string }> {
-  try {
-    // 1. Try Google Drive
-    const driveUpload = await uploadStoreProductImage(file, namePrefix);
-    return {
-      url: getDriveStreamUrl(driveUpload.id),
-      driveId: driveUpload.id,
-    };
-  } catch (e) {
-    console.warn("Error en Google Drive, intentando fallback a Supabase Storage:", e);
+export async function uploadProductImageFile(file: File, namePrefix: string): Promise<{ url: string; storagePath: string }> {
+  if (!supabase) throw new Error("No se pudo subir la imagen: Supabase no disponible");
 
-    // 2. Fallback a Supabase Storage
-    if (!supabase) throw new Error("No se pudo subir la imagen: Supabase no disponible");
+  const ext = file.name.split(".").pop() || "png";
+  const safePrefix = namePrefix.toLowerCase().replace(/[^a-z0-9]/g, "-");
+  const filePath = `products/${safePrefix}-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
 
-    const ext = file.name.split(".").pop() || "png";
-    const safePrefix = namePrefix.toLowerCase().replace(/[^a-z0-9]/g, "-");
-    const filePath = `products/${safePrefix}-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from("store")
+    .upload(filePath, file, { contentType: file.type || "image/png", upsert: true });
 
-    const { error: uploadError } = await supabase.storage
-      .from("store")
-      .upload(filePath, file, { contentType: file.type || "image/png", upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage.from("store").getPublicUrl(filePath);
-    return { url: data.publicUrl, storagePath: filePath };
+  if (uploadError) {
+    console.error("Error al subir imagen a Supabase Storage:", uploadError);
+    throw uploadError;
   }
+
+  const { data } = supabase.storage.from("store").getPublicUrl(filePath);
+  return { url: data.publicUrl, storagePath: filePath };
 }
 
 export async function createStoreProduct(input: CreateProductInput): Promise<Product> {
@@ -133,10 +123,10 @@ export async function createStoreProduct(input: CreateProductInput): Promise<Pro
     );
 
     const urls = uploadResults.map((r) => r.url);
-    const driveIds = uploadResults.map((r) => r.driveId || r.storagePath).filter(Boolean);
+    const storagePaths = uploadResults.map((r) => r.storagePath).filter(Boolean);
 
     finalImageUrl = urls[0];
-    driveFileId = driveIds.join(",");
+    driveFileId = storagePaths.join(",");
 
     // Asociar a variantImages para activar el carrusel de vistas/colores
     variantImages = {};
@@ -313,19 +303,12 @@ export async function updateStoreProduct(input: UpdateProductInput): Promise<Pro
 }
 
 export async function deleteStoreProduct(productId: string, driveFileId?: string): Promise<boolean> {
-  if (driveFileId) {
+  if (driveFileId && supabase) {
     const ids = driveFileId.split(",").map((s) => s.trim()).filter(Boolean);
-    await Promise.allSettled(
-      ids.map(async (id) => {
-        if (id.startsWith("products/")) {
-          if (supabase) {
-            await supabase.storage.from("store").remove([id]);
-          }
-        } else {
-          await deleteDriveFile(id);
-        }
-      })
-    );
+    const storagePaths = ids.filter((id) => id.startsWith("products/"));
+    if (storagePaths.length > 0) {
+      await supabase.storage.from("store").remove(storagePaths);
+    }
   }
 
   if (supabase) {

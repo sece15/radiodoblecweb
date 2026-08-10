@@ -28,9 +28,6 @@ const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/google-drive-api`;
 // ID raíz conocido de la carpeta Programas en Google Drive
 export const PROGRAMAS_ROOT_FOLDER_ID = "1_uebi4lDZ8kPcVCk9rNjW7bIXfT5Qf1Y";
 
-// ID directo de la carpeta STORE en Google Drive (compartida con la Service Account)
-export const STORE_FOLDER_ID = "1Dx8Dl7VyE4SaJU78VoCMv2RQkX94adfs";
-
 // 1. Obtener la lista de subcarpetas de programas dentro de "Programas"
 export async function fetchProgramFolders(): Promise<DriveFile[]> {
   try {
@@ -154,28 +151,7 @@ export async function createDriveAlbum(albumName: string, parentFolderId?: strin
   return await res.json();
 }
 
-// 7. Subir canción o portada directamente a una carpeta de disco o programa
-export async function uploadTrackToAlbum(file: File, albumFolderId: string, customName?: string): Promise<DriveFile> {
-  const formData = new FormData();
-  formData.append("file", file, customName || file.name);
-
-  const res = await fetch(`${FUNCTION_URL}?action=upload&folderId=${encodeURIComponent(albumFolderId)}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Error al subir archivo (${res.status}): ${errorText}`);
-  }
-
-  return await res.json();
-}
-
-// 8. Listar archivos genéricos o de una subcarpeta
+// 7. Listar archivos genéricos o de una subcarpeta
 export async function fetchDriveFiles(folderId?: string): Promise<DriveFile[]> {
   try {
     const url = folderId
@@ -200,33 +176,12 @@ export async function fetchDriveFiles(folderId?: string): Promise<DriveFile[]> {
   }
 }
 
-// 9. Generar URL de streaming directo
+// 8. Generar URL de streaming directo
 export function getDriveStreamUrl(fileId: string): string {
   return `${FUNCTION_URL}?action=download&fileId=${encodeURIComponent(fileId)}`;
 }
 
-// 10. Subir archivo a la raíz
-export async function uploadDriveFile(file: File, customName?: string): Promise<DriveFile> {
-  const formData = new FormData();
-  formData.append("file", file, customName || file.name);
-
-  const res = await fetch(`${FUNCTION_URL}?action=upload`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Error al subir archivo (${res.status}): ${errorText}`);
-  }
-
-  return await res.json();
-}
-
-// 11. Eliminar archivo o carpeta
+// 9. Eliminar archivo o carpeta
 export async function deleteDriveFile(fileId: string): Promise<boolean> {
   const res = await fetch(`${FUNCTION_URL}?action=delete&fileId=${encodeURIComponent(fileId)}`, {
     method: "DELETE",
@@ -241,55 +196,5 @@ export async function deleteDriveFile(fileId: string): Promise<boolean> {
   }
 
   return true;
-}
-
-// 12. Subir grabación de programa directamente a la carpeta del programa en Google Drive
-export async function uploadProgramRecording(
-  file: File,
-  programTitle: string,
-  customName?: string
-): Promise<DriveFile> {
-  const folders = await fetchProgramFolders();
-  const targetKey = normalizeProgramKey(programTitle);
-
-  let matchedFolder = folders.find((f) => {
-    const folderKey = normalizeProgramKey(f.name);
-    return (
-      folderKey === targetKey ||
-      folderKey.includes(targetKey) ||
-      targetKey.includes(folderKey)
-    );
-  });
-
-  // Si la carpeta del programa no existe aún en Google Drive, la creamos dentro de Programas
-  if (!matchedFolder) {
-    matchedFolder = await createDriveAlbum(programTitle, PROGRAMAS_ROOT_FOLDER_ID);
-  }
-
-  return await uploadTrackToAlbum(file, matchedFolder.id, customName);
-}
-
-// 13. Obtener o crear la carpeta STORE en Google Drive
-export async function getOrCreateStoreFolder(): Promise<DriveFile> {
-  const rootFiles = await fetchDriveFiles();
-  const storeFolder = rootFiles.find(
-    (f) =>
-      f.mimeType === "application/vnd.google-apps.folder" &&
-      (f.name.toUpperCase() === "STORE" || f.name.toUpperCase() === "TIENDA" || f.name.toUpperCase() === "ROPA")
-  );
-
-  if (storeFolder) {
-    return storeFolder;
-  }
-
-  return await createDriveAlbum("STORE");
-}
-
-// 14. Subir imagen de prenda/producto directamente a la carpeta STORE de Google Drive
-export async function uploadStoreProductImage(file: File, productName: string): Promise<DriveFile> {
-  const cleanExtension = file.name.split(".").pop() || "png";
-  const safeName = `${productName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.${cleanExtension}`;
-  // Usamos el folder ID directo de la carpeta Store (que debe estar compartida con la Service Account como Editor)
-  return await uploadTrackToAlbum(file, STORE_FOLDER_ID, safeName);
 }
 

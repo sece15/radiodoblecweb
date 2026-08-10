@@ -1,18 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import {
   fetchDriveFiles,
   getDriveStreamUrl,
-  uploadDriveFile,
   deleteDriveFile,
   DriveFile,
 } from "@/services/driveService";
 import { isAdmin } from "@/lib/permissions";
 import { formatFileSize, formatDate, cleanFileName } from "@/lib/formatters";
 import { getCardRotation } from "@/lib/styleUtils";
-import { NeoModal } from "./common/NeoModal";
 import {
-  Upload,
   Trash2,
   Play,
   Pause,
@@ -20,8 +17,6 @@ import {
   FileAudio,
   ExternalLink,
   RefreshCw,
-  CheckCircle,
-  AlertCircle,
   HardDrive,
   Clock,
 } from "lucide-react";
@@ -32,13 +27,6 @@ export const DriveArchiveSection = () => {
 
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [customTitle, setCustomTitle] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reloadFiles = useCallback(async () => {
     setIsLoading(true);
@@ -92,33 +80,6 @@ export const DriveArchiveSection = () => {
       duration: formatFileSize(file.size),
       audioUrl: streamUrl,
     });
-  };
-
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFile) return;
-
-    setIsUploading(true);
-    setUploadError(null);
-    setUploadSuccess(null);
-
-    try {
-      const uploaded = await uploadDriveFile(selectedFile, customTitle.trim() || undefined);
-      setUploadSuccess(`¡"${uploaded.name || selectedFile.name}" subido con éxito a Google Drive!`);
-      setSelectedFile(null);
-      setCustomTitle("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      await reloadFiles();
-      setTimeout(() => {
-        setIsUploadModalOpen(false);
-        setUploadSuccess(null);
-      }, 1800);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error desconocido al subir el archivo";
-      setUploadError(msg);
-    } finally {
-      setIsUploading(false);
-    }
   };
 
   const handleDeleteFile = async (fileId: string, fileName: string) => {
@@ -202,28 +163,6 @@ export const DriveArchiveSection = () => {
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> REFRESCAR
           </button>
-
-          {/* ADMIN UPLOAD BUTTON */}
-          {userIsAdmin && (
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="neo-button fun-hover-wobble"
-              style={{
-                backgroundColor: "#FFB000",
-                color: "black",
-                padding: "8px 16px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                border: "2.5px solid var(--primary)",
-                boxShadow: "4px 4px 0px var(--primary)",
-              }}
-            >
-              <Upload size={16} /> SUBIR AUDIO MP3 ⚡
-            </button>
-          )}
 
           <a
             href="https://drive.google.com/drive/folders/1OhBEPm-sb3L5ITUXi_5YkOVbRe42Acmk"
@@ -411,132 +350,6 @@ export const DriveArchiveSection = () => {
           })}
         </div>
       )}
-
-      {/* ADMIN UPLOAD MODAL */}
-      <NeoModal
-        isOpen={isUploadModalOpen && userIsAdmin}
-        onClose={() => !isUploading && setIsUploadModalOpen(false)}
-        title="Subir Archivo de Audio a Google Drive"
-        badgeText="⚡ ADMINISTRADOR"
-        maxWidth="500px"
-      >
-        <form onSubmit={handleUploadSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div>
-            <label style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "6px" }}>
-              SELECCIONAR ARCHIVO DE AUDIO (.MP3, .WAV, .M4A, .MP4)
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*,video/mp4"
-              required
-              disabled={isUploading}
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setSelectedFile(e.target.files[0]);
-                }
-              }}
-              style={{
-                width: "100%",
-                padding: "8px",
-                border: "2px solid var(--primary)",
-                backgroundColor: "var(--surface-container)",
-                fontSize: "0.8rem",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "6px" }}>
-              TÍTULO O NOMBRE PERSONALIZADO (OPCIONAL)
-            </label>
-            <input
-              type="text"
-              placeholder={selectedFile ? selectedFile.name : "Ej: Hits and Beats - Sesion 04"}
-              value={customTitle}
-              disabled={isUploading}
-              onChange={(e) => setCustomTitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                border: "2px solid var(--primary)",
-                fontSize: "0.85rem",
-                outline: "none",
-              }}
-            />
-          </div>
-
-          {uploadSuccess && (
-            <div
-              style={{
-                backgroundColor: "#C4EED0",
-                border: "2px solid #00522B",
-                padding: "8px 12px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                color: "#00522B",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <CheckCircle size={16} />
-              {uploadSuccess}
-            </div>
-          )}
-
-          {uploadError && (
-            <div
-              style={{
-                backgroundColor: "#FFDAD6",
-                border: "2px solid #BA1A1A",
-                padding: "8px 12px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                color: "#BA1A1A",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <AlertCircle size={16} />
-              {uploadError}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-            <button
-              type="submit"
-              disabled={isUploading || !selectedFile}
-              className="neo-button"
-              style={{
-                flex: 1,
-                backgroundColor: "var(--primary-container)",
-                padding: "10px",
-                fontSize: "0.8rem",
-                fontWeight: 900,
-              }}
-            >
-              {isUploading ? "SUBIENDO A GOOGLE DRIVE..." : "SUBIR AHORA 🚀"}
-            </button>
-
-            <button
-              type="button"
-              disabled={isUploading}
-              onClick={() => setIsUploadModalOpen(false)}
-              className="neo-button"
-              style={{
-                backgroundColor: "white",
-                padding: "10px 16px",
-                fontSize: "0.8rem",
-                fontWeight: 900,
-              }}
-            >
-              CANCELAR
-            </button>
-          </div>
-        </form>
-      </NeoModal>
     </div>
   );
 };
