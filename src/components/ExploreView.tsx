@@ -1155,63 +1155,62 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
           onClose={() => setSelectedHostProgram(null)}
           title={selectedHostProgram.title}
           badgeText="🎙️ PERFIL DEL LOCUTOR"
-          maxWidth="840px"
+          maxWidth="880px"
           bodyOverflow="auto"
           backgroundColor="var(--background)"
           footer={
-            <div style={{ display: "flex", gap: "10px", width: "100%", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setSelectedHostProgram(null)}
-                className="neo-button fun-hover-wobble"
-                style={{
-                  backgroundColor: "white",
-                  padding: "8px 24px",
-                  fontSize: "0.75rem",
-                  fontWeight: 900,
-                  boxShadow: "3px 3px 0px var(--primary)",
-                  border: "2px solid var(--primary)",
-                  cursor: "pointer",
-                }}
-              >
-                CERRAR VENTANA
-              </button>
-            </div>
+            <button
+              onClick={() => setSelectedHostProgram(null)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "white",
+                padding: "8px 22px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                boxShadow: "3px 3px 0px var(--primary)",
+                border: "2px solid var(--primary)",
+                cursor: "pointer",
+              }}
+            >
+              CERRAR VENTANA
+            </button>
           }
         >
           <div
             style={{
               display: "flex",
               flexDirection: "row",
-              gap: "24px",
+              gap: "20px",
               alignItems: "flex-start",
               flexWrap: "wrap",
             }}
           >
-            {/* LADO IZQUIERDO: FOTO GRANDE DEL PROGRAMA Y HORARIO */}
+            {/* LADO IZQUIERDO: FOTO, GÉNERO Y HORARIO (FIJO - ESTRUCTURA IDÉNTICA A PROGRAMA OFICIAL) */}
             <div
               style={{
-                flex: "0 0 280px",
-                maxWidth: "320px",
+                flex: "0 0 160px",
+                maxWidth: "180px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "12px",
+                gap: "8px",
                 margin: "0 auto",
                 alignItems: "center",
+                flexShrink: 0,
+                position: "sticky",
+                top: 0,
               }}
             >
-              {/* Foto Grande con Estilo Neo-Brutalista */}
               <div
                 className="neo-card"
                 style={{
-                  width: "100%",
-                  aspectRatio: "1/1",
-                  maxHeight: "280px",
+                  width: "140px",
+                  height: "140px",
                   overflow: "hidden",
-                  border: "3px solid var(--primary)",
-                  boxShadow: "6px 6px 0px var(--primary)",
-                  backgroundColor: "#1A1D10",
+                  border: "2.5px solid var(--primary)",
+                  boxShadow: "3px 3px 0px var(--primary)",
+                  backgroundColor: "var(--surface-container)",
                   position: "relative",
-                  transform: "rotate(-1deg)",
+                  flexShrink: 0,
                 }}
               >
                 <img
@@ -1226,100 +1225,84 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 <div
                   style={{
                     position: "absolute",
-                    top: "8px",
-                    left: "8px",
-                    backgroundColor: "var(--primary-container)",
-                    border: "1.5px solid var(--primary)",
-                    color: "var(--primary)",
-                    padding: "2px 8px",
-                    fontSize: "0.62rem",
+                    bottom: "6px",
+                    left: "6px",
+                    backgroundColor: "var(--primary)",
+                    color: "var(--on-primary)",
+                    padding: "1px 5px",
+                    fontSize: "0.55rem",
                     fontWeight: 900,
                     textTransform: "uppercase",
-                    boxShadow: "2px 2px 0px var(--primary)",
                   }}
                 >
                   {selectedHostProgram.genre}
                 </div>
               </div>
 
-              {/* Horario de Transmisión */}
+              {/* Horario */}
               <div
                 style={{
                   width: "100%",
-                  border: "2px solid var(--primary)",
+                  border: "1.5px solid var(--primary)",
                   backgroundColor: "var(--surface-container)",
-                  padding: "8px 10px",
+                  padding: "6px",
                   textAlign: "center",
-                  fontSize: "0.72rem",
+                  fontSize: "0.65rem",
                   fontWeight: 900,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: "3px 3px 0px var(--primary)",
+                  gap: "4px",
                 }}
               >
-                <Clock size={14} /> {selectedHostProgram.timeSlot}
+                <Clock size={12} /> {selectedHostProgram.timeSlot}
               </div>
             </div>
 
-            {/* LADO DERECHO: DETALLES DEL LOCUTOR, DESCRIPCIÓN Y HOBBIES */}
+            {/* LADO DERECHO: DATOS DEL PERFIL DEL LOCUTOR Y SHOW */}
             <div
               style={{
                 flex: "1 1 340px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "14px",
+                gap: "12px",
                 minWidth: 0,
               }}
             >
-              {/* Locutor Header Card */}
+              {/* Cuadro del Locutor */}
               <div
-                className="neo-card"
                 style={{
                   backgroundColor: "var(--primary-container)",
-                  border: "2.5px solid var(--primary)",
-                  padding: "12px 16px",
-                  boxShadow: "4px 4px 0px var(--primary)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
+                  border: "2px solid var(--primary)",
+                  padding: "10px 12px",
+                  boxShadow: "2px 2px 0px var(--primary)",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <User size={15} style={{ color: "var(--primary)" }} />
-                  <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "1px", opacity: 0.85 }}>
-                    {selectedHostProgram.hostRole || "LOCUTOR OFICIAL"}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "2px" }}>
+                  <User size={14} style={{ color: "var(--primary)" }} />
+                  <span style={{ fontSize: "0.6rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.8 }}>
+                    {selectedHostProgram.hostRole || "LOCUTOR / HOST"}
                   </span>
                 </div>
-                <h3
-                  style={{
-                    fontSize: "1.35rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    color: "var(--primary)",
-                    margin: 0,
-                    lineHeight: "1.2",
-                  }}
-                >
+                <h4 style={{ fontSize: "1rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)", margin: 0 }}>
                   {selectedHostProgram.host}
-                </h3>
+                </h4>
               </div>
 
               {/* Quién es / Biografía */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.75, display: "flex", alignItems: "center", gap: "4px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7, display: "flex", alignItems: "center", gap: "4px" }}>
                   <Sparkles size={12} /> ¿QUIÉN ESTÁ DETRÁS DEL MICRÓFONO?
                 </span>
                 <div
                   style={{
                     border: "2px solid var(--primary)",
                     backgroundColor: "var(--surface-container)",
-                    padding: "12px",
-                    fontSize: "0.78rem",
-                    lineHeight: "1.35rem",
+                    padding: "10px",
+                    fontSize: "0.75rem",
+                    lineHeight: "1.25rem",
                     color: "var(--primary)",
-                    boxShadow: "3px 3px 0px var(--primary)",
+                    boxShadow: "2px 2px 0px var(--primary)",
                   }}
                 >
                   <p style={{ margin: 0 }}>
@@ -1330,8 +1313,8 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
 
               {/* Hobbies e Intereses */}
               {selectedHostProgram.hostHobbies && selectedHostProgram.hostHobbies.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.75, display: "flex", alignItems: "center", gap: "4px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7, display: "flex", alignItems: "center", gap: "4px" }}>
                     <Heart size={12} /> HOBBIES & PASIONES
                   </span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
@@ -1341,10 +1324,10 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                         style={{
                           backgroundColor: "#FFDE82",
                           border: "1.5px solid var(--primary)",
-                          padding: "4px 10px",
-                          fontSize: "0.68rem",
+                          padding: "3px 8px",
+                          fontSize: "0.65rem",
                           fontWeight: 900,
-                          boxShadow: "2px 2px 0px var(--primary)",
+                          boxShadow: "1.5px 1.5px 0px var(--primary)",
                           textTransform: "uppercase",
                         }}
                       >
@@ -1356,17 +1339,17 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               )}
 
               {/* Sobre el Programa */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.75 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
                   📻 CONCEPTO DEL PROGRAMA
                 </span>
                 <div
                   style={{
                     border: "2px solid var(--primary)",
                     backgroundColor: "white",
-                    padding: "10px 12px",
+                    padding: "10px",
                     fontSize: "0.74rem",
-                    lineHeight: "1.3rem",
+                    lineHeight: "1.25rem",
                     boxShadow: "2px 2px 0px var(--primary)",
                   }}
                 >
