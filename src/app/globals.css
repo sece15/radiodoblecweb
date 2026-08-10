@@ -716,4 +716,37 @@ button {
   animation: spin 10s linear infinite;
 }
 
+/* Radio Doble C Endless Marquee / Banner Animation */
+@keyframes marquee-flow-left {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
 
+.radio-marquee-container {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  border: 3px solid var(--primary);
+  box-shadow: 4px 4px 0px var(--primary);
+  background-color: var(--primary-container);
+  padding: 12px 0;
+  display: flex;
+  user-select: none;
+}
+
+.radio-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-flow-left 16s linear infinite;
+}
+
+.radio-marquee-container:hover .radio-marquee-track {
+  animation-play-state: paused;
+}

@@ -16,6 +16,9 @@ export interface RadioProgram {
   genre: string;
   imageUrl: string;
   description: string;
+  hostBio?: string;
+  hostHobbies?: string[];
+  hostRole?: string;
 }
 
 export interface PastBroadcast {

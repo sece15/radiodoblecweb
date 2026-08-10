@@ -1,8 +1,9 @@
-import { useState, CSSProperties } from "react";
+import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { RadioProgram, PastBroadcast } from "@/types";
-import { Heart, Share2, Megaphone, Play, Pause, Clock, User, Disc, Radio } from "lucide-react";
+import { RadioProgram } from "@/types";
+import { Heart, Share2, Play, Pause, Clock, User, Disc, Sparkles, Megaphone } from "lucide-react";
 import { NeoModal } from "./common/NeoModal";
+import { InfiniteSlider } from "./common/InfiniteSlider";
 import { fetchProgramRecordings, getDriveStreamUrl, DriveFile } from "@/services/driveService";
 import { formatFileSize, formatDate, cleanFileName } from "@/lib/formatters";
 
@@ -15,9 +16,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
   const {
     stations,
     programs,
-    pastBroadcasts,
     playLiveStream,
-    playStation,
     playPastBroadcast,
     playRadar,
     toggleStationLike,
@@ -37,6 +36,10 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
     setSelectedStyle(filteredStyle || "TODOS");
   }
 
+  // Modal 1: Perfil del Locutor y Programa (Programas Doble C)
+  const [selectedHostProgram, setSelectedHostProgram] = useState<RadioProgram | null>(null);
+
+  // Modal 2: Guía de Programas y Emisiones Pasadas (Google Drive)
   const [selectedProgram, setSelectedProgram] = useState<RadioProgram | null>(null);
   const [programRecordings, setProgramRecordings] = useState<DriveFile[]>([]);
   const [isLoadingRecordings, setIsLoadingRecordings] = useState<boolean>(false);
@@ -84,8 +87,6 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [djSubmitted, setDjSubmitted] = useState(false);
 
-  const categories = ["TODOS", "MAGAZINE / DISCOS", "ROCK N' ROLL / ALTERNATIVO", "PEDIDOS / INVITADOS", "RAP / REGGAE", "TECHNO / DANCE"];
-
   // Filter stations based on selected style
   const filteredStations = stations.filter((station) => {
     if (selectedStyle === "TODOS") return true;
@@ -93,10 +94,6 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
     const selStyle = selectedStyle.toUpperCase();
     return sStyle === selStyle || sStyle.includes(selStyle) || selStyle.includes(sStyle);
   });
-
-  const getPastBroadcastsForProgram = (programId: string): PastBroadcast[] => {
-    return pastBroadcasts.filter((b) => b.programId === programId);
-  };
 
   const handleShareStation = (stationName: string) => {
     alert(`Enlace de sintonización copiado para: ${stationName} 📻`);
@@ -186,58 +183,65 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
         </div>
       </div>
 
-      {/* 2. CATEGORIES / ESTILOS */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", width: "100%" }}>
+      {/* 2. SPONSOR & PARTNER LOGOS INFINITE SLIDER (SIN CARDS, VELOCIDAD PAUSADA Y FADE SUAVE) */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "8px",
+          margin: "4px 0 10px 0",
+        }}
+      >
         <h3
           style={{
-            fontSize: "1.2rem",
+            fontSize: "1.15rem",
             fontWeight: 900,
             textTransform: "uppercase",
-            borderBottom: "4px solid var(--primary)",
-            paddingBottom: "6px",
-            width: "max-content",
+            letterSpacing: "1.5px",
+            color: "var(--primary)",
+            margin: "0 0 6px 0",
             textAlign: "center",
           }}
         >
-          ESTILOS
+          AUSPICIADORES & MARCAS ALIADAS
         </h3>
 
-        {/* Centered Wrap Row */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            gap: "12px",
-            padding: "18px 16px 12px 16px",
-            width: "100%",
-          }}
-        >
-          {categories.map((style, idx) => {
-            const isSelected = selectedStyle === style;
-            const restRotation = idx % 2 === 0 ? -3 : 3;
-            return (
-              <button
-                key={style}
-                onClick={() => setSelectedStyle(style)}
-                className="neo-button fun-hover-wobble"
+        <InfiniteSlider gap={60} speed={42} speedOnHover={0} style={{ padding: "6px 0" }}>
+          {[
+            { id: "1", name: "Radio Doble C", src: "/RADIO.png" },
+            { id: "2", name: "Doble C 2026", src: "/RADIO-2026.png" },
+            { id: "3", name: "Radio Doble C", src: "/RADIO.png" },
+            { id: "4", name: "Doble C 2026", src: "/RADIO-2026.png" },
+            { id: "5", name: "Radio Doble C", src: "/RADIO.png" },
+            { id: "6", name: "Doble C 2026", src: "/RADIO-2026.png" },
+          ].map((sponsor, idx) => (
+            <div
+              key={`${sponsor.id}-${idx}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                cursor: "pointer",
+                transition: "transform 0.2s ease, opacity 0.2s ease",
+              }}
+              title={sponsor.name}
+            >
+              <img
+                src={sponsor.src}
+                alt={sponsor.name}
                 style={{
-                  backgroundColor: isSelected ? "var(--primary-container)" : "var(--card-bg)",
-                  transform: isSelected
-                    ? `translate(3px, 3px) rotate(0deg)`
-                    : `rotate(${restRotation}deg)`,
-                  padding: "8px 12px",
-                  fontSize: "0.75rem",
-                  boxShadow: isSelected ? "0px 0px 0px var(--primary)" : "3px 3px 0px var(--primary)",
-                  whiteSpace: "nowrap",
-                  "--rest-rot": isSelected ? "0deg" : `${restRotation}deg`,
-                } as CSSProperties}
-              >
-                {style}
-              </button>
-            );
-          })}
-        </div>
+                  height: "52px",
+                  maxWidth: "160px",
+                  objectFit: "contain",
+                  filter: "drop-shadow(0px 2px 5px rgba(0,0,0,0.12))",
+                }}
+              />
+            </div>
+          ))}
+        </InfiniteSlider>
       </div>
 
       {/* 3. PROGRAMAS LIST */}
@@ -271,7 +275,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   const matchingProg = programs.find(
                     (p) => p.id === station.id || p.title.toLowerCase() === station.name.toLowerCase()
                   );
-                  handleOpenProgram(
+                  setSelectedHostProgram(
                     matchingProg || {
                       id: station.id,
                       title: station.name,
@@ -607,133 +611,6 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
         </div>
       </div>
 
-      {/* Custom Bottom Sheet modal for past broadcasts */}
-      {selectedProgram && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "flex-end",
-          }}
-          onClick={() => setSelectedProgram(null)}
-        >
-          {/* Sheet container */}
-          <div
-            className="neo-card"
-            style={{
-              width: "100%",
-              maxHeight: "450px",
-              borderWidth: "4px 4px 0px 4px",
-              boxShadow: "none",
-              backgroundColor: "var(--background)",
-              padding: "24px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()} // Prevent closing
-          >
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <span style={{ fontSize: "0.65rem", fontWeight: 900, color: "#BA1A1A", display: "block" }}>
-                  EMISIONES PASADAS
-                </span>
-                <h4 style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase" }}>
-                  {selectedProgram.title}
-                </h4>
-              </div>
-
-              <button
-                onClick={() => setSelectedProgram(null)}
-                style={{
-                  border: "2px solid var(--primary)",
-                  backgroundColor: "white",
-                  padding: "6px 10px",
-                  fontSize: "0.6rem",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                CERRAR
-              </button>
-            </div>
-
-            {/* List */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {getPastBroadcastsForProgram(selectedProgram.id).length === 0 ? (
-                <div
-                  style={{
-                    border: "2px solid var(--primary)",
-                    backgroundColor: "var(--surface-container)",
-                    padding: "20px",
-                    textAlign: "center",
-                    fontSize: "0.75rem",
-                    fontWeight: "bold",
-                    opacity: 0.7,
-                  }}
-                >
-                  No hay grabaciones de la última semana para este programa.
-                </div>
-              ) : (
-                getPastBroadcastsForProgram(selectedProgram.id).map((broadcast) => (
-                  <div
-                    key={broadcast.id}
-                    className="neo-card"
-                    style={{
-                      padding: "12px",
-                      boxShadow: "3px 3px 0px var(--primary)",
-                      backgroundColor: "white",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => {
-                      playPastBroadcast(broadcast);
-                      setSelectedProgram(null);
-                      onNavigateToPlayer();
-                    }}
-                  >
-                    <div>
-                      <h5 style={{ fontWeight: 900, fontSize: "0.75rem", textTransform: "uppercase" }}>
-                        {broadcast.title}
-                      </h5>
-                      <p style={{ fontSize: "0.6rem", opacity: 0.7, marginTop: "2px", fontWeight: "bold" }}>
-                        Transmitido: {broadcast.date} • Duración: {broadcast.duration}
-                      </p>
-                    </div>
-
-                    <button
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "50%",
-                        backgroundColor: "var(--primary-container)",
-                        border: "2px solid var(--primary)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Play size={16} style={{ fill: "var(--primary)", color: "var(--primary)", marginLeft: "2px" }} />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL 1: ¿QUIERES SER DJ? */}
       <NeoModal
         isOpen={isDjModalOpen}
@@ -1006,7 +883,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               flexWrap: "wrap",
             }}
           >
-            {/* LADO IZQUIERDO: FOTO, GÉNERO, HORARIO Y BOTÓN EN VIVO */}
+            {/* LADO IZQUIERDO: FOTO, GÉNERO Y HORARIO (FIJO) */}
             <div
               style={{
                 flex: "0 0 160px",
@@ -1016,6 +893,9 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 gap: "8px",
                 margin: "0 auto",
                 alignItems: "center",
+                flexShrink: 0,
+                position: "sticky",
+                top: 0,
               }}
             >
               <div
@@ -1075,41 +955,9 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               >
                 <Clock size={12} /> {selectedProgram.timeSlot}
               </div>
-
-              {/* Botón Escuchar Vivo */}
-              <button
-                onClick={() => {
-                  const matchingStation = stations.find(
-                    (s) => s.id === selectedProgram.id || s.name.toLowerCase() === selectedProgram.title.toLowerCase()
-                  );
-                  if (matchingStation) {
-                    playStation(matchingStation);
-                  } else {
-                    playLiveStream();
-                  }
-                  setSelectedProgram(null);
-                  onNavigateToPlayer();
-                }}
-                className="neo-button"
-                style={{
-                  width: "100%",
-                  backgroundColor: "#FF5E5B",
-                  color: "white",
-                  padding: "8px 6px",
-                  fontSize: "0.72rem",
-                  fontWeight: 900,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                  boxShadow: "3px 3px 0px var(--primary)",
-                }}
-              >
-                <Radio size={13} /> SINTONIZAR VIVO
-              </button>
             </div>
 
-            {/* LADO DERECHO: LOCUTOR, DESCRIPCIÓN Y GRABACIONES */}
+            {/* LADO DERECHO: LOCUTOR, DESCRIPCIÓN Y GRABACIONES (SCROLEABLE) */}
             <div
               style={{
                 flex: "1 1 340px",
@@ -1211,27 +1059,20 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                       display: "flex",
                       flexDirection: "column",
                       gap: "6px",
-                      maxHeight: "260px",
+                      maxHeight: "280px",
                       overflowY: "auto",
-                      paddingRight: "4px",
+                      paddingRight: "6px",
                     }}
                   >
                     {(() => {
-                      // Ordenar: el último/más reciente primero, y el primero/más antiguo al final
-                      const orderedRecordings = (() => {
-                        const hasValidTimes = programRecordings.some((r) => Boolean(r.createdTime));
-                        if (hasValidTimes) {
-                          return [...programRecordings].sort((a, b) => {
-                            const timeA = a.createdTime ? new Date(a.createdTime).getTime() : 0;
-                            const timeB = b.createdTime ? new Date(b.createdTime).getTime() : 0;
-                            if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
-                              return timeB - timeA; // Más reciente primero
-                            }
-                            return 0;
-                          });
-                        }
-                        return [...programRecordings].reverse();
-                      })();
+                      // Ordenar: orden 1, 2, 3, etc. (nombre natural y cronológico ascendente)
+                      const orderedRecordings = [...programRecordings].sort((a, b) => {
+                        const nameCmp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+                        if (nameCmp !== 0) return nameCmp;
+                        const timeA = a.createdTime ? new Date(a.createdTime).getTime() : 0;
+                        const timeB = b.createdTime ? new Date(b.createdTime).getTime() : 0;
+                        return timeA - timeB;
+                      });
 
                       return orderedRecordings.map((recording, rIdx) => {
                         const streamUrl = getDriveStreamUrl(recording.id);
@@ -1301,6 +1142,236 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                     })()}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </NeoModal>
+      )}
+
+      {/* MODAL ESPECIAL: PERFIL DEL LOCUTOR Y SHOW (PROGRAMAS DOBLE C) */}
+      {selectedHostProgram && (
+        <NeoModal
+          isOpen={Boolean(selectedHostProgram)}
+          onClose={() => setSelectedHostProgram(null)}
+          title={selectedHostProgram.title}
+          badgeText="🎙️ PERFIL DEL LOCUTOR"
+          maxWidth="840px"
+          bodyOverflow="auto"
+          backgroundColor="var(--background)"
+          footer={
+            <div style={{ display: "flex", gap: "10px", width: "100%", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setSelectedHostProgram(null)}
+                className="neo-button fun-hover-wobble"
+                style={{
+                  backgroundColor: "white",
+                  padding: "8px 24px",
+                  fontSize: "0.75rem",
+                  fontWeight: 900,
+                  boxShadow: "3px 3px 0px var(--primary)",
+                  border: "2px solid var(--primary)",
+                  cursor: "pointer",
+                }}
+              >
+                CERRAR VENTANA
+              </button>
+            </div>
+          }
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: "24px",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* LADO IZQUIERDO: FOTO GRANDE DEL PROGRAMA Y HORARIO */}
+            <div
+              style={{
+                flex: "0 0 280px",
+                maxWidth: "320px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                margin: "0 auto",
+                alignItems: "center",
+              }}
+            >
+              {/* Foto Grande con Estilo Neo-Brutalista */}
+              <div
+                className="neo-card"
+                style={{
+                  width: "100%",
+                  aspectRatio: "1/1",
+                  maxHeight: "280px",
+                  overflow: "hidden",
+                  border: "3px solid var(--primary)",
+                  boxShadow: "6px 6px 0px var(--primary)",
+                  backgroundColor: "#1A1D10",
+                  position: "relative",
+                  transform: "rotate(-1deg)",
+                }}
+              >
+                <img
+                  src={selectedHostProgram.imageUrl}
+                  alt={selectedHostProgram.title}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "8px",
+                    left: "8px",
+                    backgroundColor: "var(--primary-container)",
+                    border: "1.5px solid var(--primary)",
+                    color: "var(--primary)",
+                    padding: "2px 8px",
+                    fontSize: "0.62rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    boxShadow: "2px 2px 0px var(--primary)",
+                  }}
+                >
+                  {selectedHostProgram.genre}
+                </div>
+              </div>
+
+              {/* Horario de Transmisión */}
+              <div
+                style={{
+                  width: "100%",
+                  border: "2px solid var(--primary)",
+                  backgroundColor: "var(--surface-container)",
+                  padding: "8px 10px",
+                  textAlign: "center",
+                  fontSize: "0.72rem",
+                  fontWeight: 900,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  boxShadow: "3px 3px 0px var(--primary)",
+                }}
+              >
+                <Clock size={14} /> {selectedHostProgram.timeSlot}
+              </div>
+            </div>
+
+            {/* LADO DERECHO: DETALLES DEL LOCUTOR, DESCRIPCIÓN Y HOBBIES */}
+            <div
+              style={{
+                flex: "1 1 340px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                minWidth: 0,
+              }}
+            >
+              {/* Locutor Header Card */}
+              <div
+                className="neo-card"
+                style={{
+                  backgroundColor: "var(--primary-container)",
+                  border: "2.5px solid var(--primary)",
+                  padding: "12px 16px",
+                  boxShadow: "4px 4px 0px var(--primary)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <User size={15} style={{ color: "var(--primary)" }} />
+                  <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "1px", opacity: 0.85 }}>
+                    {selectedHostProgram.hostRole || "LOCUTOR OFICIAL"}
+                  </span>
+                </div>
+                <h3
+                  style={{
+                    fontSize: "1.35rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    color: "var(--primary)",
+                    margin: 0,
+                    lineHeight: "1.2",
+                  }}
+                >
+                  {selectedHostProgram.host}
+                </h3>
+              </div>
+
+              {/* Quién es / Biografía */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.75, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Sparkles size={12} /> ¿QUIÉN ESTÁ DETRÁS DEL MICRÓFONO?
+                </span>
+                <div
+                  style={{
+                    border: "2px solid var(--primary)",
+                    backgroundColor: "var(--surface-container)",
+                    padding: "12px",
+                    fontSize: "0.78rem",
+                    lineHeight: "1.35rem",
+                    color: "var(--primary)",
+                    boxShadow: "3px 3px 0px var(--primary)",
+                  }}
+                >
+                  <p style={{ margin: 0 }}>
+                    {selectedHostProgram.hostBio || selectedHostProgram.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Hobbies e Intereses */}
+              {selectedHostProgram.hostHobbies && selectedHostProgram.hostHobbies.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.75, display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Heart size={12} /> HOBBIES & PASIONES
+                  </span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {selectedHostProgram.hostHobbies.map((hobby, hIdx) => (
+                      <span
+                        key={hIdx}
+                        style={{
+                          backgroundColor: "#FFDE82",
+                          border: "1.5px solid var(--primary)",
+                          padding: "4px 10px",
+                          fontSize: "0.68rem",
+                          fontWeight: 900,
+                          boxShadow: "2px 2px 0px var(--primary)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        ✦ {hobby}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sobre el Programa */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.75 }}>
+                  📻 CONCEPTO DEL PROGRAMA
+                </span>
+                <div
+                  style={{
+                    border: "2px solid var(--primary)",
+                    backgroundColor: "white",
+                    padding: "10px 12px",
+                    fontSize: "0.74rem",
+                    lineHeight: "1.3rem",
+                    boxShadow: "2px 2px 0px var(--primary)",
+                  }}
+                >
+                  <p style={{ margin: 0 }}>{selectedHostProgram.description}</p>
+                </div>
               </div>
             </div>
           </div>
