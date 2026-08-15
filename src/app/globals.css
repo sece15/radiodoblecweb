@@ -905,3 +905,11 @@ button {
   text-decoration: underline !important;
 }
 
+/* On mobile and small tablets (screens <= 860px), hide ONLY the fixed red badge button so scrolling news has 100% full width */
+@media (max-width: 860px) {
+  .news-ticker-badge-btn {
+    display: none !important;
+  }
+}
+
+

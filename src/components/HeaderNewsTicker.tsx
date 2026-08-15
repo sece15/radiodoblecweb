@@ -64,9 +64,10 @@ export const HeaderNewsTicker: React.FC<HeaderNewsTickerProps> = ({
       onTouchStart={() => setIsPaused(true)}
       onTouchEnd={() => setIsPaused(false)}
     >
-      {/* 1. Left Label Badge (Fixed) */}
+      {/* 1. Left Label Badge (Fixed on Desktop, Hidden on Mobile/Tablets) */}
       <button
         onClick={() => onOpenNews()}
+        className="news-ticker-badge-btn"
         style={{
           backgroundColor: "#BA1A1A",
           color: "#FFFFFF",
