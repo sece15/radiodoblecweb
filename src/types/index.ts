@@ -112,3 +112,20 @@ export interface SocketChatConfig {
   isSlowMode?: boolean;
   isEmoteOnly?: boolean;
 }
+
+export interface MusicScheduleBlock {
+  id: string;
+  timeSlot: string;
+  startHour: number; // 0-23
+  endHour: number;   // 0-24 (e.g. 1 means 01:00 next day)
+  name: string;
+  subtitle?: string;
+  genres: string[];
+  energyLevel: "Alta" | "Media" | "Media-Baja" | "Muy Alta" | "Baja" | "Automatizada";
+  energyDescription: string;
+  bpmInfo?: string;
+  period: "morning" | "workday" | "lunch" | "afternoon" | "primetime" | "night" | "autodj";
+  iconName?: string;
+  tagColor?: string;
+  badge?: string;
+}

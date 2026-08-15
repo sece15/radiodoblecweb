@@ -413,6 +413,20 @@ button {
   box-shadow: 6px 6px 0px var(--primary-container) !important;
 }
 
+/* Schedule Table Cell Hover (No scale to prevent clipping behind sticky header/columns) */
+.schedule-table-cell {
+  transition: background-color 0.15s ease;
+}
+
+.schedule-table-cell:hover {
+  background-color: var(--primary-container) !important;
+}
+
+.schedule-block-title {
+  color: var(--primary);
+  opacity: 0.85;
+}
+
 /* Split-screen Modal Layouts (Side-by-side on Desktop, Stacked on Mobile) */
 .modal-split-container {
   display: flex;
@@ -653,22 +667,38 @@ button {
   }
 }
 
+.side-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1990;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.side-menu-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .mobile-menu-drawer {
   position: fixed;
-  top: 88px;
+  top: 0;
   right: 0;
-  width: 100vw;
-  height: calc(100vh - 88px);
+  width: min(420px, 90vw);
+  height: 100vh;
   background-color: var(--background);
-  border-left: 4px solid var(--primary);
-  border-top: 4px solid var(--primary);
-  z-index: 1500;
+  border-left: 5px solid var(--primary);
+  box-shadow: -8px 0px 0px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 48px 24px;
-  gap: 28px;
+  padding: 32px 24px;
+  gap: 16px;
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -678,29 +708,30 @@ button {
   transform: translateX(0);
 }
 
-/* Mobile Nav Button stylings */
+/* Mobile & Desktop Nav Button stylings */
 .mobile-nav-link {
-  width: 85%;
-  max-width: 320px;
+  width: 100%;
+  max-width: 340px;
   text-align: center;
-  font-size: 1.8rem !important;
-  letter-spacing: 0.05em;
-  padding: 16px 24px !important;
+  font-size: 1.05rem !important;
+  letter-spacing: 0.04em;
+  padding: 12px 18px !important;
   text-transform: uppercase;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: inherit;
   font-weight: 900;
-  border: 4px solid var(--primary) !important;
-  box-shadow: 6px 6px 0px 0px var(--primary) !important;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  border: 3.5px solid var(--primary) !important;
+  box-shadow: 4px 4px 0px 0px var(--primary) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
 }
 
 .mobile-nav-link:active {
-  transform: translate(4px, 4px) !important;
-  box-shadow: 2px 2px 0px 0px var(--primary) !important;
+  transform: translate(3px, 3px) !important;
+  box-shadow: 1px 1px 0px 0px var(--primary) !important;
 }
 
 @keyframes spin {

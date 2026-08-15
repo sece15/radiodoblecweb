@@ -611,6 +611,91 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
         </div>
       </div>
 
+      {/* 5. AVISO LEGAL DE DERECHOS DE AUTOR & DIFUSIÓN CULTURAL */}
+      <div
+        className="neo-card"
+        style={{
+          marginTop: "40px",
+          marginBottom: "16px",
+          backgroundColor: "var(--card-bg)",
+          border: "3px solid var(--primary)",
+          boxShadow: "4px 4px 0px var(--primary)",
+          padding: "20px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span
+              style={{
+                backgroundColor: "var(--primary)",
+                color: "var(--on-primary)",
+                padding: "3px 8px",
+                fontSize: "0.65rem",
+                fontWeight: 900,
+                letterSpacing: "1px",
+              }}
+            >
+              ⚖️ AVISO LEGAL &amp; DERECHOS DE AUTOR (DISCLAIMER)
+            </span>
+          </div>
+
+          <span style={{ fontSize: "0.65rem", fontWeight: 900, opacity: 0.75 }}>
+            DIFUSIÓN CULTURAL &amp; COMUNITARIA
+          </span>
+        </div>
+
+        <p
+          style={{
+            fontSize: "0.74rem",
+            lineHeight: "1.25rem",
+            color: "var(--primary)",
+            margin: 0,
+            opacity: 0.88,
+          }}
+        >
+          <strong>Radio Doble C</strong> es una plataforma independiente de difusión cultural, musical y comunitaria. Todos los derechos de autor, máster, producción fonográfica y marcas comerciales de las obras musicales transmitidas pertenecen exclusivamente a sus respectivos autores, intérpretes, compositores y sellos discográficos. Este proyecto apoya activamente la escena de bandas locales, músicos emergentes y creadores independientes.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            paddingTop: "8px",
+            borderTop: "1.5px dashed var(--primary)",
+          }}
+        >
+          <span style={{ fontSize: "0.7rem", fontWeight: "bold", opacity: 0.8 }}>
+            ¿Eres titular de derechos de alguna obra y deseas su acreditación o remoción?
+          </span>
+
+          <a
+            href="mailto:radiodoblec@gmail.com?subject=Solicitud%20de%20Derechos%20de%20Autor%20-%20Radio%20Doble%20C"
+            className="neo-button fun-hover-wobble"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              backgroundColor: "var(--primary-container)",
+              color: "var(--on-primary-container)",
+              padding: "6px 14px",
+              fontSize: "0.7rem",
+              fontWeight: 900,
+              textDecoration: "none",
+              boxShadow: "2px 2px 0px var(--primary)",
+              cursor: "pointer",
+            }}
+          >
+            📧 CONTACTO DE DERECHOS / DMCA
+          </a>
+        </div>
+      </div>
+
       {/* MODAL 1: ¿QUIERES SER DJ? */}
       <NeoModal
         isOpen={isDjModalOpen}
