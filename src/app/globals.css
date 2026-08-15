@@ -877,3 +877,31 @@ button {
 .radio-marquee-container:hover .radio-marquee-track {
   animation-play-state: paused;
 }
+
+/* Breaking News Ticker Animation */
+@keyframes news-ticker-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.news-ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  width: max-content;
+  will-change: transform;
+  animation: news-ticker-scroll 160s linear infinite;
+}
+
+.news-ticker-paused {
+  animation-play-state: paused !important;
+}
+
+.hover-underline:hover {
+  text-decoration: underline !important;
+}
+

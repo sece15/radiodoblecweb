@@ -3,9 +3,12 @@
 import { CSSProperties, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, User, ShoppingBag } from "lucide-react";
+import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, User, ShoppingBag, Newspaper } from "lucide-react";
 import { RadioLogo } from "@/components/RadioLogo";
+import { HeaderNewsTicker } from "@/components/HeaderNewsTicker";
+import { NewsModal } from "@/components/NewsModal";
 import { useAudio } from "@/hooks/useAudio";
+import { useNews } from "@/hooks/useNews";
 import { isVip } from "@/lib/permissions";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
@@ -31,6 +34,20 @@ export const Header = ({
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { userProfile } = useAudio();
+
+  // News hook integration
+  const {
+    news,
+    selectedCategory,
+    setSelectedCategory,
+    selectedNewsItem,
+    setSelectedNewsItem,
+    isNewsModalOpen,
+    setNewsModalOpen,
+    isLoading: isNewsLoading,
+    refreshNews,
+    lastUpdated,
+  } = useNews();
 
   const isVipUser = isVip(userProfile.role);
 
@@ -67,21 +84,31 @@ export const Header = ({
 
   return (
     <>
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "var(--background)",
-          borderBottom: "4px solid var(--primary)",
-          padding: "10px 18px",
-          height: "80px",
-          width: "100%",
-        }}
-      >
+      <div style={{ position: "sticky", top: 0, zIndex: 100, width: "100%" }}>
+        {/* 1. TOP BREAKING NEWS TICKER */}
+        <HeaderNewsTicker
+          news={news}
+          onOpenNews={(item) => {
+            if (item) setSelectedNewsItem(item);
+            setNewsModalOpen(true);
+          }}
+          isLoading={isNewsLoading}
+        />
+
+        {/* 2. MAIN APP BAR */}
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "var(--background)",
+            borderBottom: "4px solid var(--primary)",
+            padding: "10px 18px",
+            height: "80px",
+            width: "100%",
+            position: "relative",
+          }}
+        >
         {/* 1. LEFT SIDE: BUSCAR BUTTON */}
         <button
           onClick={() => setSearchActive(true)}
@@ -226,6 +253,7 @@ export const Header = ({
           </button>
         </div>
       </header>
+    </div>
 
       {/* 4. BACKDROP OVERLAY */}
       <div
@@ -474,6 +502,45 @@ export const Header = ({
               </span>
             )}
           </button>
+
+          {/* 6. Noticias Huánuco & Mundo */}
+          <button
+            onClick={() => {
+              setIsMenuOpen(false);
+              setNewsModalOpen(true);
+            }}
+            className="mobile-nav-link fun-hover-wobble"
+            style={{
+              backgroundColor: isNewsModalOpen ? "#CCFF00" : "var(--card-bg)",
+              color: isNewsModalOpen ? "#161E00" : "var(--primary)",
+              border: "2.5px solid var(--primary)",
+              boxShadow: isNewsModalOpen ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
+              transform: isNewsModalOpen ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(-1deg)",
+              "--rest-rot": isNewsModalOpen ? "0deg" : "-1deg",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "9px 14px",
+            } as CSSProperties}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Newspaper size={16} />
+              <span>FLASH HCO Y EL MUNDO</span>
+            </div>
+            <span
+              style={{
+                backgroundColor: "#BA1A1A",
+                color: "#FFFFFF",
+                fontSize: "0.55rem",
+                fontWeight: 900,
+                padding: "2px 6px",
+                letterSpacing: "0.8px",
+                border: "1px solid var(--primary)",
+              }}
+            >
+              ● EN VIVO
+            </span>
+          </button>
         </div>
 
         {/* Small radio sticker badge at bottom */}
@@ -497,6 +564,23 @@ export const Header = ({
           </div>
         </div>
       </aside>
+
+      {/* 6. MODAL DE NOTICIAS HUÁNUCO & CABINA */}
+      <NewsModal
+        isOpen={isNewsModalOpen}
+        onClose={() => {
+          setNewsModalOpen(false);
+          setSelectedNewsItem(null);
+        }}
+        news={news}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        selectedNewsItem={selectedNewsItem}
+        setSelectedNewsItem={setSelectedNewsItem}
+        isLoading={isNewsLoading}
+        refreshNews={refreshNews}
+        lastUpdated={lastUpdated}
+      />
     </>
   );
 };
