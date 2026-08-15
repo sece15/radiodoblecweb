@@ -1,4 +1,4 @@
-import { Station, RadioProgram, PastBroadcast, Album, Song, Product, MusicScheduleBlock } from "@/types";
+import { Station, RadioProgram, PastBroadcast, Album, Song, Product, MusicScheduleBlock, DayOfWeekItem } from "@/types";
 
 export const MP_ALIAS = process.env.NEXT_PUBLIC_MP_ALIAS || "";
 export const MP_CVU = process.env.NEXT_PUBLIC_MP_CVU || "";
@@ -351,4 +351,14 @@ export const MUSIC_SCHEDULE_BLOCKS: MusicScheduleBlock[] = [
     tagColor: "#CBD5E0",
     badge: "🤖 MADRUGADA ESTELAR",
   },
+];
+
+export const DAYS_OF_WEEK: DayOfWeekItem[] = [
+  { id: "lun", label: "LUNES", short: "LUN", dayIndex: 1, isWeekend: false },
+  { id: "mar", label: "MARTES", short: "MAR", dayIndex: 2, isWeekend: false },
+  { id: "mie", label: "MIÉRCOLES", short: "MIÉ", dayIndex: 3, isWeekend: false },
+  { id: "jue", label: "JUEVES", short: "JUE", dayIndex: 4, isWeekend: false },
+  { id: "vie", label: "VIERNES", short: "VIE", dayIndex: 5, isWeekend: false, hasSpecialShows: true },
+  { id: "sab", label: "SÁBADO", short: "SÁB", dayIndex: 6, isWeekend: true, hasSpecialShows: true },
+  { id: "dom", label: "DOMINGO", short: "DOM", dayIndex: 0, isWeekend: true, hasSpecialShows: true },
 ];

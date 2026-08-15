@@ -254,7 +254,7 @@ export const DriveAlbumsSection = ({
                 gap: "4px",
               }}
             >
-              <Disc size={12} /> {requireVip ? "DISCOTECA VIP EXCLUSIVA" : "DISCOTECA DOBLE C"}
+              <Disc size={12} /> {requireVip ? "DISCOS UNDERGROUND VIP" : "DISCOS UNDERGROUND"}
             </span>
             <span
               style={{
@@ -269,12 +269,12 @@ export const DriveAlbumsSection = ({
             </span>
           </div>
           <h3 style={{ fontSize: "1.2rem", fontWeight: 900, textTransform: "uppercase" }}>
-            {requireVip ? "ÁLBUMES Y PRODUCCIONES DE ESTUDIO" : "DISCOS Y ÁLBUMES DE ESTUDIO"}
+            {requireVip ? "DISCOS UNDERGROUND & ARCHIVO VIP" : "DISCOS UNDERGROUND"}
           </h3>
           <p style={{ fontSize: "0.75rem", opacity: 0.75 }}>
             {requireVip
-              ? "Producciones discográficas completas para miembros VIP con descarga en alta fidelidad."
-              : "Producciones discográficas completas organizadas en la discoteca de Radio Doble C."}
+              ? "Producciones independientes, joyas sonoras y discos underground en alta fidelidad para miembros VIP."
+              : "Discos independientes, producciones underground y joyas sonoras curadas por Radio Doble C."}
           </p>
         </div>
 
@@ -359,7 +359,7 @@ export const DriveAlbumsSection = ({
         >
           <Disc size={36} className="animate-spin" style={{ color: "var(--primary)" }} />
           <p style={{ fontSize: "0.8rem", fontWeight: 900, textTransform: "uppercase" }}>
-            Sincronizando discografía desde Google Drive...
+            Sincronizando discos underground desde Google Drive...
           </p>
         </div>
       ) : albums.length === 0 ? (
@@ -377,11 +377,11 @@ export const DriveAlbumsSection = ({
           }}
         >
           <Music size={36} style={{ opacity: 0.6 }} />
-          <h4 style={{ fontSize: "0.95rem", fontWeight: 900 }}>NO HAY DISCOS DISPONIBLES</h4>
+          <h4 style={{ fontSize: "0.95rem", fontWeight: 900 }}>NO HAY DISCOS UNDERGROUND DISPONIBLES</h4>
           <p style={{ fontSize: "0.75rem", opacity: 0.75 }}>
             {userIsAdmin
               ? "Crea tu primer disco con el botón 'CREAR DISCO' para comenzar."
-              : "Pronto el equipo subirá nuevas producciones discográficas."}
+              : "Pronto el equipo subirá nuevos discos y joyas underground."}
           </p>
         </div>
       ) : (

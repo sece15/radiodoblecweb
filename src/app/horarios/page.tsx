@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { ZineBackgroundFrame } from "@/components/ZineBackgroundFrame";
 import { SpotifyPlayerBar } from "@/components/SpotifyPlayerBar";
@@ -8,7 +8,9 @@ import { ChatSidebar } from "@/components/ChatSidebar";
 import { PlayerView } from "@/components/PlayerView";
 import { Toast } from "@/components/Toast";
 import { useToast } from "@/hooks/useToast";
-import { MUSIC_SCHEDULE_BLOCKS } from "@/constants";
+import { RadioLogo } from "@/components/RadioLogo";
+import { DAYS_OF_WEEK } from "@/constants";
+import { useSchedule } from "@/hooks/useSchedule";
 import { MusicScheduleBlock } from "@/types";
 import {
   Clock,
@@ -26,53 +28,30 @@ import {
   Check,
   Grid,
   List,
-  Radio,
+  Calendar,
 } from "lucide-react";
-
-const DAYS_OF_WEEK = [
-  { id: "lun", label: "LUNES", short: "LUN", dayIndex: 1, isWeekend: false },
-  { id: "mar", label: "MARTES", short: "MAR", dayIndex: 2, isWeekend: false },
-  { id: "mie", label: "MIÉRCOLES", short: "MIÉ", dayIndex: 3, isWeekend: false },
-  { id: "jue", label: "JUEVES", short: "JUE", dayIndex: 4, isWeekend: false },
-  { id: "vie", label: "VIERNES", short: "VIE", dayIndex: 5, isWeekend: false, hasSpecialShows: true },
-  { id: "sab", label: "SÁBADO", short: "SÁB", dayIndex: 6, isWeekend: true, hasSpecialShows: true },
-  { id: "dom", label: "DOMINGO", short: "DOM", dayIndex: 0, isWeekend: true },
-];
 
 export default function HorariosPage() {
   const { toastMessage, toastType, showToast, setToastMessage } = useToast();
-
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDayFilter, setSelectedDayFilter] = useState<string>("all");
+  const {
+    selectedDayFilter,
+    setSelectedDayFilter,
+    viewMode,
+    setViewMode,
+    searchQuery,
+    setSearchQuery,
+    currentDayIndex,
+    filteredBlocks,
+    isBlockActiveNow,
+    getSpecialProgramsForSlot,
+    getHourlyBreakdown,
+  } = useSchedule();
+
   const [isPlayerExpanded, setPlayerExpanded] = useState(false);
   const [isChatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-
-  // Current time states
-  const [currentHour, setCurrentHour] = useState<number>(() => new Date().getHours());
-  const [currentMinute, setCurrentMinute] = useState<number>(() => new Date().getMinutes());
-  const [currentDayIndex, setCurrentDayIndex] = useState<number>(() => new Date().getDay());
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentHour(now.getHours());
-      setCurrentMinute(now.getMinutes());
-      setCurrentDayIndex(now.getDay());
-    };
-    const timer = setInterval(updateTime, 30000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const isBlockActiveNow = (block: MusicScheduleBlock) => {
-    if (block.startHour > block.endHour) {
-      return currentHour >= block.startHour || currentHour < block.endHour;
-    }
-    return currentHour >= block.startHour && currentHour < block.endHour;
-  };
 
   const handlePrint = () => {
     if (typeof window !== "undefined") {
@@ -89,18 +68,20 @@ export default function HorariosPage() {
     }
   };
 
-  const filteredBlocks = useMemo(() => {
-    if (!searchQuery.trim()) return MUSIC_SCHEDULE_BLOCKS;
-    const q = searchQuery.toLowerCase().trim();
-    return MUSIC_SCHEDULE_BLOCKS.filter(
-      (b) =>
-        b.name.toLowerCase().includes(q) ||
-        b.timeSlot.toLowerCase().includes(q) ||
-        b.energyLevel.toLowerCase().includes(q) ||
-        b.energyDescription.toLowerCase().includes(q) ||
-        b.genres.some((g) => g.toLowerCase().includes(q))
-    );
-  }, [searchQuery]);
+  const renderTimeSlot = (timeSlot: string) => {
+    const parts = timeSlot.split(" - ");
+    if (parts.length === 2) {
+      return (
+        <div className="schedule-time-container">
+          <span>{parts[0]}</span>
+          <span className="schedule-time-dash">-</span>
+          <span className="schedule-time-divider">↓</span>
+          <span>{parts[1]}</span>
+        </div>
+      );
+    }
+    return <span style={{ lineHeight: "0.85rem" }}>{timeSlot}</span>;
+  };
 
   const getEnergyBadge = (level: MusicScheduleBlock["energyLevel"]) => {
     switch (level) {
@@ -119,78 +100,6 @@ export default function HorariosPage() {
       default:
         return { bg: "#E2E2E2", color: "#111", icon: <Music size={11} /> };
     }
-  };
-
-  // Special programs schedule mapping for Friday & Saturday
-  const getSpecialProgramsForSlot = (timeSlotId: string, dayId: string) => {
-    if (dayId === "vie") {
-      if (timeSlotId === "block_primetime") {
-        return [
-          {
-            id: "conversa_time",
-            title: "Conversa Time",
-            host: "Nicoll",
-            timeText: "20:00 - 21:00",
-            genre: "Magazine Musical",
-            isLiveRightNow: currentDayIndex === 5 && currentHour >= 20 && currentHour < 21,
-          },
-          {
-            id: "neonpop",
-            title: "El Espacio del Koyote",
-            host: "El Koyote",
-            timeText: "21:00 - 22:00",
-            genre: "Pedidos / Invitados",
-            isLiveRightNow: currentDayIndex === 5 && currentHour >= 21 && currentHour < 22,
-          },
-        ];
-      }
-      if (timeSlotId === "block_chill_night") {
-        return [
-          {
-            id: "subterraneo",
-            title: "Hits and Beats",
-            host: "JS",
-            timeText: "23:00 - 00:00",
-            genre: "All Music / Baterías",
-            isLiveRightNow: currentDayIndex === 5 && currentHour >= 23,
-          },
-        ];
-      }
-    }
-
-    if (dayId === "sab") {
-      if (timeSlotId === "block_afternoon") {
-        return [
-          {
-            id: "lado_c",
-            title: "Lado C",
-            host: "Marx y Anthony",
-            timeText: "17:00 - 18:30",
-            genre: "Discos / Concursos",
-            isLiveRightNow:
-              currentDayIndex === 6 &&
-              (currentHour === 17 || (currentHour === 18 && currentMinute <= 30)),
-          },
-        ];
-      }
-    }
-
-    if (dayId === "dom") {
-      if (timeSlotId === "block_primetime" || timeSlotId === "block_afternoon") {
-        return [
-          {
-            id: "zona_anime",
-            title: "Zona Anime & J-Music",
-            host: "Especial Otaku",
-            timeText: "16:00 - 20:00",
-            genre: "Anime Openings, J-Rock, Vocaloid, J-Pop & OSTs",
-            isLiveRightNow: currentDayIndex === 0 && currentHour >= 16 && currentHour < 20,
-          },
-        ];
-      }
-    }
-
-    return null;
   };
 
   return (
@@ -240,22 +149,26 @@ export default function HorariosPage() {
           VOLVER A LA RADIO
         </Link>
 
-        {/* Center Title Badge */}
-        <div
+        {/* Center Radio Logo (Identical size & layout to main page header, Desktop Only) */}
+        <Link
+          href="/"
+          className="header-logo-container desktop-only-flex"
           style={{
-            display: "flex",
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            height: "72px",
+            width: "72px",
             alignItems: "center",
-            gap: "6px",
-            backgroundColor: "var(--primary-container)",
-            border: "2px solid var(--primary)",
-            padding: "4px 10px",
-            boxShadow: "2px 2px 0px var(--primary)",
-            transform: "rotate(1deg)",
+            justifyContent: "center",
+            cursor: "pointer",
+            textDecoration: "none",
           }}
+          title="Radio Doble C - Inicio"
         >
-          <Radio size={16} />
-          <span style={{ fontSize: "0.75rem", fontWeight: 900 }}>RADIO DOBLE C</span>
-        </div>
+          <RadioLogo />
+        </Link>
 
         {/* Action Buttons */}
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -552,7 +465,7 @@ export default function HorariosPage() {
                   }}
                 >
                   <colgroup>
-                    <col style={{ width: "100px" }} />
+                    <col className="schedule-time-col-header" style={{ width: "95px" }} />
                     {DAYS_OF_WEEK.filter(
                       (d) => selectedDayFilter === "all" || selectedDayFilter === d.id
                     ).map((day) => (
@@ -564,11 +477,12 @@ export default function HorariosPage() {
                     <tr style={{ backgroundColor: "var(--primary)", color: "var(--on-primary)" }}>
                       {/* Sticky Header Top-Left */}
                       <th
+                        className="schedule-time-col-header"
                         style={{
                           position: "sticky",
                           left: 0,
                           zIndex: 20,
-                          padding: "10px 6px",
+                          padding: "10px 4px",
                           fontSize: "0.72rem",
                           fontWeight: 900,
                           backgroundColor: "var(--primary)",
@@ -576,6 +490,7 @@ export default function HorariosPage() {
                           borderRight: "2px solid var(--background)",
                           fontFamily: "monospace",
                           textAlign: "center",
+                          width: "95px",
                         }}
                       >
                         HORARIO
@@ -638,37 +553,37 @@ export default function HorariosPage() {
                             backgroundColor: isNow ? "rgba(204, 255, 0, 0.05)" : "transparent",
                           }}
                         >
-                          {/* Sticky Hour Column */}
+                          {/* Sticky Hour Column with responsive stacked time numbers */}
                           <td
+                            className="schedule-time-col-cell"
                             style={{
                               position: "sticky",
                               left: 0,
                               zIndex: 10,
-                              padding: "8px 4px",
-                              fontFamily: "monospace",
-                              fontSize: "0.68rem",
-                              fontWeight: 900,
+                              padding: "8px 3px",
                               borderRight: "2.5px solid var(--primary)",
                               textAlign: "center",
                               backgroundColor: isNow ? "var(--primary-container)" : "var(--surface-container)",
                               boxShadow: "2px 0px 4px rgba(0,0,0,0.1)",
+                              width: "95px",
                             }}
                           >
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-                              <Clock size={12} />
-                              <span style={{ lineHeight: "0.85rem" }}>{block.timeSlot}</span>
+                              <Clock size={11} className="desktop-only-flex" />
+                              {renderTimeSlot(block.timeSlot)}
                               {isNow && (
                                 <span
                                   style={{
                                     backgroundColor: "#BA1A1A",
                                     color: "#FFF",
-                                    padding: "1px 4px",
-                                    fontSize: "0.5rem",
+                                    padding: "1px 3px",
+                                    fontSize: "0.48rem",
                                     fontWeight: 900,
                                     borderRadius: "2px",
+                                    marginTop: "1px",
                                   }}
                                 >
-                                  EN VIVO
+                                  VIVO
                                 </span>
                               )}
                             </div>
@@ -837,114 +752,292 @@ export default function HorariosPage() {
                 </table>
               </div>
             ) : (
-              /* 4. LIST / DETAILED VIEW */
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              /* 4. LIST / DETAILED VIEW (EQUAL TO SEMANAL DATA + SPECIAL SHOWS + HOURLY SECTIONS) */
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {filteredBlocks.map((block) => {
                   const isNow = isBlockActiveNow(block);
                   const energy = getEnergyBadge(block.energyLevel);
+                  const hourlyItems = getHourlyBreakdown(block.id, selectedDayFilter);
+
+                  const daySpecialPrograms = selectedDayFilter !== "all"
+                    ? getSpecialProgramsForSlot(block.id, selectedDayFilter)
+                    : null;
 
                   return (
                     <div
                       key={block.id}
                       className="neo-card"
                       style={{
-                        backgroundColor: isNow ? "var(--primary-container)" : "var(--card-bg)",
+                        backgroundColor: isNow ? "rgba(204, 255, 0, 0.06)" : "var(--card-bg)",
                         border: "3px solid var(--primary)",
                         boxShadow: isNow ? "5px 5px 0px var(--primary)" : "3px 3px 0px var(--primary)",
-                        padding: "16px",
+                        padding: "16px 18px",
                         display: "flex",
                         flexDirection: "column",
-                        gap: "10px",
+                        gap: "14px",
                       }}
                     >
+                      {/* Top Header of Block with Days and Hours Badges */}
                       <div
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
-                          alignItems: "center",
+                          alignItems: "flex-start",
                           flexWrap: "wrap",
-                          gap: "8px",
+                          gap: "10px",
+                          borderBottom: "2px solid var(--primary)",
+                          paddingBottom: "12px",
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span
-                            style={{
-                              backgroundColor: "var(--primary)",
-                              color: "var(--on-primary)",
-                              fontFamily: "monospace",
-                              fontSize: "0.78rem",
-                              fontWeight: 900,
-                              padding: "3px 8px",
-                            }}
-                          >
-                            {block.timeSlot}
-                          </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {/* Badges: Time + Days */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                            <span
+                              style={{
+                                backgroundColor: "var(--primary)",
+                                color: "var(--on-primary)",
+                                fontFamily: "monospace",
+                                fontSize: "0.82rem",
+                                fontWeight: 900,
+                                padding: "4px 9px",
+                                letterSpacing: "0.5px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                              }}
+                            >
+                              <Clock size={13} /> {block.timeSlot}
+                            </span>
+
+                            <span
+                              style={{
+                                backgroundColor: "#FFDE82",
+                                color: "#111111",
+                                border: "1.5px solid var(--primary)",
+                                padding: "3px 8px",
+                                fontSize: "0.68rem",
+                                fontWeight: 900,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Calendar size={12} />
+                              {selectedDayFilter === "all"
+                                ? "LUNES A DOMINGO (7 DÍAS)"
+                                : `DÍA: ${DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter)?.label.toUpperCase()}`}
+                            </span>
+
+                            {isNow && (
+                              <span
+                                style={{
+                                  backgroundColor: "#BA1A1A",
+                                  color: "#FFF",
+                                  padding: "3px 8px",
+                                  fontSize: "0.65rem",
+                                  fontWeight: 900,
+                                  border: "1.5px solid var(--primary)",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                ● AL AIRE AHORA
+                              </span>
+                            )}
+                          </div>
 
                           <h3
                             style={{
-                              fontSize: "1.1rem",
+                              fontSize: "1.2rem",
                               fontWeight: 900,
                               textTransform: "uppercase",
-                              margin: 0,
+                              margin: "4px 0 0 0",
+                              color: "var(--primary)",
                             }}
                           >
                             {block.name}
                           </h3>
-                        </div>
-
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          {isNow && (
-                            <span
-                              style={{
-                                backgroundColor: "#BA1A1A",
-                                color: "#FFF",
-                                padding: "2px 7px",
-                                fontSize: "0.62rem",
-                                fontWeight: 900,
-                                border: "1.5px solid var(--primary)",
-                              }}
-                            >
-                              ● AL AIRE AHORA
+                          {block.subtitle && (
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, opacity: 0.85 }}>
+                              {block.subtitle}
                             </span>
                           )}
+                        </div>
 
+                        {/* Energy Level Badge */}
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                           <span
                             style={{
                               backgroundColor: energy.bg,
                               color: energy.color,
                               border: "1.5px solid var(--primary)",
-                              padding: "2px 7px",
-                              fontSize: "0.62rem",
+                              padding: "4px 9px",
+                              fontSize: "0.68rem",
                               fontWeight: 900,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
                             }}
                           >
+                            {energy.icon}
                             {block.energyLevel} ({block.bpmInfo})
                           </span>
                         </div>
                       </div>
 
-                      <p style={{ fontSize: "0.76rem", fontWeight: "bold", opacity: 0.85, margin: 0 }}>
+                      <p style={{ fontSize: "0.78rem", fontWeight: "bold", opacity: 0.85, margin: 0 }}>
                         {block.energyDescription}
                       </p>
 
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
-                        <span style={{ fontSize: "0.65rem", fontWeight: 900, opacity: 0.8 }}>GÉNEROS:</span>
-                        {block.genres.map((g, gIdx) => (
-                          <span
-                            key={gIdx}
-                            style={{
-                              backgroundColor: "var(--surface-container)",
-                              border: "1.5px solid var(--primary)",
-                              padding: "2px 6px",
-                              fontSize: "0.62rem",
-                              fontWeight: 800,
-                              boxShadow: "1px 1px 0px var(--primary)",
-                            }}
-                          >
-                            ✦ {g}
+                      {/* HOURLY BREAKDOWN LIST WITH DAYS & HOURS */}
+                      {hourlyItems.length > 0 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                            backgroundColor: "var(--surface-container)",
+                            border: "2px solid var(--primary)",
+                            padding: "12px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
+                            <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
+                              🎶 SECCIONES MUSICALES &amp; PROGRAMACIÓN HORA POR HORA:
+                            </span>
+                            <span style={{ fontSize: "0.62rem", fontWeight: 800, opacity: 0.75 }}>
+                              HORAS Y DÍAS DETALLADOS
+                            </span>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))", gap: "8px" }}>
+                            {hourlyItems.map((item, hIdx) => (
+                              <div
+                                key={hIdx}
+                                style={{
+                                  backgroundColor: item.isSpecialShow ? "#FFDE82" : "var(--card-bg)",
+                                  border: item.isSpecialShow ? "2px solid #BA1A1A" : "1.5px solid var(--primary)",
+                                  boxShadow: item.isSpecialShow ? "2.5px 2.5px 0px #BA1A1A" : "1.5px 1.5px 0px var(--primary)",
+                                  padding: "8px 10px",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "4px",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "4px" }}>
+                                  {/* Time */}
+                                  <span
+                                    style={{
+                                      backgroundColor: item.isSpecialShow ? "#BA1A1A" : "var(--primary)",
+                                      color: "white",
+                                      fontFamily: "monospace",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 900,
+                                      padding: "2px 6px",
+                                    }}
+                                  >
+                                    ⏰ {item.timeText}
+                                  </span>
+
+                                  {/* Days badge */}
+                                  <span
+                                    style={{
+                                      backgroundColor: item.isSpecialShow ? "#BA1A1A" : "var(--primary-container)",
+                                      color: item.isSpecialShow ? "white" : "var(--primary)",
+                                      fontSize: "0.6rem",
+                                      fontWeight: 900,
+                                      padding: "1px 5px",
+                                      border: "1px solid var(--primary)",
+                                    }}
+                                  >
+                                    📅 {item.daysText}
+                                  </span>
+                                </div>
+
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                                  <h4 style={{ fontSize: "0.82rem", fontWeight: 900, margin: 0, color: "var(--primary)" }}>
+                                    {item.title}
+                                  </h4>
+                                  {item.badgeText && (
+                                    <span
+                                      style={{
+                                        backgroundColor: item.isSpecialShow ? "#111" : "var(--primary)",
+                                        color: "white",
+                                        fontSize: "0.52rem",
+                                        fontWeight: 900,
+                                        padding: "1px 4px",
+                                      }}
+                                    >
+                                      {item.badgeText}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {item.host && (
+                                  <div style={{ fontSize: "0.65rem", fontWeight: 800, color: "#BA1A1A" }}>
+                                    👤 Conducción: {item.host}
+                                  </div>
+                                )}
+
+                                <p style={{ fontSize: "0.68rem", opacity: 0.85, margin: 0, lineHeight: "0.95rem" }}>
+                                  {item.description}
+                                </p>
+
+                                <div style={{ fontSize: "0.62rem", fontWeight: 700, opacity: 0.8, fontStyle: "italic", marginTop: "2px" }}>
+                                  🎵 Géneros: {item.genres}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Special Programs in this slot (if single day selected) */}
+                      {daySpecialPrograms && daySpecialPrograms.length > 0 && (
+                        <div
+                          style={{
+                            borderTop: "2px dashed var(--primary)",
+                            paddingTop: "10px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                          }}
+                        >
+                          <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "#BA1A1A" }}>
+                            🎙️ PROGRAMAS EN VIVO EN ESTE HORARIO ({DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter)?.label}):
                           </span>
-                        ))}
-                      </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "8px" }}>
+                            {daySpecialPrograms.map((sp) => (
+                              <div
+                                key={sp.id}
+                                style={{
+                                  backgroundColor: sp.isLiveRightNow ? "#BA1A1A" : "#FFDE82",
+                                  color: sp.isLiveRightNow ? "#FFFFFF" : "#111111",
+                                  border: "2px solid var(--primary)",
+                                  padding: "8px 10px",
+                                  boxShadow: "2px 2px 0px var(--primary)",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <span style={{ fontSize: "0.78rem", fontWeight: 900 }}>🎙️ {sp.title}</span>
+                                  {sp.isLiveRightNow && (
+                                    <span style={{ fontSize: "0.5rem", fontWeight: 900, backgroundColor: "#FFF", color: "#BA1A1A", padding: "1px 4px" }}>
+                                      ONLINE
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: "0.65rem", fontWeight: "bold", marginTop: "2px" }}>
+                                  ⏰ {sp.timeText} • 👤 Conductor: {sp.host}
+                                </div>
+                                <div style={{ fontSize: "0.6rem", opacity: 0.85, fontStyle: "italic", marginTop: "2px" }}>
+                                  Estilo: {sp.genre}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -995,10 +1088,10 @@ export default function HorariosPage() {
               >
                 <strong>Radio Doble C</strong> es una plataforma de difusión cultural independiente y comunitaria. Todos los derechos de autor, máster y marcas registradas pertenecen a sus respectivos autores, intérpretes y sellos. Si eres titular de derechos y requieres acreditación o retiro de algún contenido, contáctanos a:{" "}
                 <a
-                  href="mailto:radiodoblec@gmail.com?subject=Consulta%20de%20Derechos%20-%20Radio%20Doble%20C"
+                  href="mailto:radiodoblechseo@gmail.com?subject=Consulta%20de%20Derechos%20-%20Radio%20Doble%20C"
                   style={{ color: "var(--primary)", fontWeight: 900, textDecoration: "underline" }}
                 >
-                  radiodoblec@gmail.com
+                  radiodoblechseo@gmail.com
                 </a>.
               </p>
             </div>

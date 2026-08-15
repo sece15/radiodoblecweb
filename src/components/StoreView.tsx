@@ -317,119 +317,118 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
 
   return (
     <div
+      className="store-view-container"
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: "16px",
-        padding: "20px 16px 180px 16px",
+        padding: "16px 12px 180px 12px",
         position: "relative",
         width: "100%",
-        maxWidth: "768px",
+        maxWidth: "800px",
         margin: "0 auto",
       }}
     >
-      {/* URBAN BACKGROUND GRAFFITI & STAR DECORATIONS */}
+      {/* URBAN BACKGROUND GRAFFITI & STAR DECORATIONS (ISOLATED TO PREVENT HORIZONTAL SCROLL) */}
       <div
         style={{
           position: "absolute",
-          top: "10%",
-          left: "-40px",
-          fontSize: "9rem",
-          fontWeight: 900,
-          fontFamily: "Space Grotesk, sans-serif",
-          color: "var(--primary)",
-          opacity: 0.05,
-          transform: "rotate(-20deg)",
+          inset: 0,
+          overflow: "hidden",
           pointerEvents: "none",
-          userSelect: "none",
           zIndex: 0,
         }}
       >
-        PUNK
+        <div
+          style={{
+            position: "absolute",
+            top: "10%",
+            left: "-20px",
+            fontSize: "clamp(4rem, 15vw, 9rem)",
+            fontWeight: 900,
+            fontFamily: "Space Grotesk, sans-serif",
+            color: "var(--primary)",
+            opacity: 0.05,
+            transform: "rotate(-20deg)",
+            userSelect: "none",
+          }}
+        >
+          PUNK
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            bottom: "20%",
+            right: "-20px",
+            fontSize: "clamp(3.5rem, 12vw, 7rem)",
+            fontWeight: 900,
+            fontFamily: "Space Grotesk, sans-serif",
+            color: "var(--primary-container)",
+            opacity: 0.07,
+            transform: "rotate(15deg)",
+            userSelect: "none",
+          }}
+        >
+          DOBLE C
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            top: "45%",
+            right: "5%",
+            fontSize: "clamp(3rem, 10vw, 5rem)",
+            fontWeight: 900,
+            fontFamily: "Space Grotesk, sans-serif",
+            color: "var(--primary)",
+            opacity: 0.04,
+            transform: "rotate(-10deg)",
+            userSelect: "none",
+          }}
+        >
+          STREET
+        </div>
+
+        <Star
+          size={120}
+          style={{
+            position: "absolute",
+            top: "25%",
+            right: "-30px",
+            color: "var(--primary-container)",
+            fill: "var(--primary-container)",
+            opacity: 0.06,
+            transform: "rotate(25deg)",
+          }}
+        />
+
+        <Star
+          size={100}
+          style={{
+            position: "absolute",
+            bottom: "10%",
+            left: "-20px",
+            color: "var(--primary)",
+            fill: "var(--primary)",
+            opacity: 0.05,
+            transform: "rotate(-35deg)",
+          }}
+        />
+
+        <Sparkles
+          size={60}
+          style={{
+            position: "absolute",
+            top: "5%",
+            right: "15%",
+            color: "var(--primary)",
+            opacity: 0.05,
+            transform: "rotate(15deg)",
+          }}
+        />
       </div>
-
-      <div
-        style={{
-          position: "absolute",
-          bottom: "20%",
-          right: "-30px",
-          fontSize: "7rem",
-          fontWeight: 900,
-          fontFamily: "Space Grotesk, sans-serif",
-          color: "var(--primary-container)",
-          opacity: 0.07,
-          transform: "rotate(15deg)",
-          pointerEvents: "none",
-          userSelect: "none",
-          zIndex: 0,
-        }}
-      >
-        DOBLE C
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          top: "45%",
-          right: "10%",
-          fontSize: "5rem",
-          fontWeight: 900,
-          fontFamily: "Space Grotesk, sans-serif",
-          color: "var(--primary)",
-          opacity: 0.04,
-          transform: "rotate(-10deg)",
-          pointerEvents: "none",
-          userSelect: "none",
-          zIndex: 0,
-        }}
-      >
-        STREET
-      </div>
-
-      <Star
-        size={140}
-        style={{
-          position: "absolute",
-          top: "25%",
-          right: "-50px",
-          color: "var(--primary-container)",
-          fill: "var(--primary-container)",
-          opacity: 0.06,
-          transform: "rotate(25deg)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-
-      <Star
-        size={120}
-        style={{
-          position: "absolute",
-          bottom: "10%",
-          left: "-40px",
-          color: "var(--primary)",
-          fill: "var(--primary)",
-          opacity: 0.05,
-          transform: "rotate(-35deg)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-
-      <Sparkles
-        size={80}
-        style={{
-          position: "absolute",
-          top: "5%",
-          right: "20%",
-          color: "var(--primary)",
-          opacity: 0.05,
-          transform: "rotate(15deg)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
 
       {/* HEADER SECTION */}
       <h2
@@ -480,17 +479,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
       )}
 
       {/* COMPACT PRODUCT GRID */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-          gap: "24px",
-          width: "100%",
-          maxWidth: "800px",
-          marginTop: "16px",
-          zIndex: 1,
-        }}
-      >
+      <div className="store-products-grid">
         {products.map((product) => (
           <div
             key={product.id}

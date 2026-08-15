@@ -427,6 +427,97 @@ button {
   opacity: 0.85;
 }
 
+/* Schedule Time Column Responsiveness */
+.schedule-time-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-family: monospace;
+  font-weight: 900;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.schedule-time-divider {
+  display: none;
+}
+
+@media (max-width: 868px) {
+  .schedule-time-container {
+    flex-direction: column !important;
+    gap: 1px !important;
+    font-size: 0.62rem !important;
+  }
+  .schedule-time-dash {
+    display: none !important;
+  }
+  .schedule-time-divider {
+    display: block !important;
+    font-size: 0.5rem !important;
+    line-height: 0.6rem !important;
+    opacity: 0.6 !important;
+  }
+  .schedule-time-col-header {
+    width: 64px !important;
+    min-width: 64px !important;
+    padding: 8px 2px !important;
+    font-size: 0.62rem !important;
+  }
+  .schedule-time-col-cell {
+    width: 64px !important;
+    min-width: 64px !important;
+    padding: 6px 2px !important;
+  }
+}
+
+/* Sponsors & Partners Carousel Responsiveness */
+.sponsors-title {
+  font-size: 1.15rem;
+  letter-spacing: 1.5px;
+}
+
+.sponsor-logo-img {
+  height: 52px;
+  max-width: 170px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .sponsors-title {
+    font-size: 0.76rem !important;
+    letter-spacing: 0.8px !important;
+  }
+  .sponsor-logo-img {
+    height: 40px !important;
+    max-width: 140px !important;
+  }
+}
+
+/* Store View Products Grid Responsiveness */
+.store-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 800px;
+  margin-top: 16px;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .store-products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    margin-top: 12px !important;
+  }
+  .store-view-container {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    max-width: 100% !important;
+  }
+}
+
 /* Split-screen Modal Layouts (Side-by-side on Desktop, Stacked on Mobile) */
 .modal-split-container {
   display: flex;
@@ -665,6 +756,11 @@ button {
     top: 72px !important;
     height: calc(100vh - 72px) !important;
   }
+  .header-menu-btn {
+    padding: 6px 10px !important;
+    font-size: 0.7rem !important;
+    gap: 5px !important;
+  }
 }
 
 .side-menu-backdrop {
@@ -687,18 +783,18 @@ button {
   position: fixed;
   top: 0;
   right: 0;
-  width: min(420px, 90vw);
+  width: min(320px, 85vw);
   height: 100vh;
   background-color: var(--background);
-  border-left: 5px solid var(--primary);
-  box-shadow: -8px 0px 0px rgba(0, 0, 0, 0.2);
+  border-left: 4px solid var(--primary);
+  box-shadow: -6px 0px 0px rgba(0, 0, 0, 0.2);
   z-index: 2000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 32px 24px;
-  gap: 16px;
+  padding: 20px 16px;
+  gap: 12px;
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -711,26 +807,26 @@ button {
 /* Mobile & Desktop Nav Button stylings */
 .mobile-nav-link {
   width: 100%;
-  max-width: 340px;
-  text-align: center;
-  font-size: 1.05rem !important;
+  max-width: 280px;
+  text-align: left;
+  font-size: 0.8rem !important;
   letter-spacing: 0.04em;
-  padding: 12px 18px !important;
+  padding: 8px 12px !important;
   text-transform: uppercase;
   font-family: inherit;
   font-weight: 900;
-  border: 3.5px solid var(--primary) !important;
-  box-shadow: 4px 4px 0px 0px var(--primary) !important;
+  border: 2.5px solid var(--primary) !important;
+  box-shadow: 3px 3px 0px 0px var(--primary) !important;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .mobile-nav-link:active {
-  transform: translate(3px, 3px) !important;
+  transform: translate(2px, 2px) !important;
   box-shadow: 1px 1px 0px 0px var(--primary) !important;
 }
 

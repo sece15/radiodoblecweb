@@ -129,3 +129,32 @@ export interface MusicScheduleBlock {
   tagColor?: string;
   badge?: string;
 }
+
+export interface DayOfWeekItem {
+  id: string;
+  label: string;
+  short: string;
+  dayIndex: number;
+  isWeekend: boolean;
+  hasSpecialShows?: boolean;
+}
+
+export interface HourlyMusicItem {
+  timeText: string;
+  title: string;
+  daysText: string;
+  genres: string;
+  description: string;
+  host?: string;
+  isSpecialShow?: boolean;
+  badgeText?: string;
+}
+
+export interface SpecialProgramSchedule {
+  id: string;
+  title: string;
+  host: string;
+  timeText: string;
+  genre: string;
+  isLiveRightNow: boolean;
+}

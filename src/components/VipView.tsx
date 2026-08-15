@@ -1,6 +1,7 @@
 import { useAudio } from "@/hooks/useAudio";
 import { isVip } from "@/lib/permissions";
 import { DriveAlbumsSection } from "./DriveAlbumsSection";
+import { RadioVideosSection } from "./RadioVideosSection";
 import { Sparkles, Crown, Lock } from "lucide-react";
 
 interface VipViewProps {
@@ -43,7 +44,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Crown style={{ color: "#BA1A1A", fill: "#FFB000" }} size={28} />
               <h2 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", margin: 0 }}>
-                ZONA EXCLUSIVA VIP • DISCOTECA
+                ZONA EXCLUSIVA VIP • DISCOS UNDERGROUND
               </h2>
             </div>
             <span
@@ -64,7 +65,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
           </div>
 
           <p style={{ fontSize: "0.75rem", lineHeight: "1.15rem", opacity: 0.9, margin: 0 }}>
-            Como miembro **VIP**, tienes acceso desbloqueado a las producciones discográficas oficiales alojadas en la radio doble c, streaming en alta definición y descarga directa de archivos MP3 en alta fidelidad. ¡Gracias por apoyar la radio libre! ⚡
+            Como miembro **VIP**, tienes acceso desbloqueado a los discos underground oficiales alojados en Radio Doble C, streaming en alta definición y descarga directa de archivos MP3 en alta fidelidad. ¡Gracias por apoyar la radio libre! ⚡
           </p>
         </div>
       ) : (
@@ -98,12 +99,12 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
               <Lock size={14} /> CONTENIDO EXCLUSIVO VIP
             </div>
             <h2 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
-              DISCOTECA Y ÁLBUMES DE ESTUDIO
+              DISCOS UNDERGROUND &amp; ARCHIVO EXCLUSIVO
             </h2>
           </div>
 
           <p style={{ fontSize: "0.8rem", lineHeight: "1.25rem", color: "#333", margin: 0 }}>
-            Esta sección contiene la discografía completa de Radio Doble C, sesiones de autor y canciones exclusivas en alta definición. Suscríbete al Club VIP para desbloquear la escucha a la carta y descargas directas.
+            Esta sección contiene los discos underground completos de Radio Doble C, sesiones de autor y producciones independientes en alta fidelidad. Suscríbete al Club VIP para desbloquear la escucha completa y descargas directas.
           </p>
 
           <a
@@ -132,6 +133,9 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
 
       {/* 2. GOOGLE DRIVE ALBUMS & DISCOGRAPHY */}
       <DriveAlbumsSection requireVip={true} onNavigateToPlayer={onNavigateToPlayer} />
+
+      {/* 3. VIDEOS, ENTREVISTAS & SESIONES */}
+      <RadioVideosSection />
     </div>
   );
 };

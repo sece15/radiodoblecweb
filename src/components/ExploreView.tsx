@@ -4,6 +4,7 @@ import { RadioProgram } from "@/types";
 import { Heart, Share2, Play, Pause, Clock, User, Disc, Sparkles, Megaphone } from "lucide-react";
 import { NeoModal } from "./common/NeoModal";
 import { InfiniteSlider } from "./common/InfiniteSlider";
+import { RadioVideosSection } from "./RadioVideosSection";
 import { fetchProgramRecordings, getDriveStreamUrl, DriveFile } from "@/services/driveService";
 import { formatFileSize, formatDate, cleanFileName } from "@/lib/formatters";
 
@@ -191,24 +192,23 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
           flexDirection: "column",
           alignItems: "center",
           gap: "8px",
-          margin: "4px 0 10px 0",
+          margin: "4px 0 12px 0",
         }}
       >
         <h3
+          className="sponsors-title"
           style={{
-            fontSize: "1.15rem",
             fontWeight: 900,
             textTransform: "uppercase",
-            letterSpacing: "1.5px",
             color: "var(--primary)",
             margin: "0 0 6px 0",
             textAlign: "center",
           }}
         >
-          AUSPICIADORES & MARCAS ALIADAS
+          AUSPICIADORES &amp; MARCAS ALIADAS
         </h3>
 
-        <InfiniteSlider gap={60} speed={42} speedOnHover={0} style={{ padding: "6px 0" }}>
+        <InfiniteSlider gap={75} speed={36} speedOnHover={0} style={{ padding: "8px 0" }}>
           {[
             { id: "1", name: "Radio Doble C", src: "/RADIO.png" },
             { id: "2", name: "Doble C 2026", src: "/RADIO-2026.png" },
@@ -225,6 +225,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 justifyContent: "center",
                 flexShrink: 0,
                 cursor: "pointer",
+                padding: "4px 12px",
                 transition: "transform 0.2s ease, opacity 0.2s ease",
               }}
               title={sponsor.name}
@@ -232,9 +233,8 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               <img
                 src={sponsor.src}
                 alt={sponsor.name}
+                className="sponsor-logo-img"
                 style={{
-                  height: "52px",
-                  maxWidth: "160px",
                   objectFit: "contain",
                   filter: "drop-shadow(0px 2px 5px rgba(0,0,0,0.12))",
                 }}
@@ -511,13 +511,16 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
         </div>
       </div>
 
+      {/* 3.8 SECCIÓN DE VIDEOS, ENTREVISTAS & SESIONES */}
+      <RadioVideosSection />
+
       {/* 4. BOTTOM BANNERS GRID */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
           gap: "24px",
-          marginTop: "32px",
+          marginTop: "16px",
         }}
       >
         {/* RADAR & SIGNAL STATUS */}
@@ -615,85 +618,53 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
       <div
         className="neo-card"
         style={{
-          marginTop: "40px",
+          marginTop: "32px",
           marginBottom: "16px",
           backgroundColor: "var(--card-bg)",
-          border: "3px solid var(--primary)",
+          border: "2.5px solid var(--primary)",
           boxShadow: "4px 4px 0px var(--primary)",
-          padding: "20px 24px",
+          padding: "16px 20px",
           display: "flex",
           flexDirection: "column",
-          gap: "12px",
+          gap: "10px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span
-              style={{
-                backgroundColor: "var(--primary)",
-                color: "var(--on-primary)",
-                padding: "3px 8px",
-                fontSize: "0.65rem",
-                fontWeight: 900,
-                letterSpacing: "1px",
-              }}
-            >
-              ⚖️ AVISO LEGAL &amp; DERECHOS DE AUTOR (DISCLAIMER)
-            </span>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+          <span
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "var(--on-primary)",
+              padding: "2px 7px",
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              letterSpacing: "1px",
+            }}
+          >
+            ⚖️ AVISO LEGAL &amp; DERECHOS DE AUTOR
+          </span>
 
-          <span style={{ fontSize: "0.65rem", fontWeight: 900, opacity: 0.75 }}>
+          <span style={{ fontSize: "0.62rem", fontWeight: 900, opacity: 0.75 }}>
             DIFUSIÓN CULTURAL &amp; COMUNITARIA
           </span>
         </div>
 
         <p
           style={{
-            fontSize: "0.74rem",
-            lineHeight: "1.25rem",
+            fontSize: "0.72rem",
+            lineHeight: "1.2rem",
             color: "var(--primary)",
             margin: 0,
-            opacity: 0.88,
+            opacity: 0.85,
           }}
         >
-          <strong>Radio Doble C</strong> es una plataforma independiente de difusión cultural, musical y comunitaria. Todos los derechos de autor, máster, producción fonográfica y marcas comerciales de las obras musicales transmitidas pertenecen exclusivamente a sus respectivos autores, intérpretes, compositores y sellos discográficos. Este proyecto apoya activamente la escena de bandas locales, músicos emergentes y creadores independientes.
-        </p>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-            paddingTop: "8px",
-            borderTop: "1.5px dashed var(--primary)",
-          }}
-        >
-          <span style={{ fontSize: "0.7rem", fontWeight: "bold", opacity: 0.8 }}>
-            ¿Eres titular de derechos de alguna obra y deseas su acreditación o remoción?
-          </span>
-
+          <strong>Radio Doble C</strong> es una plataforma de difusión cultural independiente y comunitaria. Todos los derechos de autor, máster y marcas registradas pertenecen a sus respectivos autores, intérpretes y sellos. Si eres titular de derechos y requieres acreditación o retiro de algún contenido, contáctanos a:{" "}
           <a
-            href="mailto:radiodoblec@gmail.com?subject=Solicitud%20de%20Derechos%20de%20Autor%20-%20Radio%20Doble%20C"
-            className="neo-button fun-hover-wobble"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              backgroundColor: "var(--primary-container)",
-              color: "var(--on-primary-container)",
-              padding: "6px 14px",
-              fontSize: "0.7rem",
-              fontWeight: 900,
-              textDecoration: "none",
-              boxShadow: "2px 2px 0px var(--primary)",
-              cursor: "pointer",
-            }}
+            href="mailto:radiodoblechseo@gmail.com?subject=Consulta%20de%20Derechos%20-%20Radio%20Doble%20C"
+            style={{ color: "var(--primary)", fontWeight: 900, textDecoration: "underline" }}
           >
-            📧 CONTACTO DE DERECHOS / DMCA
-          </a>
-        </div>
+            radiodoblechseo@gmail.com
+          </a>.
+        </p>
       </div>
 
       {/* MODAL 1: ¿QUIERES SER DJ? */}
