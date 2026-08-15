@@ -11,6 +11,7 @@ const ContentSecurityPolicy = `
   connect-src 'self'
     https://*.supabase.co
     wss://*.supabase.co
+    https://itunes.apple.com
     ${process.env.NEXT_PUBLIC_CHAT_URL || ""}
     ${process.env.NEXT_PUBLIC_CHAT_URL ? process.env.NEXT_PUBLIC_CHAT_URL.replace("https://", "wss://").replace("http://", "ws://") : ""}
     ${process.env.NEXT_PUBLIC_AZURACAST_URL || ""}

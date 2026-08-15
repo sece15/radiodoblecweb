@@ -15,7 +15,8 @@ import {
   formatRelativeTime,
 } from "@/utils/newsSanitizer";
 
-export const revalidate = NEWS_REVALIDATE_SECONDS;
+// En Next.js App Router, 'revalidate' debe ser un número literal estático para ser analizable en el build
+export const revalidate = 180;
 
 interface CacheStore {
   timestamp: number;
