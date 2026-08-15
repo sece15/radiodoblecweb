@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { ZineBackgroundFrame } from "@/components/ZineBackgroundFrame";
 import { ExploreView } from "@/components/ExploreView";
@@ -16,6 +16,7 @@ import { Play, Pause } from "lucide-react";
 // Custom Hooks
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { CheckoutStep } from "@/hooks/useCheckout";
 
 // Modular UI Components
@@ -27,9 +28,19 @@ import { Toast } from "@/components/Toast";
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
 export default function Home() {
+  useWakeLock(true);
   const { isPlaying, currentTrack, togglePlayPause, isAuthenticated } = useAudio();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("explore");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as ActiveTab | null;
+      if (tabParam && ["explore", "store", "profile", "vip"].includes(tabParam)) {
+        return tabParam;
+      }
+    }
+    return "explore";
+  });
   const [isSearchActive, setSearchActive] = useState(false);
   const [filteredStyle, setFilteredStyle] = useState<string | null>(null);
 
@@ -43,17 +54,6 @@ export default function Home() {
   const { cart, isCartOpen, setCartOpen, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
 
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("idle");
-
-  // Sync tab from URL query params if user navigated from another page
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab") as ActiveTab | null;
-      if (tabParam && ["explore", "store", "profile", "vip"].includes(tabParam)) {
-        setActiveTab(tabParam);
-      }
-    }
-  }, []);
 
   // Helper to render current active panel/tab
   const renderActiveView = () => {

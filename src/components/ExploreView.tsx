@@ -939,7 +939,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               flexWrap: "wrap",
             }}
           >
-            {/* LADO IZQUIERDO: FOTO, GÉNERO Y HORARIO (FIJO) */}
+            {/* LADO IZQUIERDO: FOTO, GÉNERO Y HORARIO */}
             <div
               style={{
                 flex: "0 0 160px",
@@ -950,8 +950,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 margin: "0 auto",
                 alignItems: "center",
                 flexShrink: 0,
-                position: "sticky",
-                top: 0,
+                position: "relative",
               }}
             >
               <div
@@ -1241,7 +1240,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
               flexWrap: "wrap",
             }}
           >
-            {/* LADO IZQUIERDO: FOTO, GÉNERO Y HORARIO (FIJO - ESTRUCTURA IDÉNTICA A PROGRAMA OFICIAL) */}
+            {/* LADO IZQUIERDO: FOTO, GÉNERO Y HORARIO */}
             <div
               style={{
                 flex: "0 0 160px",
@@ -1252,8 +1251,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                 margin: "0 auto",
                 alignItems: "center",
                 flexShrink: 0,
-                position: "sticky",
-                top: 0,
+                position: "relative",
               }}
             >
               <div

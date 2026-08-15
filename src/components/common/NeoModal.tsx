@@ -61,16 +61,12 @@ export const NeoModal = ({
         width: "100vw",
         height: "100vh",
         backgroundColor: "rgba(0, 0, 0, 0.78)",
-        zIndex: 5000, // Por encima de header (100) y player (1000)
+        zIndex: 6000, // Por encima de header (100) y player (1000)
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        // Márgenes seguros arriba y abajo para que nunca se tape con Header ni con Player
-        paddingTop: isMobile ? "82px" : "94px",
-        paddingBottom: isMobile ? "102px" : "92px",
-        paddingLeft: "16px",
-        paddingRight: "16px",
-        backdropFilter: "blur(4px)",
+        padding: "20px 16px",
+        backdropFilter: "blur(5px)",
         boxSizing: "border-box",
       }}
       onClick={() => closeOnBackdrop && onClose()}
@@ -81,7 +77,7 @@ export const NeoModal = ({
           width: "100%",
           maxWidth,
           backgroundColor: backgroundColor || "var(--background)",
-          boxShadow: "6px 6px 0px var(--primary)",
+          boxShadow: "8px 8px 0px var(--primary)",
           border: "3px solid var(--primary)",
           display: "flex",
           flexDirection: "column",
@@ -89,6 +85,7 @@ export const NeoModal = ({
           position: "relative",
           boxSizing: "border-box",
           overflow: "hidden",
+          margin: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -8,6 +8,7 @@ import { ChatSidebar } from "@/components/ChatSidebar";
 import { PlayerView } from "@/components/PlayerView";
 import { Toast } from "@/components/Toast";
 import { useToast } from "@/hooks/useToast";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { RadioLogo } from "@/components/RadioLogo";
 import { DAYS_OF_WEEK } from "@/constants";
 import { useSchedule } from "@/hooks/useSchedule";
@@ -32,6 +33,7 @@ import {
 } from "lucide-react";
 
 export default function HorariosPage() {
+  useWakeLock(true);
   const { toastMessage, toastType, showToast, setToastMessage } = useToast();
   const tableScrollRef = useRef<HTMLDivElement>(null);
 

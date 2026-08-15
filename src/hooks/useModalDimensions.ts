@@ -13,12 +13,6 @@ export interface ModalDimensions {
   isLandscape: boolean;
 }
 
-const HEADER_HEIGHT_DESKTOP = 88;
-const HEADER_HEIGHT_MOBILE = 76;
-const PLAYER_HEIGHT_DESKTOP = 85;
-const PLAYER_HEIGHT_MOBILE = 95;
-const SAFE_VERTICAL_MARGIN = 24;
-
 /**
  * Hook para detectar las medidas exactas de la pantalla
  * Descuenta el Header superior (88px) y el Reproductor inferior (85px)
@@ -30,9 +24,9 @@ export function useModalDimensions(): ModalDimensions {
       return {
         windowWidth: 1200,
         windowHeight: 800,
-        availableHeight: 580,
-        maxModalHeight: 560,
-        maxTracklistHeight: 240,
+        availableHeight: 740,
+        maxModalHeight: 680,
+        maxTracklistHeight: 320,
         isMobile: false,
         isTablet: false,
         isLandscape: false,
@@ -43,12 +37,10 @@ export function useModalDimensions(): ModalDimensions {
     const height = window.innerHeight;
     const isMobile = width < 768;
     const isTablet = width >= 768 && width < 1024;
-    const headerHeight = isMobile ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT_DESKTOP;
-    const playerHeight = isMobile ? PLAYER_HEIGHT_MOBILE : PLAYER_HEIGHT_DESKTOP;
 
-    const availableHeight = Math.max(260, height - headerHeight - playerHeight - SAFE_VERTICAL_MARGIN);
-    const maxModalHeight = Math.min(availableHeight, isMobile ? availableHeight : 580);
-    const maxTracklistHeight = Math.max(140, maxModalHeight - 220);
+    const availableHeight = Math.max(280, height - (isMobile ? 32 : 50));
+    const maxModalHeight = Math.min(availableHeight, isMobile ? height - 32 : 720);
+    const maxTracklistHeight = Math.max(160, maxModalHeight - 200);
 
     return {
       windowWidth: width,
@@ -68,12 +60,10 @@ export function useModalDimensions(): ModalDimensions {
       const height = window.innerHeight;
       const isMobile = width < 768;
       const isTablet = width >= 768 && width < 1024;
-      const headerHeight = isMobile ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT_DESKTOP;
-      const playerHeight = isMobile ? PLAYER_HEIGHT_MOBILE : PLAYER_HEIGHT_DESKTOP;
 
-      const availableHeight = Math.max(260, height - headerHeight - playerHeight - SAFE_VERTICAL_MARGIN);
-      const maxModalHeight = Math.min(availableHeight, isMobile ? availableHeight : 580);
-      const maxTracklistHeight = Math.max(140, maxModalHeight - 220);
+      const availableHeight = Math.max(280, height - (isMobile ? 32 : 50));
+      const maxModalHeight = Math.min(availableHeight, isMobile ? height - 32 : 720);
+      const maxTracklistHeight = Math.max(160, maxModalHeight - 200);
 
       setDimensions({
         windowWidth: width,

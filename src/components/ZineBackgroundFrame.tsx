@@ -6,7 +6,7 @@ interface ZineBackgroundFrameProps {
 
 export const ZineBackgroundFrame = ({ children }: ZineBackgroundFrameProps) => {
   return (
-    <div style={{ position: "relative", width: "100%", minHeight: "100%", zIndex: 1 }}>
+    <div style={{ position: "relative", width: "100%", minHeight: "100%" }}>
       {/* Zine Background Collage Graphics */}
       <div className="zine-background">
         {/* 1. Crown Top Start */}
@@ -90,7 +90,7 @@ export const ZineBackgroundFrame = ({ children }: ZineBackgroundFrameProps) => {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ position: "relative", zIndex: 2, width: "100%", minHeight: "100%" }}>
+      <div style={{ position: "relative", width: "100%", minHeight: "100%" }}>
         {children}
       </div>
     </div>
