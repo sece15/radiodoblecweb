@@ -67,7 +67,7 @@ export const useSchedule = () => {
           {
             id: "l_mental",
             title: "L-Mental",
-            host: "Locutor & La Seka",
+            host: "La Seka",
             timeText: "21:00 - 22:00",
             genre: "Misterio / Rock, Reggae & Ska",
             isLiveRightNow: currentDayIndex === 5 && currentHour >= 21 && currentHour < 22,

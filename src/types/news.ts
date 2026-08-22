@@ -1,4 +1,4 @@
-export type NewsCategory = "huanuco" | "alerts" | "music_culture" | "tech_ai" | "community_good" | "world";
+export type NewsCategory = "latam" | "world" | "music_culture" | "tech_ai" | "community_good" | "alerts";
 
 export interface NewsItem {
   id: string;

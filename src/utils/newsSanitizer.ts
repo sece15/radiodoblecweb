@@ -2,7 +2,6 @@ import { NewsCategory } from "@/types/news";
 import {
   COMMERCIAL_KEYWORDS,
   PANIC_MORBID_KEYWORDS,
-  INVESTIGATION_KEYWORDS,
   CULTURE_KEYWORDS,
   ALERT_KEYWORDS,
   TECH_KEYWORDS,
@@ -89,7 +88,7 @@ export function sanitizeNewsText(text: string): string {
 
   // 5. Remove standalone media names that might linger at the end
   clean = clean.replace(
-    /\b(Infobae Perú|Infobae|Diario Correo|Correo Perú|Ahora Huánuco|Diario Ahora|Tu Diario Huánuco|Tu Diario|Página3|Pagina3|RPP Noticias|RPP|La República|El Comercio|Andina)\b/gi,
+    /\b(BBC News Mundo|BBC Mundo|CNN en Español|CNN|El País|DW Español|EFE|Infobae América|Infobae|RPP Noticias|RPP|La República|El Comercio|Clarín|El Universal|El Tiempo|Telesur|France 24|Reuters)\b/gi,
     ""
   );
 
@@ -133,17 +132,35 @@ export function classifyNewsItem(
 ): { category: NewsCategory; categoryLabel: string; badgeColor: string; isUrgent: boolean } {
   const lower = title.toLowerCase();
 
-  const isInvestigation = INVESTIGATION_KEYWORDS.some((kw) => lower.includes(kw));
   const isCulture = CULTURE_KEYWORDS.some((kw) => lower.includes(kw));
   const isActualAlert = !isCulture && ALERT_KEYWORDS.some((kw) => lower.includes(kw));
   const isTech = TECH_KEYWORDS.some((kw) => lower.includes(kw));
-  const isCommunityGood =
-    !isInvestigation && COMMUNITY_POSITIVE_KEYWORDS.some((kw) => lower.includes(kw));
+  const isCommunityGood = COMMUNITY_POSITIVE_KEYWORDS.some((kw) => lower.includes(kw));
+
+  const isLatam =
+    lower.includes("latinoamérica") ||
+    lower.includes("américa latina") ||
+    lower.includes("hispanoamérica") ||
+    lower.includes("méxico") ||
+    lower.includes("colombia") ||
+    lower.includes("argentina") ||
+    lower.includes("chile") ||
+    lower.includes("perú") ||
+    lower.includes("españa") ||
+    lower.includes("uruguay") ||
+    lower.includes("ecuador") ||
+    lower.includes("bolivia") ||
+    lower.includes("paraguay") ||
+    lower.includes("venezuela") ||
+    lower.includes("costa rica") ||
+    lower.includes("panamá") ||
+    lower.includes("guatemala") ||
+    lower.includes("iberoamérica");
 
   if (isActualAlert) {
     return {
       category: "alerts",
-      categoryLabel: "ALERTA VIAL / COER",
+      categoryLabel: "ALERTA & VÍAS",
       badgeColor: "#BA1A1A",
       isUrgent: true,
     };
@@ -152,17 +169,8 @@ export function classifyNewsItem(
   if (isCulture) {
     return {
       category: "music_culture",
-      categoryLabel: "CULTURA & EVENTOS",
+      categoryLabel: "MÚSICA & CULTURA",
       badgeColor: "#FFDE82",
-      isUrgent: false,
-    };
-  }
-
-  if (isInvestigation) {
-    return {
-      category: "huanuco",
-      categoryLabel: "HUÁNUCO & REGIÓN",
-      badgeColor: "#CCFF00",
       isUrgent: false,
     };
   }
@@ -179,8 +187,17 @@ export function classifyNewsItem(
   if (isCommunityGood) {
     return {
       category: "community_good",
-      categoryLabel: "BUENAS NOTICIAS",
+      categoryLabel: "BUENAS NOTICIAS & PLANETA",
       badgeColor: "#A7F3D0",
+      isUrgent: false,
+    };
+  }
+
+  if (isLatam) {
+    return {
+      category: "latam",
+      categoryLabel: "LATINOAMÉRICA",
+      badgeColor: "#CCFF00",
       isUrgent: false,
     };
   }
@@ -199,31 +216,27 @@ export function classifyNewsItem(
 export function generateContextualSummary(title: string, category: NewsCategory): string {
   const lower = title.toLowerCase();
 
-  if (INVESTIGATION_KEYWORDS.some((kw) => lower.includes(kw))) {
-    return `Reporte de fiscalización y seguimiento a la gestión de recursos y obras públicas en la región Huánuco. Información en desarrollo emitida para los oyentes de Radio Doble C.`;
-  }
-
-  if (CULTURE_KEYWORDS.some((kw) => lower.includes(kw))) {
-    return `Celebración y fiesta regional en Huánuco. Cobertura especial con la mejor música y orgullo huanuqueño en la sintonía de Radio Doble C.`;
-  }
-
   if (category === "tech_ai" || TECH_KEYWORDS.some((kw) => lower.includes(kw))) {
-    return `Reporte de avances en tecnología e inteligencia artificial. Tendencias de innovación que transforman la era digital compartidas por Radio Doble C.`;
+    return `Reporte de avances en tecnología, ciencia e inteligencia artificial que transforman el mundo. Información compartida en la señal de Radio Doble C.`;
+  }
+
+  if (category === "music_culture" || CULTURE_KEYWORDS.some((kw) => lower.includes(kw))) {
+    return `Panorama cultural, lanzamientos y festivales en la escena musical iberoamericana y global. Cobertura en la sintonía de Radio Doble C.`;
   }
 
   if (category === "community_good" || COMMUNITY_POSITIVE_KEYWORDS.some((kw) => lower.includes(kw))) {
-    return `Iniciativa positiva y acción comunitaria. Buenas noticias que inspiran y fortalecen el bienestar de nuestra gente en la región.`;
+    return `Iniciativa positiva, sostenibilidad y acción comunitaria que generan impacto en nuestra sociedad y el planeta.`;
   }
 
   if (category === "alerts" || ALERT_KEYWORDS.some((kw) => lower.includes(kw))) {
-    return `Reporte de monitoreo vial y servicio público para la ciudadanía de Huánuco, Amarilis y Pillco Marca. Mantenga precauciones en los tramos afectados.`;
+    return `Aviso meteorológico y de conectividad vial para la comunidad de oyentes. Manténgase informado y tome las previsiones necesarias.`;
   }
 
-  if (lower.includes("jne") || lower.includes("elecciones") || lower.includes("gore") || lower.includes("municipal") || lower.includes("alcalde") || lower.includes("gobernador") || lower.includes("carrera") || lower.includes("política")) {
-    return `Seguimiento de la coyuntura política y pronunciamientos institucionales en la región Huánuco. Información en desarrollo emitida para los oyentes de Radio Doble C.`;
+  if (category === "latam" || lower.includes("latinoamérica") || lower.includes("américa latina") || lower.includes("hispanoamérica")) {
+    return `Seguimiento de la actualidad y tendencias en los países de habla hispana y Latinoamérica. Reporte emitido para los oyentes de Radio Doble C.`;
   }
 
-  return `Noticia de actualidad regional y nacional. Manténgase en sintonía con la programación informativa de Radio Doble C.`;
+  return `Noticia de actualidad y panorama internacional en español. Manténgase en sintonía con la programación informativa de Radio Doble C.`;
 }
 
 /**

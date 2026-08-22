@@ -35,7 +35,7 @@ export const HeaderNewsTicker: React.FC<HeaderNewsTickerProps> = ({
           }}
         >
           <Radio size={12} className="animate-spin" />
-          <span>Sincronizando noticias de Huánuco y música en vivo...</span>
+          <span>Sincronizando noticias de Latinoamérica y el mundo en vivo...</span>
         </div>
       );
     }
@@ -97,7 +97,7 @@ export const HeaderNewsTicker: React.FC<HeaderNewsTickerProps> = ({
             animation: "pulse 1.5s infinite",
           }}
         />
-        <span>FLASH HCO Y EL MUNDO</span>
+        <span>FLASH DEL MUNDO</span>
         <Newspaper size={11} />
       </button>
 
@@ -203,7 +203,7 @@ export const HeaderNewsTicker: React.FC<HeaderNewsTickerProps> = ({
           flexShrink: 0,
           zIndex: 2,
         }}
-        title="Ver todas las noticias de Huánuco"
+        title="Ver todas las noticias del mundo y Latinoamérica"
       >
         <span>VER TODAS</span>
         <ChevronRight size={12} />

@@ -503,7 +503,7 @@ export const Header = ({
             )}
           </button>
 
-          {/* 6. Noticias Huánuco & Mundo */}
+          {/* 6. Noticias Mundo & Latam */}
           <button
             onClick={() => {
               setIsMenuOpen(false);
@@ -525,7 +525,7 @@ export const Header = ({
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Newspaper size={16} />
-              <span>FLASH HCO Y EL MUNDO</span>
+              <span>FLASH DEL MUNDO</span>
             </div>
             <span
               style={{
@@ -565,7 +565,7 @@ export const Header = ({
         </div>
       </aside>
 
-      {/* 6. MODAL DE NOTICIAS HUÁNUCO & CABINA */}
+      {/* 6. MODAL DE NOTICIAS MUNDO & LATAM */}
       <NewsModal
         isOpen={isNewsModalOpen}
         onClose={() => {

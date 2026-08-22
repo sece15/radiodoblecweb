@@ -34,8 +34,9 @@ export const NewsModal: React.FC<NewsModalProps> = ({
 
   const categories: { id: NewsCategory | "all"; label: string; icon: React.ReactNode }[] = [
     { id: "all", label: "TODAS", icon: <Globe size={12} /> },
-    { id: "huanuco", label: "HUÁNUCO & REGIÓN", icon: <MapPin size={12} /> },
-    { id: "community_good", label: "BUENAS NOTICIAS", icon: <Sparkles size={12} /> },
+    { id: "latam", label: "LATINOAMÉRICA", icon: <MapPin size={12} /> },
+    { id: "world", label: "MUNDO", icon: <Globe size={12} /> },
+    { id: "community_good", label: "BUENAS NOTICIAS & PLANETA", icon: <Sparkles size={12} /> },
     { id: "tech_ai", label: "TECNOLOGÍA & IA", icon: <Bot size={12} /> },
     { id: "music_culture", label: "MÚSICA & CULTURA", icon: <Music size={12} /> },
     { id: "alerts", label: "ALERTAS & VÍAS", icon: <AlertTriangle size={12} /> },
@@ -45,7 +46,7 @@ export const NewsModal: React.FC<NewsModalProps> = ({
     <NeoModal
       isOpen={isOpen}
       onClose={onClose}
-      title={selectedNewsItem ? selectedNewsItem.title : "FLASH HCO Y EL MUNDO"}
+      title={selectedNewsItem ? selectedNewsItem.title : "FLASH DEL MUNDO"}
       badgeText={selectedNewsItem ? "🎙️ RADIO DOBLE C INFORMA" : "⚡ NOTICIAS EN VIVO"}
       maxWidth="780px"
       backgroundColor="var(--background)"
@@ -266,7 +267,7 @@ export const NewsModal: React.FC<NewsModalProps> = ({
           {isLoading && news.length === 0 ? (
             <div style={{ padding: "30px", textAlign: "center" }}>
               <RefreshCw size={24} className="animate-spin" style={{ margin: "0 auto 8px auto", color: "var(--primary)" }} />
-              <p style={{ fontSize: "0.78rem", fontWeight: 800, margin: 0 }}>Cargando noticias de Huánuco...</p>
+              <p style={{ fontSize: "0.78rem", fontWeight: 800, margin: 0 }}>Cargando noticias de Latinoamérica y el mundo...</p>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "30px", textAlign: "center", opacity: 0.8 }}>

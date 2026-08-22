@@ -131,18 +131,18 @@ export const ALERT_KEYWORDS = [
   "alerta vial",
   "bloqueo de vía",
   "bloqueo de carretera",
-  "carretera central bloqueada",
   "corte de agua",
   "corte de luz",
   "aviso meteorológico",
   "aviso meteorologico",
   "alerta meteorológica",
-  "alerta coer",
-  "coer huánuco",
-  "coer huanuco",
+  "alerta sísmica",
+  "alerta sismica",
+  "alerta temprana",
   "lluvias intensas",
-  "huaico",
-  "desborde de río",
+  "temporal",
+  "huracán",
+  "ciclón",
 ];
 
 // Tech & Artificial Intelligence keywords
@@ -157,9 +157,12 @@ export const TECH_KEYWORDS = [
   "tecnologia",
   "ciberseguridad",
   "innovación digital",
+  "ciencia",
+  "espacial",
+  "telescopio",
 ];
 
-// Positive community keywords
+// Positive community & planet keywords
 export const COMMUNITY_POSITIVE_KEYWORDS = [
   "buenas noticias",
   "solidaridad",
@@ -169,59 +172,80 @@ export const COMMUNITY_POSITIVE_KEYWORDS = [
   "emprendimiento social",
   "donación",
   "ayuda social",
+  "reforestación",
+  "medio ambiente",
+  "sostenibilidad",
+  "energía solar",
 ];
 
 // Sources to strip from headlines and text
 export const KNOWN_SOURCES_REGEX =
-  /\s*[-–—|•]\s*(Diario Correo|Correo|Infobae|Infobae Perú|Ahora Huánuco|Diario Ahora|Tu Diario|Tu Diario Huánuco|Página3|Pagina3|RPP Noticias|RPP|La República|La Republica|El Comercio|Agencia Andina|Andina|Caretas|Expreso|Exitosa|Ojo|Trome|Perú21|Peru21|Panamericana|América Noticias|America Noticias|Facebook|Twitter|Instagram|TikTok|YouTube|Google Noticias|Google News)\s*$/i;
+  /\s*[-–—|•]\s*(BBC News Mundo|BBC Mundo|CNN en Español|CNN|El País|El Pais|DW Español|DW|EFE|Agencia EFE|Infobae|Infobae América|RPP Noticias|RPP|La República|El Comercio|El Tiempo|El Universal|Clarín|Clarin|La Nación|La Nacion|BioBioChile|Telesur|RT en Español|France 24|Reuters|Europa Press|Google Noticias|Google News)\s*$/i;
 
-// RSS Feeds configuration
+// RSS Feeds configuration: Global & Latin America in Spanish (Habla Hispana)
 export const RSS_FEEDS_CONFIG = [
   {
-    category: "huanuco" as const,
-    categoryLabel: "HUÁNUCO & REGIÓN",
+    category: "latam" as const,
+    categoryLabel: "LATINOAMÉRICA",
     badgeColor: "#CCFF00",
-    query: '(Huánuco OR "Pillco Marca" OR Amarilis OR "Carretera Central Huánuco" OR "Tingo María") when:2d -guantes -comprar -tienda -ropa -amazon -aliexpress -asesinato -sicariato -muerte -cadaver -fallece -sangriento -balacera -tragedia -suicidio',
+    query: '(Latinoamérica OR "América Latina" OR Hispanoamérica OR México OR Colombia OR Argentina OR Chile OR Perú OR España) when:2d -guantes -comprar -tienda -ropa -amazon -aliexpress -asesinato -sicariato -muerte -cadaver -fallece -sangriento -balacera -tragedia -suicidio',
+  },
+  {
+    category: "world" as const,
+    categoryLabel: "MUNDO & INTERNACIONAL",
+    badgeColor: "#FF9F1C",
+    query: '("Internacional" OR "Mundo" OR "Unión Europea" OR "Estados Unidos" OR "Asia" OR "ONU" OR "Cumbre Mundial" OR "Ciencia Global") when:2d -guantes -comprar -tienda -ropa -amazon -aliexpress -asesinato -sicariato -muerte -cadaver -fallece -sangriento -balacera -tragedia',
   },
   {
     category: "tech_ai" as const,
     categoryLabel: "TECNOLOGÍA & IA",
     badgeColor: "#70D6FF",
-    query: '("Inteligencia Artificial" OR "Tecnología e innovación" OR "Avances IA" OR "OpenAI" OR "Robótica") when:2d -guantes -comprar -tienda -curso -oferta -amazon -aliexpress -asesinato -muerte',
-  },
-  {
-    category: "community_good" as const,
-    categoryLabel: "BUENAS NOTICIAS",
-    badgeColor: "#A7F3D0",
-    query: '("Buenas noticias Perú" OR "Acción solidaria Perú" OR "Voluntariado Perú" OR "Emprendimiento social Perú" OR "Becas Perú") when:3d -guantes -comprar -tienda -oferta -amazon -asesinato -muerte -tragedia',
+    query: '("Inteligencia Artificial" OR "Tecnología e innovación" OR "Avances IA" OR "OpenAI" OR "Robótica" OR "Exploración Espacial") when:2d -guantes -comprar -tienda -curso -oferta -amazon -aliexpress -asesinato -muerte',
   },
   {
     category: "music_culture" as const,
     categoryLabel: "MÚSICA & CULTURA",
     badgeColor: "#FFDE82",
-    query: '("Rock Peruano" OR "Conciertos Perú" OR "Bandas peruanas" OR "Festival de Música" OR "Escena Rock" OR "Música Huanuqueña") when:3d -guantes -comprar -tienda -ropa -disfraz -amazon -aliexpress -oferta -asesinato -muerte',
+    query: '("Rock en Español" OR "Música Latina" OR "Festivales de Música" OR "Cine Iberoamericano" OR "Lanzamientos Musicales" OR "Cultura") when:3d -guantes -comprar -tienda -ropa -disfraz -amazon -aliexpress -oferta -asesinato -muerte',
+  },
+  {
+    category: "community_good" as const,
+    categoryLabel: "BUENAS NOTICIAS & PLANETA",
+    badgeColor: "#A7F3D0",
+    query: '("Buenas noticias" OR "Sostenibilidad" OR "Innovación social" OR "Energías limpias" OR "Descubrimiento científico") when:3d -guantes -comprar -tienda -oferta -amazon -asesinato -muerte -tragedia',
   },
 ];
 
 // Fallback curated news when offline or network fails
 export const FALLBACK_NEWS: NewsItem[] = [
   {
-    id: "fb_hco_1",
-    title: "Tránsito fluido en la Carretera Central tramo Huánuco - Pasco y desvíos en Amarilis",
-    summary: "Reporte de monitoreo vial matutino para transportistas y conductores locales.",
+    id: "fb_latam_1",
+    title: "Latinoamérica lidera iniciativas de transición energética limpia y preservación de ecosistemas en la región",
+    summary: "Países de habla hispana impulsan acuerdos multilaterales de desarrollo sostenible, energías renovables y protección de reservas naturales.",
     link: "https://radiodoblec.com",
     source: "Radio Doble C",
-    category: "alerts",
-    categoryLabel: "SERVICIO AL VECINO",
+    category: "latam",
+    categoryLabel: "LATINOAMÉRICA",
     pubDate: new Date().toISOString(),
     relativeTime: "Hace 15 min",
-    badgeColor: "#BA1A1A",
-    isUrgent: true,
+    badgeColor: "#CCFF00",
+  },
+  {
+    id: "fb_world_1",
+    title: "La comunidad astronómica internacional revela nuevas observaciones de exoplanetas y galaxias lejanas",
+    summary: "Nuevos datos de telescopios espaciales abren horizontes inéditos sobre la formación del universo y la búsqueda de vida más allá de la Tierra.",
+    link: "https://radiodoblec.com",
+    source: "Radio Doble C",
+    category: "world",
+    categoryLabel: "MUNDO & CIENCIA",
+    pubDate: new Date().toISOString(),
+    relativeTime: "Hace 20 min",
+    badgeColor: "#FF9F1C",
   },
   {
     id: "fb_tech_1",
-    title: "Nuevos modelos de Inteligencia Artificial transforman la creación y producción musical en radio",
-    summary: "Reporte de avances en tecnología e inteligencia artificial. Tendencias de innovación que transforman la era digital compartidas por Radio Doble C.",
+    title: "Nuevos modelos de Inteligencia Artificial en español transforman la creación sonora y la radio digital",
+    summary: "Herramientas de procesamiento de lenguaje natural y síntesis de audio impulsan la producción independiente y la difusión cultural en todo el mundo hispanohablante.",
     link: "https://radiodoblec.com",
     source: "Radio Doble C",
     category: "tech_ai",
@@ -231,39 +255,27 @@ export const FALLBACK_NEWS: NewsItem[] = [
     badgeColor: "#70D6FF",
   },
   {
+    id: "fb_culture_1",
+    title: "El rock y la música independiente en español protagonizan los principales festivales de Iberoamérica",
+    summary: "Bandas emergentes y consagradas revitalizan los circuitos de conciertos en vivo con fusiones contemporáneas de rock, ska y sonidos de autor.",
+    link: "https://radiodoblec.com",
+    source: "Radio Doble C",
+    category: "music_culture",
+    categoryLabel: "MÚSICA & CULTURA",
+    pubDate: new Date().toISOString(),
+    relativeTime: "Hace 40 min",
+    badgeColor: "#FFDE82",
+  },
+  {
     id: "fb_comm_1",
-    title: "Jóvenes voluntarios impulsan jornada de reforestación y limpieza en riberas del Río Huallaga",
-    summary: "Iniciativa positiva y acción comunitaria. Buenas noticias que inspiran y fortalecen el bienestar de nuestra gente en la región.",
+    title: "Proyectos de innovación social y educación comunitaria reciben reconocimientos internacionales",
+    summary: "Iniciativas ciudadanas en América Latina demuestran el poder de la acción comunitaria para transformar realidades y generar oportunidades para las nuevas generaciones.",
     link: "https://radiodoblec.com",
     source: "Radio Doble C",
     category: "community_good",
     categoryLabel: "BUENAS NOTICIAS",
     pubDate: new Date().toISOString(),
-    relativeTime: "Hace 45 min",
-    badgeColor: "#A7F3D0",
-  },
-  {
-    id: "fb_hco_2",
-    title: "Municipalidad de Pillco Marca coordina operativos de seguridad y mantenimiento en Av. Universitaria",
-    summary: "Trabajos de bacheo y reforzamiento del patrullaje integrado vecinal en los accesos universitarios.",
-    link: "https://radiodoblec.com",
-    source: "Radio Doble C",
-    category: "huanuco",
-    categoryLabel: "HUÁNUCO & COMUNIDAD",
-    pubDate: new Date().toISOString(),
     relativeTime: "Hace 50 min",
-    badgeColor: "#CCFF00",
-  },
-  {
-    id: "fb_hco_3",
-    title: "Anuncian feria cultural y presentaciones de bandas locales en el Malecón Daniel Alomía Robles",
-    summary: "Espacio gastronómico y conciertos acústicos este fin de semana para incentivar el arte huanuqueño.",
-    link: "https://radiodoblec.com",
-    source: "Radio Doble C",
-    category: "music_culture",
-    categoryLabel: "CULTURA & MÚSICA",
-    pubDate: new Date().toISOString(),
-    relativeTime: "Hace 1 h",
-    badgeColor: "#FFDE82",
+    badgeColor: "#A7F3D0",
   },
 ];
