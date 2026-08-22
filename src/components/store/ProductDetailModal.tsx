@@ -3,6 +3,7 @@
 import { useState, useMemo, MouseEvent } from "react";
 import { ShoppingCart } from "lucide-react";
 import { Product } from "@/types";
+import { formatPrice } from "@/lib/priceUtils";
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -313,7 +314,7 @@ export const ProductDetailModal = ({
                   transform: "rotate(-3deg)",
                 }}
               >
-                {product.price}
+                {formatPrice(product.price)}
               </div>
             </div>
 
@@ -425,7 +426,7 @@ export const ProductDetailModal = ({
                 {product.name}
               </h3>
               <span style={{ fontSize: "1.3rem", fontWeight: 900, color: "var(--primary)" }}>
-                {product.price}
+                {formatPrice(product.price)}
               </span>
             </div>
 

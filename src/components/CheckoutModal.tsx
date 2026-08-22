@@ -3,6 +3,8 @@ import { ArrowLeft, Copy, Check, Upload, Tag, Megaphone } from "lucide-react";
 import { CartItem } from "@/hooks/useCart";
 import { MP_ALIAS, MP_CVU } from "@/constants";
 import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
+import { formatPrice } from "@/lib/priceUtils";
+import { calculateCartTotals } from "@/lib/cartCalculator";
 
 interface CheckoutModalProps {
   step: "shipping" | "payment" | "success";
@@ -43,38 +45,23 @@ export const CheckoutModal = ({
 
   // Discount Coupons
   const [couponCode, setCouponCode] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [isFreeShipping, setIsFreeShipping] = useState(false);
-  const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState("");
 
-  const subtotal = cart.reduce((acc, item) => acc + parseFloat(item.product.price.replace("$", "")) * item.quantity, 0);
-  const discountAmount = (subtotal * discountPercent) / 100;
-  const shippingCost = isFreeShipping ? 0 : 5;
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingCost);
-  const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const {
+    subtotal,
+    totalItems: totalItemsCount,
+    discountPercent,
+    discountAmount,
+    isFreeShipping,
+    shippingCost,
+    total: totalAmount,
+    couponMessage,
+    isCouponValid,
+  } = calculateCartTotals(cart, appliedCoupon);
 
   const handleApplyCoupon = (e: React.MouseEvent) => {
     e.preventDefault();
-    const clean = couponCode.trim().toUpperCase();
-    if (clean === "DOBLEC2026") {
-      setDiscountPercent(10);
-      setIsFreeShipping(false);
-      setCouponMessage("¡Cupón DOBLEC2026 aplicado! 10% OFF 🔥");
-    } else if (clean === "FUCKINGGOODSHIT") {
-      setDiscountPercent(15);
-      setIsFreeShipping(false);
-      setCouponMessage("¡Cupón FUCKINGGOODSHIT aplicado! 15% OFF ⚡");
-    } else if (clean === "VIPDOBLEC") {
-      setDiscountPercent(20);
-      setIsFreeShipping(false);
-      setCouponMessage("¡Cupón VIP aplicado! 20% OFF ⭐");
-    } else if (clean === "ENVIOFREE") {
-      setDiscountPercent(0);
-      setIsFreeShipping(true);
-      setCouponMessage("¡Cupón ENVIOFREE aplicado! Envío Gratis 🚚");
-    } else {
-      setCouponMessage("Cupón inválido. Prueba DOBLEC2026 o ENVIOFREE");
-    }
+    setAppliedCoupon(couponCode.trim().toUpperCase());
   };
 
   const handleCopyAlias = () => {
@@ -295,7 +282,7 @@ export const CheckoutModal = ({
                 </button>
               </div>
               {couponMessage && (
-                <p style={{ fontSize: "0.6rem", fontWeight: "bold", margin: "4px 0 0 0", color: discountPercent > 0 || isFreeShipping ? "#008800" : "#BA1A1A" }}>
+                <p style={{ fontSize: "0.6rem", fontWeight: "bold", margin: "4px 0 0 0", color: isCouponValid ? "#008800" : "#BA1A1A" }}>
                   {couponMessage}
                 </p>
               )}
@@ -308,25 +295,21 @@ export const CheckoutModal = ({
               </span>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", fontWeight: "bold" }}>
                 <span>PRODUCTOS ({totalItemsCount})</span>
-                <span>
-                  ${subtotal.toFixed(2)}
-                </span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               {discountPercent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", fontWeight: "bold", color: "#008800" }}>
                   <span>DESCUENTO ({discountPercent}%)</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>- {formatPrice(discountAmount)}</span>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", fontWeight: "bold" }}>
                 <span>COSTO DE ENVÍO</span>
-                <span>{isFreeShipping ? "GRATIS" : "$5.00"}</span>
+                <span>{isFreeShipping ? "GRATIS" : formatPrice(shippingCost)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 900, borderTop: "1.5px dashed var(--primary)", paddingTop: "4px", marginTop: "4px" }}>
                 <span>TOTAL A PAGAR</span>
-                <span>
-                  ${totalAmount.toFixed(2)}
-                </span>
+                <span>{formatPrice(totalAmount)}</span>
               </div>
             </div>
 
@@ -400,7 +383,7 @@ export const CheckoutModal = ({
           <div style={{ textAlign: "center", margin: "4px 0" }}>
             <span style={{ fontSize: "0.7rem", fontWeight: "bold", opacity: 0.8 }}>MONTO A TRANSFERIR:</span>
             <h2 style={{ fontSize: "2rem", fontWeight: 900, color: "var(--primary)" }}>
-              ${totalAmount.toFixed(2)}
+              {formatPrice(totalAmount)}
             </h2>
           </div>
 

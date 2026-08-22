@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Moon, Volume2, Mic, Check, Square, Send } from "lucide-react";
+import { Moon, Mic, Check, Square, Send } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { useSleepTimer } from "@/hooks/useSleepTimer";
-import { useSoundboard, SoundEffectType } from "@/hooks/useSoundboard";
 
 interface StudioToolsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type ToolTab = "timer" | "soundboard" | "voice";
+type ToolTab = "timer" | "voice";
 
 export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => {
   const [activeTab, setActiveTab] = useState<ToolTab>("timer");
@@ -26,10 +25,7 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
   } = useSleepTimer();
   const [customMinutes, setCustomMinutes] = useState<number>(30);
 
-  // 2. Soundboard Hook
-  const { playSoundEffect } = useSoundboard();
-
-  // 3. Voice Message State
+  // 2. Voice Message State
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [voiceSenderName, setVoiceSenderName] = useState<string>("");
@@ -38,20 +34,49 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
   const audioChunksRef = useRef<Blob[]>([]);
 
   const startVoiceRecording = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("⚠️ Tu navegador no soporta grabación de audio o estás en un entorno no seguro (requiere HTTPS).");
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      // Detect supported MIME type across browsers (Safari iOS, Chrome, Firefox, Edge)
+      let selectedMimeType = "audio/webm";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          selectedMimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          selectedMimeType = "audio/webm";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          selectedMimeType = "audio/mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/aac")) {
+          selectedMimeType = "audio/aac";
+        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+          selectedMimeType = "audio/ogg";
+        }
+      }
+
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+      const options = selectedMimeType ? { mimeType: selectedMimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunksRef.current, { type: selectedMimeType || "audio/webm" });
         const url = URL.createObjectURL(audioBlob);
         setRecordedAudioUrl(url);
         stream.getTracks().forEach((track) => track.stop());
@@ -61,7 +86,7 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
       setIsRecording(true);
     } catch (err) {
       console.error("Error al acceder al micrófono:", err);
-      alert("Por favor permite el acceso al micrófono para grabar tu saludo 🎙️");
+      alert("Por favor permite el acceso al micrófono en tu navegador para grabar tu saludo 🎙️");
     }
   };
 
@@ -85,22 +110,13 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
     }, 4000);
   };
 
-  const SOUND_EFFECTS: { id: SoundEffectType; name: string; icon: string; desc: string }[] = [
-    { id: "airhorn", name: "AIRHORN", icon: "📢", desc: "Clásico reggae de radio" },
-    { id: "scratch", name: "VINIL SCRATCH", icon: "⚡", desc: "Rasguño de tornamesa" },
-    { id: "siren", name: "SIRENA DUB", icon: "🚨", desc: "Alerta dub & sound system" },
-    { id: "static", name: "ESTÁTICA CRT", icon: "📻", desc: "Interferencia analógica" },
-    { id: "bell", name: "CAMPANA", icon: "🛎️", desc: "Campana de ring" },
-    { id: "laser", name: "LASER ZAP", icon: "👾", desc: "Efecto retro 80s" },
-  ];
-
   return (
     <NeoModal
       isOpen={isOpen}
       onClose={onClose}
-      title="ESTUDIO & HERRAMIENTAS DOBLE C"
-      badgeText="⚡ CONTROL ROOM"
-      maxWidth="540px"
+      title="HERRAMIENTAS DOBLE C"
+      badgeText="⚡ CONTROL"
+      maxWidth="500px"
       backgroundColor="var(--background)"
     >
       {/* TABS NAVIGATION */}
@@ -111,18 +127,17 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
           borderBottom: "3px solid var(--primary)",
           paddingBottom: "12px",
           marginBottom: "16px",
-          flexWrap: "wrap",
         }}
       >
         <button
           onClick={() => setActiveTab("timer")}
           className="neo-button"
           style={{
-            flex: "1 1 120px",
+            flex: 1,
             backgroundColor: activeTab === "timer" ? "var(--primary-container)" : "white",
             color: "var(--primary)",
             padding: "8px 10px",
-            fontSize: "0.7rem",
+            fontSize: "0.75rem",
             fontWeight: 900,
             display: "flex",
             alignItems: "center",
@@ -137,36 +152,14 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
         </button>
 
         <button
-          onClick={() => setActiveTab("soundboard")}
-          className="neo-button"
-          style={{
-            flex: "1 1 120px",
-            backgroundColor: activeTab === "soundboard" ? "var(--primary-container)" : "white",
-            color: "var(--primary)",
-            padding: "8px 10px",
-            fontSize: "0.7rem",
-            fontWeight: 900,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "6px",
-            boxShadow: activeTab === "soundboard" ? "2px 2px 0px var(--primary)" : "none",
-            border: "2px solid var(--primary)",
-          }}
-        >
-          <Volume2 size={14} />
-          <span>SOUNDBOARD 🔊</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab("voice")}
           className="neo-button"
           style={{
-            flex: "1 1 120px",
+            flex: 1,
             backgroundColor: activeTab === "voice" ? "var(--primary-container)" : "white",
             color: "var(--primary)",
             padding: "8px 10px",
-            fontSize: "0.7rem",
+            fontSize: "0.75rem",
             fontWeight: 900,
             display: "flex",
             alignItems: "center",
@@ -284,52 +277,7 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
         </div>
       )}
 
-      {/* TAB 2: SOUNDBOARD */}
-      {activeTab === "soundboard" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <p style={{ fontSize: "0.72rem", fontWeight: "bold", opacity: 0.85, margin: 0, textAlign: "center" }}>
-            Haz click para disparar efectos de sonido clásicos de la radio en vivo:
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-              gap: "10px",
-            }}
-          >
-            {SOUND_EFFECTS.map((fx) => (
-              <button
-                key={fx.id}
-                onClick={() => playSoundEffect(fx.id)}
-                className="neo-button fun-hover-wobble"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                  padding: "14px 8px",
-                  backgroundColor: "white",
-                  border: "2.5px solid var(--primary)",
-                  boxShadow: "3px 3px 0px var(--primary)",
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: "1.6rem" }}>{fx.icon}</span>
-                <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>
-                  {fx.name}
-                </span>
-                <span style={{ fontSize: "0.55rem", opacity: 0.7, textAlign: "center" }}>
-                  {fx.desc}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: VOICE GREETING */}
+      {/* TAB 2: VOICE GREETING */}
       {activeTab === "voice" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {voiceSubmitted ? (

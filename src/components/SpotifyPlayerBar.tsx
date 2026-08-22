@@ -368,7 +368,7 @@ export const SpotifyPlayerBar = ({
             justifyContent: "center",
             cursor: "pointer",
           }}
-          title="Herramientas de Estudio (Apagado automático, Soundboard y Saludos)"
+          title="Herramientas (Apagado automático y Saludos al Aire)"
         >
           <Sliders size={16} />
         </button>

@@ -1,6 +1,8 @@
-import { CSSProperties } from "react";
-import { ShoppingCart, X, Minus, Plus, Trash2 } from "lucide-react";
-import { CartItem } from "@/hooks/useCart";
+import { CSSProperties, useState } from "react";
+import { ShoppingCart, X, Minus, Plus, Trash2, ArrowRight } from "lucide-react";
+import { CartItem } from "@/types";
+import { parsePrice, formatPrice } from "@/lib/priceUtils";
+import { calculateCartTotals } from "@/lib/cartCalculator";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -10,7 +12,7 @@ interface CartDrawerProps {
   removeFromCart: (id: string) => void;
   isAuthenticated: boolean;
   showToast: (message: string, type?: "info" | "error" | "success") => void;
-  setActiveTab: (tab: "explore" | "store" | "profile") => void;
+  setActiveTab: (tab: "explore" | "store" | "profile" | "vip") => void;
   onCheckout: () => void;
 }
 
@@ -25,11 +27,27 @@ export const CartDrawer = ({
   setActiveTab,
   onCheckout,
 }: CartDrawerProps) => {
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState("");
+
   if (!isOpen) return null;
 
-  const subtotal = cart.reduce((acc, item) => acc + parseFloat(item.product.price.replace("$", "")) * item.quantity, 0);
-  const shippingCost = 5.0;
-  const total = subtotal + shippingCost;
+  // Single source of truth calculation engine
+  const {
+    subtotal,
+    totalItems,
+    discountPercent,
+    discountAmount,
+    shippingCost,
+    total,
+    couponMessage,
+    isCouponValid,
+  } = calculateCartTotals(cart, appliedCoupon);
+
+  const handleApplyCoupon = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setAppliedCoupon(couponCode.trim().toUpperCase());
+  };
 
   return (
     <div
@@ -39,7 +57,8 @@ export const CartDrawer = ({
         left: 0,
         width: "100vw",
         height: "100vh",
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        backgroundColor: "rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(3px)",
         zIndex: 3000,
         display: "flex",
         justifyContent: "flex-end",
@@ -50,25 +69,36 @@ export const CartDrawer = ({
         className="cart-drawer-active"
         style={{
           width: "100%",
-          maxWidth: "400px",
+          maxWidth: "420px",
           height: "100%",
           backgroundColor: "var(--background)",
           borderLeft: "4px solid var(--primary)",
           boxShadow: "-6px 0px 0px var(--primary)",
           display: "flex",
           flexDirection: "column",
-          padding: "24px",
+          padding: "20px",
           position: "relative",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "4px solid var(--primary)", paddingBottom: "12px", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "4px solid var(--primary)", paddingBottom: "12px", marginBottom: "14px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <ShoppingCart size={20} />
-            <h3 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase" }}>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
               TU CESTA
             </h3>
+            <span
+              style={{
+                backgroundColor: "var(--primary-container)",
+                border: "1.5px solid var(--primary)",
+                padding: "2px 6px",
+                fontSize: "0.65rem",
+                fontWeight: 900,
+              }}
+            >
+              {totalItems} {totalItems === 1 ? "ITEM" : "ITEMS"}
+            </span>
           </div>
           <button
             onClick={onClose}
@@ -87,20 +117,22 @@ export const CartDrawer = ({
         </div>
 
         {/* Cart Items List */}
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", paddingRight: "4px" }}>
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px", paddingRight: "4px" }}>
           {cart.length === 0 ? (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", opacity: 0.8 }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", opacity: 0.8, padding: "40px 0" }}>
               <span style={{ fontSize: "3rem" }}>📻</span>
               <p style={{ fontSize: "0.85rem", fontWeight: 900, textTransform: "uppercase" }}>
                 Tu cesta está vacía
               </p>
               <p style={{ fontSize: "0.7rem", textAlign: "center" }}>
-                ¡Ve a la tienda y sintoniza algo de merch pirata!
+                ¡Explora la tienda oficial y consigue tus prendas de Radio Doble C!
               </p>
             </div>
           ) : (
             cart.map((item) => {
-              const itemPrice = parseFloat(item.product.price.replace("$", ""));
+              const unitPrice = parsePrice(item.product.price);
+              const lineTotal = unitPrice * item.quantity;
+
               return (
                 <div
                   key={item.id}
@@ -110,34 +142,35 @@ export const CartDrawer = ({
                     backgroundColor: "var(--surface-container)",
                     display: "flex",
                     gap: "10px",
-                    boxShadow: "4px 4px 0px var(--primary)",
+                    boxShadow: "3px 3px 0px var(--primary)",
+                    border: "2px solid var(--primary)",
                   }}
                 >
                   <img
                     src={item.product.imageUrl}
                     alt={item.product.name}
-                    style={{ width: "64px", height: "64px", objectFit: "cover", border: "2px solid var(--primary)", flexShrink: 0 }}
+                    style={{ width: "68px", height: "68px", objectFit: "cover", border: "2px solid var(--primary)", flexShrink: 0, backgroundColor: "#000" }}
                   />
                   <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <div>
-                      <h4 style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
+                      <h4 style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0 0 2px 0" }}>
                         {item.product.name}
                       </h4>
-                      <p style={{ fontSize: "0.6rem", fontWeight: "bold", opacity: 0.8 }}>
+                      <p style={{ fontSize: "0.6rem", fontWeight: "bold", opacity: 0.8, margin: 0 }}>
                         {item.color} • TALLA {item.size}
                       </p>
                     </div>
                     
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
                       {/* Quantity control */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                         <button
                           onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
                           style={{ width: "20px", height: "20px", border: "1.5px solid var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backgroundColor: "white", padding: 0 }}
                         >
                           <Minus size={10} />
                         </button>
-                        <span style={{ fontSize: "0.7rem", fontWeight: 900 }}>{item.quantity}</span>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 900, minWidth: "16px", textAlign: "center" }}>{item.quantity}</span>
                         <button
                           onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
                           style={{ width: "20px", height: "20px", border: "1.5px solid var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backgroundColor: "white", padding: 0 }}
@@ -147,12 +180,13 @@ export const CartDrawer = ({
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "0.8rem", fontWeight: 900 }}>
-                          ${(itemPrice * item.quantity).toFixed(2)}
+                        <span style={{ fontSize: "0.85rem", fontWeight: 900 }}>
+                          {formatPrice(lineTotal)}
                         </span>
                         <button
                           onClick={() => removeFromCart(item.id)}
                           style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--error)" }}
+                          title="Eliminar de la cesta"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -165,36 +199,100 @@ export const CartDrawer = ({
           )}
         </div>
 
-        {/* Footer Summary & Checkout */}
+        {/* Footer Summary, Coupons & Checkout */}
         {cart.length > 0 && (
-          <div style={{ borderTop: "4px solid var(--primary)", paddingTop: "16px", marginTop: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: "bold" }}>
+          <div style={{ borderTop: "4px solid var(--primary)", paddingTop: "14px", marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            {/* Discount Coupon Box */}
+            <div
+              style={{
+                backgroundColor: "var(--surface-container)",
+                border: "1.5px solid var(--primary)",
+                padding: "8px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <div style={{ display: "flex", gap: "4px" }}>
+                <input
+                  type="text"
+                  placeholder="CUPÓN (Ej. DOBLEC2026)"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  style={{
+                    flex: 1,
+                    padding: "4px 8px",
+                    fontSize: "0.65rem",
+                    border: "1.5px solid var(--primary)",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    backgroundColor: "white",
+                  }}
+                />
+                <button
+                  onClick={handleApplyCoupon}
+                  className="neo-button"
+                  style={{
+                    padding: "4px 10px",
+                    backgroundColor: "#CCFF00",
+                    color: "#111",
+                    fontSize: "0.65rem",
+                    fontWeight: 900,
+                    border: "1.5px solid var(--primary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  APLICAR
+                </button>
+              </div>
+              {couponMessage && (
+                <span
+                  style={{
+                    fontSize: "0.58rem",
+                    fontWeight: 900,
+                    color: isCouponValid ? "#008800" : "#BA1A1A",
+                  }}
+                >
+                  {couponMessage}
+                </span>
+              )}
+            </div>
+
+            {/* Subtotal, Discount, Shipping, Total */}
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", fontWeight: "bold" }}>
               <span>SUBTOTAL</span>
-              <span>
-                ${subtotal.toFixed(2)}
-              </span>
+              <span>{formatPrice(subtotal)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: "bold", opacity: 0.8 }}>
+
+            {discountPercent > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", fontWeight: "bold", color: "#008800" }}>
+                <span>DESCUENTO ({discountPercent}%)</span>
+                <span>- {formatPrice(discountAmount)}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", fontWeight: "bold", opacity: 0.85 }}>
               <span>COSTO DE ENVÍO</span>
-              <span>${shippingCost.toFixed(2)}</span>
+              <span>{shippingCost === 0 ? "GRATIS" : formatPrice(shippingCost)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", fontWeight: 900, borderTop: "2px dashed var(--primary)", paddingTop: "8px", marginTop: "4px" }}>
+
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 900, borderTop: "2px dashed var(--primary)", paddingTop: "6px", marginTop: "2px" }}>
               <span>TOTAL ESTIMADO</span>
-              <span>
-                ${total.toFixed(2)}
+              <span style={{ color: "var(--primary)" }}>
+                {formatPrice(total)}
               </span>
             </div>
 
             {!isAuthenticated && (
-              <p style={{ fontSize: "0.7rem", color: "var(--error)", fontWeight: "bold", textAlign: "center", margin: "4px 0" }}>
-                ⚠️ Debés iniciar sesión en la pestaña Perfil para realizar tu pedido.
+              <p style={{ fontSize: "0.65rem", color: "var(--error)", fontWeight: "bold", textAlign: "center", margin: "2px 0" }}>
+                ⚠️ Debes iniciar sesión en la pestaña Perfil para completar tu pedido.
               </p>
             )}
 
             <button
               onClick={() => {
                 if (!isAuthenticated) {
-                  showToast("Por favor, iniciá sesión en la sección Mi Perfil para continuar con tu compra.", "error");
+                  showToast("Por favor, inicia sesión en la sección Mi Perfil para continuar con tu compra.", "error");
                   setActiveTab("profile");
                   onClose();
                   return;
@@ -202,17 +300,26 @@ export const CartDrawer = ({
                 onClose();
                 onCheckout();
               }}
-              className="neo-button"
+              className="neo-button fun-hover-wobble"
               style={{
-                backgroundColor: "var(--primary-container)",
+                backgroundColor: "#CCFF00",
+                color: "#111111",
                 width: "100%",
                 padding: "12px",
-                fontSize: "0.8rem",
+                fontSize: "0.85rem",
+                fontWeight: 900,
                 boxShadow: "3px 3px 0px var(--primary)",
-                marginTop: "8px",
+                border: "2.5px solid var(--primary)",
+                cursor: "pointer",
+                marginTop: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
               }}
             >
-              COMPRAR AHORA 🛒
+              <span>COMPRAR AHORA 🛒</span>
+              <ArrowRight size={16} />
             </button>
           </div>
         )}

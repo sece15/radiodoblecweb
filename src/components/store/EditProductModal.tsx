@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { Product } from "@/types";
 import { UpdateProductInput } from "@/services/productService";
+import { sanitizePriceInput, formatPrice, parsePrice } from "@/lib/priceUtils";
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ const EditProductForm = ({
 }: EditProductFormProps) => {
   const [name, setName] = useState(product.name);
   const [price, setPrice] = useState(
-    product.price.replace("S/.", "").replace("S/", "").trim()
+    parsePrice(product.price).toString()
   );
   const [desc, setDesc] = useState(product.description || "");
   const [specs, setSpecs] = useState(product.specs || "");
@@ -71,7 +72,7 @@ const EditProductForm = ({
       await onSubmit({
         id: product.id,
         name,
-        price,
+        price: formatPrice(price),
         description: desc,
         badge,
         sizes: sizes.length > 0 ? sizes : ["S", "M", "L", "XL"],
@@ -190,22 +191,38 @@ const EditProductForm = ({
           >
             PRECIO (S/.) *
           </label>
-          <input
-            type="text"
-            required
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="79.90"
-            className="neo-input"
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              fontSize: "0.75rem",
-              border: "2px solid var(--primary)",
-              fontWeight: "bold",
-              backgroundColor: "white",
-            }}
-          />
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span
+              style={{
+                padding: "8px 12px",
+                backgroundColor: "var(--primary-container)",
+                border: "2px solid var(--primary)",
+                borderRight: "none",
+                fontWeight: 900,
+                fontSize: "0.8rem",
+                color: "var(--primary)",
+              }}
+            >
+              S/.
+            </span>
+            <input
+              type="text"
+              inputMode="decimal"
+              required
+              value={price}
+              onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
+              placeholder="129.90"
+              className="neo-input"
+              style={{
+                flex: 1,
+                padding: "8px 10px",
+                fontSize: "0.75rem",
+                border: "2px solid var(--primary)",
+                fontWeight: "bold",
+                backgroundColor: "white",
+              }}
+            />
+          </div>
         </div>
         <div>
           <label

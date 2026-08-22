@@ -3,11 +3,10 @@
 import { CSSProperties, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, ShoppingBag, Sliders, User, Newspaper } from "lucide-react";
+import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, ShoppingBag, User, Newspaper } from "lucide-react";
 import { RadioLogo } from "@/components/RadioLogo";
 import { HeaderNewsTicker } from "@/components/HeaderNewsTicker";
 import { NewsModal } from "@/components/NewsModal";
-import { StudioToolsModal } from "@/components/tools/StudioToolsModal";
 import { useAudio } from "@/hooks/useAudio";
 import { useNews } from "@/hooks/useNews";
 import { isVip } from "@/lib/permissions";
@@ -36,7 +35,6 @@ export const Header = ({
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isStudioOpen, setStudioOpen] = useState(false);
   const { userProfile } = useAudio();
 
   // News hook integration
@@ -113,201 +111,178 @@ export const Header = ({
             position: "relative",
           }}
         >
-        {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <button
-            onClick={() => setSearchActive(true)}
-            className="neo-button fun-hover-wobble"
-            style={{
-              padding: "7px 14px",
-              fontSize: "0.75rem",
-              fontWeight: 900,
-              backgroundColor: "var(--card-bg)",
-              boxShadow: "3px 3px 0px var(--primary)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              cursor: "pointer",
-              transform: "rotate(-1.5deg)",
-              "--rest-rot": "-1.5deg",
-            } as CSSProperties}
-            title="Buscar estaciones, canciones y programas"
-          >
-            <Search size={14} />
-            <span>BUSCAR</span>
-          </button>
-
-          <button
-            onClick={() => setStudioOpen(true)}
-            className="neo-button fun-hover-wobble desktop-only-flex"
-            style={{
-              padding: "7px 12px",
-              fontSize: "0.72rem",
-              fontWeight: 900,
-              backgroundColor: "var(--primary-container)",
-              color: "var(--primary)",
-              boxShadow: "2.5px 2.5px 0px var(--primary)",
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-              cursor: "pointer",
-              transform: "rotate(1deg)",
-              "--rest-rot": "1deg",
-            } as CSSProperties}
-            title="Herramientas: Temporizador de apagado, Soundboard y Saludos"
-          >
-            <Sliders size={13} />
-            <span>🎛️ ESTUDIO</span>
-          </button>
-
-          {onOpenSpin && (
+          {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
-              onClick={onOpenSpin}
-              className="neo-button fun-hover-wobble desktop-only-flex"
+              onClick={() => setSearchActive(true)}
+              className="neo-button fun-hover-wobble"
               style={{
-                padding: "7px 12px",
-                fontSize: "0.72rem",
+                padding: "7px 14px",
+                fontSize: "0.75rem",
                 fontWeight: 900,
-                backgroundColor: "#CCFF00",
-                color: "#111111",
-                boxShadow: "2.5px 2.5px 0px var(--primary)",
-                border: "2px solid var(--primary)",
+                backgroundColor: "var(--card-bg)",
+                boxShadow: "3px 3px 0px var(--primary)",
                 display: "flex",
                 alignItems: "center",
-                gap: "5px",
+                gap: "6px",
                 cursor: "pointer",
-                transform: "rotate(-1deg)",
-                "--rest-rot": "-1deg",
+                transform: "rotate(-1.5deg)",
+                "--rest-rot": "-1.5deg",
               } as CSSProperties}
-              title="Gira la Tornamesa Doble C gratis cada día para ganar premios y C-Coins"
+              title="Buscar estaciones, canciones y programas"
             >
-              <span>🎰 TORNAMESA C</span>
+              <Search size={14} />
+              <span>BUSCAR</span>
             </button>
-          )}
-        </div>
 
-        {/* 2. CENTER: LOGO (CENTERED & CLEAN) */}
-        <div
-          onClick={() => handleNavClick("explore")}
-          className="header-logo-container"
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            height: "72px",
-            width: "72px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-          title="Radio Doble C - Inicio"
-        >
-          <RadioLogo />
-        </div>
-
-        {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {/* VIP Badge (Desktop only if VIP) */}
-          {isVipUser && (
-            <button
-              onClick={() => handleNavClick("vip")}
-              className="neo-button fun-hover-wobble desktop-only-flex"
-              style={{
-                padding: "6px 12px",
-                fontSize: "0.72rem",
-                fontWeight: 900,
-                backgroundColor: isVipTab ? "#CCFF00" : "#FFDE82",
-                color: "#111111",
-                boxShadow: isVipTab ? "1px 1px 0px var(--primary)" : "2.5px 2.5px 0px var(--primary)",
-                cursor: "pointer",
-                transform: isVipTab ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1.5deg)",
-                "--rest-rot": isVipTab ? "0deg" : "1.5deg",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              } as CSSProperties}
-            >
-              <Sparkles size={13} />
-              ZONA VIP ⭐
-            </button>
-          )}
-
-          {/* Cart Button */}
-          <button
-            onClick={() => setCartOpen(true)}
-            className="neo-button fun-hover-wobble"
-            style={{
-              padding: "7px 11px",
-              fontSize: "0.75rem",
-              fontWeight: 900,
-              backgroundColor: "var(--card-bg)",
-              boxShadow: "2.5px 2.5px 0px var(--primary)",
-              cursor: "pointer",
-              transform: "rotate(-1deg)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              position: "relative",
-              "--rest-rot": "-1deg",
-            } as CSSProperties}
-            title="Ver Carrito de Compras"
-          >
-            <ShoppingCart size={15} />
-            {cartCount > 0 && (
-              <span
+            {onOpenSpin && (
+              <button
+                onClick={onOpenSpin}
+                className="neo-button fun-hover-wobble desktop-only-flex"
                 style={{
-                  position: "absolute",
-                  top: "-7px",
-                  right: "-7px",
-                  backgroundColor: "#BA1A1A",
-                  color: "white",
-                  borderRadius: "50%",
-                  width: "18px",
-                  height: "18px",
-                  fontSize: "0.6rem",
+                  padding: "7px 12px",
+                  fontSize: "0.72rem",
                   fontWeight: 900,
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
+                  boxShadow: "2.5px 2.5px 0px var(--primary)",
+                  border: "2px solid var(--primary)",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  border: "2px solid var(--primary)",
-                  boxShadow: "1px 1px 0px var(--primary)",
-                }}
+                  gap: "5px",
+                  cursor: "pointer",
+                  transform: "rotate(-1deg)",
+                  "--rest-rot": "-1deg",
+                } as CSSProperties}
+                title="Gira la Tornamesa Doble C gratis cada día para ganar premios y C-Coins"
               >
-                {cartCount}
-              </span>
+                <span>🎰 TORNAMESA C</span>
+              </button>
             )}
-          </button>
+          </div>
 
-          {/* MAIN BURGER MENU BUTTON */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="neo-button fun-hover-wobble header-menu-btn"
+          {/* 2. CENTER: LOGO (CENTERED & CLEAN) */}
+          <div
+            onClick={() => handleNavClick("explore")}
+            className="header-logo-container"
             style={{
-              padding: "6px 12px",
-              backgroundColor: isMenuOpen ? "var(--primary-container)" : "var(--primary)",
-              color: isMenuOpen ? "var(--primary)" : "var(--on-primary)",
-              boxShadow: isMenuOpen ? "1px 1px 0px var(--primary)" : "2.5px 2.5px 0px var(--primary-container)",
-              transform: isMenuOpen ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1deg)",
-              cursor: "pointer",
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              height: "72px",
+              width: "72px",
               display: "flex",
               alignItems: "center",
-              gap: "6px",
-              fontSize: "0.72rem",
-              fontWeight: 900,
-              letterSpacing: "0.5px",
-              "--rest-rot": isMenuOpen ? "0deg" : "1deg",
-            } as CSSProperties}
-            aria-label="Abrir Menú Principal"
-            title="Abrir Menú de Navegación"
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+            title="Radio Doble C - Inicio"
           >
-            {isMenuOpen ? <X size={15} /> : <Menu size={15} />}
-            <span>MENÚ</span>
-          </button>
-        </div>
-      </header>
-    </div>
+            <RadioLogo />
+          </div>
+
+          {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* VIP Badge (Desktop only if VIP) */}
+            {isVipUser && (
+              <button
+                onClick={() => handleNavClick("vip")}
+                className="neo-button fun-hover-wobble desktop-only-flex"
+                style={{
+                  padding: "6px 12px",
+                  fontSize: "0.72rem",
+                  fontWeight: 900,
+                  backgroundColor: isVipTab ? "#CCFF00" : "#FFDE82",
+                  color: "#111111",
+                  boxShadow: isVipTab ? "1px 1px 0px var(--primary)" : "2.5px 2.5px 0px var(--primary)",
+                  cursor: "pointer",
+                  transform: isVipTab ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1.5deg)",
+                  "--rest-rot": isVipTab ? "0deg" : "1.5deg",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                } as CSSProperties}
+              >
+                <Sparkles size={13} />
+                ZONA VIP ⭐
+              </button>
+            )}
+
+            {/* Cart Button */}
+            <button
+              onClick={() => setCartOpen(true)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                padding: "7px 11px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                backgroundColor: "var(--card-bg)",
+                boxShadow: "2.5px 2.5px 0px var(--primary)",
+                cursor: "pointer",
+                transform: "rotate(-1deg)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                position: "relative",
+                "--rest-rot": "-1deg",
+              } as CSSProperties}
+              title="Ver Carrito de Compras"
+            >
+              <ShoppingCart size={15} />
+              {cartCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-7px",
+                    right: "-7px",
+                    backgroundColor: "#BA1A1A",
+                    color: "white",
+                    borderRadius: "50%",
+                    width: "18px",
+                    height: "18px",
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px solid var(--primary)",
+                    boxShadow: "1px 1px 0px var(--primary)",
+                  }}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            {/* MAIN BURGER MENU BUTTON */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="neo-button fun-hover-wobble header-menu-btn"
+              style={{
+                padding: "6px 12px",
+                backgroundColor: isMenuOpen ? "var(--primary-container)" : "var(--primary)",
+                color: isMenuOpen ? "var(--primary)" : "var(--on-primary)",
+                boxShadow: isMenuOpen ? "1px 1px 0px var(--primary)" : "2.5px 2.5px 0px var(--primary-container)",
+                transform: isMenuOpen ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1deg)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                letterSpacing: "0.5px",
+                "--rest-rot": isMenuOpen ? "0deg" : "1deg",
+              } as CSSProperties}
+              aria-label="Abrir Menú Principal"
+              title="Abrir Menú de Navegación"
+            >
+              {isMenuOpen ? <X size={15} /> : <Menu size={15} />}
+              <span>MENÚ</span>
+            </button>
+          </div>
+        </header>
+      </div>
 
       {/* 4. BACKDROP OVERLAY */}
       <div
@@ -595,43 +570,6 @@ export const Header = ({
               ● EN VIVO
             </span>
           </button>
-          {/* 7. ESTUDIO & FX BUTTON */}
-          <button
-            onClick={() => {
-              setIsMenuOpen(false);
-              setStudioOpen(true);
-            }}
-            className="mobile-nav-link fun-hover-wobble"
-            style={{
-              backgroundColor: "var(--primary-container)",
-              color: "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: "3.5px 3.5px 0px var(--primary)",
-              transform: "rotate(1deg)",
-              "--rest-rot": "1deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
-            } as CSSProperties}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Sliders size={16} />
-              <span>ESTUDIO &amp; FX (APAGADO / SOUNDS)</span>
-            </div>
-            <span
-              style={{
-                backgroundColor: "var(--primary)",
-                color: "var(--on-primary)",
-                fontSize: "0.55rem",
-                fontWeight: 900,
-                padding: "2px 6px",
-                letterSpacing: "0.8px",
-              }}
-            >
-              ⚡ HERRAMIENTAS
-            </span>
-          </button>
         </div>
 
         {/* Small radio sticker badge at bottom */}
@@ -671,12 +609,6 @@ export const Header = ({
         isLoading={isNewsLoading}
         refreshNews={refreshNews}
         lastUpdated={lastUpdated}
-      />
-
-      {/* 7. MODAL DE ESTUDIO & FX (SLEEP TIMER, SOUNDBOARD, SALUDOS) */}
-      <StudioToolsModal
-        isOpen={isStudioOpen}
-        onClose={() => setStudioOpen(false)}
       />
     </>
   );

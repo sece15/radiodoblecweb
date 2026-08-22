@@ -2,6 +2,8 @@ import { supabase } from "@/lib/supabase";
 import { Product } from "@/types";
 import { STORE_PRODUCTS } from "@/constants";
 
+export type { Product };
+
 export interface CreateProductInput {
   name: string;
   price: string;

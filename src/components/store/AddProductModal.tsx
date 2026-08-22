@@ -4,6 +4,7 @@ import { useState, ChangeEvent, FormEvent } from "react";
 import { Upload, Image as ImageIcon, Check } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { CreateProductInput } from "@/services/productService";
+import { sanitizePriceInput, formatPrice } from "@/lib/priceUtils";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -117,7 +118,7 @@ export const AddProductModal = ({
 
       await onSubmit({
         name,
-        price,
+        price: formatPrice(price),
         description: desc,
         imageFiles,
         imageLabels,
@@ -488,22 +489,38 @@ export const AddProductModal = ({
               >
                 PRECIO (S/.) *
               </label>
-              <input
-                type="text"
-                required
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="EJ. S/.79.90"
-                className="neo-input"
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  fontSize: "0.75rem",
-                  border: "2px solid var(--primary)",
-                  fontWeight: "bold",
-                  backgroundColor: "white",
-                }}
-              />
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <span
+                  style={{
+                    padding: "8px 12px",
+                    backgroundColor: "var(--primary-container)",
+                    border: "2px solid var(--primary)",
+                    borderRight: "none",
+                    fontWeight: 900,
+                    fontSize: "0.8rem",
+                    color: "var(--primary)",
+                  }}
+                >
+                  S/.
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  value={price}
+                  onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
+                  placeholder="129.90"
+                  className="neo-input"
+                  style={{
+                    flex: 1,
+                    padding: "8px 10px",
+                    fontSize: "0.75rem",
+                    border: "2px solid var(--primary)",
+                    fontWeight: "bold",
+                    backgroundColor: "white",
+                  }}
+                />
+              </div>
             </div>
 
             <div>

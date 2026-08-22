@@ -108,20 +108,49 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
       return;
     }
 
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("⚠️ Tu navegador no soporta grabación de audio o estás en un entorno no seguro (requiere HTTPS).");
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      // Detect supported MIME type across browsers (Safari iOS, Chrome, Firefox, Edge)
+      let selectedMimeType = "audio/webm";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          selectedMimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          selectedMimeType = "audio/webm";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          selectedMimeType = "audio/mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/aac")) {
+          selectedMimeType = "audio/aac";
+        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+          selectedMimeType = "audio/ogg";
+        }
+      }
+
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+      const options = selectedMimeType ? { mimeType: selectedMimeType } : undefined;
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunksRef.current, { type: selectedMimeType || "audio/webm" });
         const url = URL.createObjectURL(audioBlob);
         setVoiceAudioUrl(url);
         stream.getTracks().forEach((track) => track.stop());
@@ -752,8 +781,33 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
 
                       {/* Playable Voice Greeting Audio Bubble */}
                       {msg.voiceAudioUrl && !isDeleted && !isBanned && (
-                        <div style={{ marginTop: "4px", padding: "4px", backgroundColor: "#FFFFFF", border: "1.5px solid var(--primary)" }}>
-                          <audio src={msg.voiceAudioUrl} controls style={{ width: "100%", height: "26px" }} />
+                        <div
+                          style={{
+                            marginTop: "6px",
+                            padding: "6px 8px",
+                            backgroundColor: "#FFFBE5",
+                            border: "1.5px solid var(--primary)",
+                            boxShadow: "2px 2px 0px var(--primary)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span style={{ fontSize: "0.58rem", fontWeight: 900, color: "#BA1A1A" }}>
+                              📻 SALUDO DE VOZ AL AIRE:
+                            </span>
+                          </div>
+                          <audio
+                            src={msg.voiceAudioUrl}
+                            controls
+                            style={{
+                              width: "100%",
+                              height: "28px",
+                              borderRadius: "0px",
+                              outline: "none",
+                            }}
+                          />
                         </div>
                       )}
                     </div>

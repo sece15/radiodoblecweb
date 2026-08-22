@@ -3,6 +3,7 @@
 import { MouseEvent } from "react";
 import { ShoppingCart, Trash2, Pencil } from "lucide-react";
 import { Product } from "@/types";
+import { formatPrice } from "@/lib/priceUtils";
 
 interface StoreProductCardProps {
   product: Product;
@@ -150,7 +151,7 @@ export const StoreProductCard = ({
               boxShadow: "1px 1px 0px var(--primary)",
             }}
           >
-            {product.price}
+            {formatPrice(product.price)}
           </div>
         </div>
       </div>
