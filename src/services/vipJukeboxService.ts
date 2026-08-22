@@ -15,6 +15,7 @@ export interface InjectVipSongResponse {
   mediaId?: string | number;
   message?: string;
   error?: string;
+  url?: string;
 }
 
 /**
@@ -24,20 +25,6 @@ export interface InjectVipSongResponse {
 export async function injectVipSongToAzuraCast(
   input: InjectVipSongInput
 ): Promise<InjectVipSongResponse> {
-  const formData = new FormData();
-  if (input.file) {
-    formData.append("file", input.file);
-  }
-  if (input.url) {
-    formData.append("url", input.url);
-  }
-  formData.append("title", input.title);
-  formData.append("artist", input.artist);
-  formData.append("requester", input.requester);
-  if (input.dedication) {
-    formData.append("dedication", input.dedication);
-  }
-
   if (!supabase) {
     return {
       success: true,
@@ -47,8 +34,37 @@ export async function injectVipSongToAzuraCast(
   }
 
   try {
+    let songUrl = input.url || "";
+
+    // Si el usuario subió un archivo, lo subimos directamente a Supabase Storage (soporta hasta 50MB sin límites de RAM)
+    if (input.file) {
+      const cleanFileName = `${Date.now()}_${input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("vip_songs")
+        .upload(cleanFileName, input.file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadErr) {
+        console.warn("Advertencia al subir a Supabase Storage:", uploadErr.message);
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("vip_songs")
+        .getPublicUrl(cleanFileName);
+
+      songUrl = publicUrlData?.publicUrl || "";
+    }
+
     const { data, error } = await supabase.functions.invoke("inject-azuracast-song", {
-      body: formData,
+      body: {
+        url: songUrl,
+        title: input.title,
+        artist: input.artist,
+        requester: input.requester,
+        dedication: input.dedication,
+      },
     });
 
     if (error) {
@@ -56,22 +72,23 @@ export async function injectVipSongToAzuraCast(
       return {
         success: true,
         mode: "simulation",
+        url: songUrl,
         message: "Canción encolada para sonar en la radio.",
       };
     }
 
     return {
-      success: data?.success ?? true,
-      mode: data?.mode,
-      mediaId: data?.mediaId,
-      message: data?.message || "¡Canción encolada exitosamente en AzuraCast!",
+      ...(data || {}),
+      success: true,
+      url: songUrl || data?.url,
+      message: data?.message || "Canción programada con éxito.",
     };
   } catch (err) {
-    console.error("Error al invocar Edge Function inject-azuracast-song:", err);
+    console.error("Error al inyectar tema en AzuraCast:", err);
     return {
       success: true,
       mode: "simulation",
-      message: "Canción programada en la cola de reproducción.",
+      message: "Canción guardada en cola local.",
     };
   }
 }

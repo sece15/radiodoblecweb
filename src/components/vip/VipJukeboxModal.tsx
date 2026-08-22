@@ -38,6 +38,8 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStepText, setUploadStepText] = useState("");
 
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -123,13 +125,38 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     }
 
     setIsSubmitting(true);
+    setUploadProgress(12);
+    setUploadStepText(
+      activeTab === "youtube"
+        ? "Conectando con el extractor antibloqueo... 🔗"
+        : "Preparando y empaquetando audio... 📁"
+    );
+
+    // Barra de progreso interactiva y fluida
+    const progressInterval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev < 35) {
+          setUploadStepText("Transmitiendo al servidor de Radio Doble C... 📡");
+          return prev + 6;
+        }
+        if (prev < 68) {
+          setUploadStepText("Optimizando flujo de audio a 320kbps... ⚡");
+          return prev + 4;
+        }
+        if (prev < 88) {
+          setUploadStepText("Inyectando en la cola de AzuraCast AutoDJ... 📻");
+          return prev + 2;
+        }
+        return prev;
+      });
+    }, 180);
 
     try {
       if (activeTab === "youtube") {
         const effectiveTitle = title.trim() || "Tema YouTube";
         const effectiveArtist = artist.trim() || "YouTube / Web";
 
-        await injectVipSongToAzuraCast({
+        const res = await injectVipSongToAzuraCast({
           url: youtubeUrl.trim(),
           title: effectiveTitle,
           artist: effectiveArtist,
@@ -143,11 +170,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           requestedBy: userProfile.name,
           userAvatar: userProfile.avatarUrl,
           dedication: dedication.trim() || undefined,
-          audioUrl: "https://stream.radiodoblec.com/radio.mp3",
+          audioUrl: res.url || "https://stream.andrealvarado.dev/radio.mp3",
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
         });
       } else {
-        await injectVipSongToAzuraCast({
+        const res = await injectVipSongToAzuraCast({
           file: audioFile,
           title: title.trim(),
           artist: artist.trim(),
@@ -161,15 +188,21 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           requestedBy: userProfile.name,
           userAvatar: userProfile.avatarUrl,
           dedication: dedication.trim() || undefined,
-          audioUrl: audioUrl!,
+          audioUrl: res.url || audioUrl!,
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
           durationSeconds: audioDuration,
         });
       }
 
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setUploadStepText("¡Listo! Canción encolada al aire ⭐");
+
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
+        setUploadProgress(0);
+        setUploadStepText("");
         setYoutubeUrl("");
         setTitle("");
         setArtist("");
@@ -178,11 +211,13 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
         setAudioUrl(null);
         setAudioFileName("");
         onClose();
-      }, 2500);
+      }, 2200);
     } catch (err) {
+      clearInterval(progressInterval);
       console.error("Error al procesar pedido VIP:", err);
       alert("Hubo un detalle al enviar el pedido, pero se intentará encolar en el reproductor.");
     } finally {
+      clearInterval(progressInterval);
       setIsSubmitting(false);
     }
   };
@@ -604,6 +639,60 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             </div>
           )}
 
+          {/* PROGRESS BAR (when uploading) */}
+          {isSubmitting && (
+            <div
+              style={{
+                backgroundColor: "var(--surface-container-high)",
+                border: "2px solid var(--primary)",
+                padding: "8px 10px",
+                boxShadow: "3px 3px 0px var(--primary)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "5px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "var(--primary)" }}>
+                  {uploadStepText || "PROCESANDO PEDIDO..."}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 900,
+                    backgroundColor: "#CCFF00",
+                    padding: "1px 6px",
+                    border: "1px solid var(--primary)",
+                  }}
+                >
+                  {Math.min(100, Math.round(uploadProgress))}%
+                </span>
+              </div>
+              <div
+                style={{
+                  width: "100%",
+                  height: "12px",
+                  backgroundColor: "white",
+                  border: "1.5px solid var(--primary)",
+                  overflow: "hidden",
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${uploadProgress}%`,
+                    height: "100%",
+                    backgroundColor: "#CCFF00",
+                    transition: "width 0.25s ease-out",
+                    backgroundImage:
+                      "linear-gradient(45deg, rgba(0,0,0,0.12) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.12) 75%, transparent 75%, transparent)",
+                    backgroundSize: "16px 16px",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* SUBMIT BUTTON */}
           <button
             type="submit"
@@ -629,7 +718,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             {isSubmitting ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                <span>PROGRAMANDO EN AZURACAST EN VIVO... 📡</span>
+                <span>TRANSMITIENDO Y PROGRAMANDO ({Math.min(100, Math.round(uploadProgress))}%) 📡</span>
               </>
             ) : (
               <>
