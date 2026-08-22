@@ -31,6 +31,9 @@ export interface AudioStoreState {
     imageUrl: string;
     streamUrl: string;
     isLive: boolean;
+    vipRequester?: string;
+    dedication?: string;
+    isVipSong?: boolean;
   };
   progress: number;
   currentTime: number;
@@ -110,6 +113,12 @@ export interface AudioStoreState {
   approveVoiceGreeting: (greetingId: string) => void;
   rejectVoiceGreeting: (greetingId: string) => void;
 
+  // Rockola VIP / Jukebox Doble C
+  vipQueue: import("@/types").VipSongRequest[];
+  activeVipSong: import("@/types").VipSongRequest | null;
+  requestVipSong: (req: Omit<import("@/types").VipSongRequest, "id" | "status" | "createdAt">, playImmediately?: boolean) => boolean;
+  skipToNextVipSong: () => void;
+
   // Autenticación y Transmisión en Vivo
   isAuthenticated: boolean;
   signOut: () => void;
@@ -137,6 +146,10 @@ export const initialStoreState: AudioStoreState = {
   submitVoiceGreeting: noop,
   approveVoiceGreeting: noop,
   rejectVoiceGreeting: noop,
+  vipQueue: [],
+  activeVipSong: null,
+  requestVipSong: () => true,
+  skipToNextVipSong: noop,
   currentTrack: {
     title: "RADIO DOBLE C",
     album: "RADIO DOBLE C ONLINE",

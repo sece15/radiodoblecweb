@@ -1,16 +1,19 @@
+import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { isVip } from "@/lib/permissions";
 import { DriveAlbumsSection } from "./DriveAlbumsSection";
 import { RadioVideosSection } from "./RadioVideosSection";
-import { Sparkles, Crown, Lock } from "lucide-react";
+import { VipJukeboxModal } from "./vip/VipJukeboxModal";
+import { Sparkles, Crown, Lock, Music } from "lucide-react";
 
 interface VipViewProps {
   onNavigateToPlayer: () => void;
 }
 
 export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
-  const { userProfile } = useAudio();
+  const { userProfile, vipQueue } = useAudio();
   const userIsVip = isVip(userProfile.role);
+  const [isJukeboxOpen, setIsJukeboxOpen] = useState(false);
 
   return (
     <div
@@ -67,6 +70,29 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
           <p style={{ fontSize: "0.75rem", lineHeight: "1.15rem", opacity: 0.9, margin: 0 }}>
             Como miembro **VIP**, tienes acceso desbloqueado a los discos underground oficiales alojados en Radio Doble C, streaming en alta definición y descarga directa de archivos MP3 en alta fidelidad. ¡Gracias por apoyar la radio libre! ⚡
           </p>
+
+          <div style={{ display: "flex", gap: "10px", marginTop: "4px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => setIsJukeboxOpen(true)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "#CCFF00",
+                color: "#111",
+                padding: "8px 16px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                border: "2px solid var(--primary)",
+                boxShadow: "3px 3px 0px var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+              }}
+            >
+              <Music size={14} />
+              <span>⭐ PEDIR TEMA EN LA ROCKOLA VIP ({vipQueue.length} en fila)</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div
@@ -136,6 +162,12 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
 
       {/* 3. VIDEOS, ENTREVISTAS & SESIONES */}
       <RadioVideosSection />
+
+      {/* 4. MODAL ROCKOLA VIP */}
+      <VipJukeboxModal
+        isOpen={isJukeboxOpen}
+        onClose={() => setIsJukeboxOpen(false)}
+      />
     </div>
   );
 };

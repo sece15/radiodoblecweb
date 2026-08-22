@@ -47,10 +47,27 @@ export interface TrackInfo {
   streamUrl: string;
   isLive: boolean;
   stationId?: string;
-  type?: "live" | "station" | "album_song" | "past_broadcast" | "vip_exclusive";
+  type?: "live" | "station" | "album_song" | "past_broadcast" | "vip_exclusive" | "vip_jukebox";
+  vipRequester?: string;
+  dedication?: string;
+  isVipSong?: boolean;
 }
 
 export type CurrentTrack = TrackInfo;
+
+export interface VipSongRequest {
+  id: string;
+  title: string;
+  artist: string;
+  requestedBy: string;
+  userAvatar?: string;
+  dedication?: string;
+  audioUrl: string;
+  coverUrl: string;
+  durationSeconds?: number;
+  status: "queued" | "playing" | "played";
+  createdAt: string;
+}
 
 export interface Song {
   id: string;

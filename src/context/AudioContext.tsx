@@ -11,6 +11,8 @@ import {
   Song,
   Album,
   UserProfile,
+  VipSongRequest,
+  CurrentTrack,
 } from "@/types";
 import {
   INITIAL_STATIONS,
@@ -73,6 +75,15 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   // Gamificación: Puntos C (C-Puntos) y Recompensa Diaria
   const [puntosC, setPuntosC] = useLocalStorage<number>("doblec_puntos_c", 2);
   const [lastCheckInDate, setLastCheckInDate] = useLocalStorage<string>("doblec_last_checkin", "");
+
+  // Rockola VIP: Cola de canciones en espera y canción activa
+  const [vipQueue, setVipQueue] = useState<VipSongRequest[]>([]);
+  const [activeVipSong, setActiveVipSong] = useState<VipSongRequest | null>(null);
+  const vipQueueRef = useRef<VipSongRequest[]>([]);
+
+  useEffect(() => {
+    vipQueueRef.current = vipQueue;
+  }, [vipQueue]);
 
   // Recompensa diaria: +1 Punto C al sintonizar la radio cada día
   useEffect(() => {
@@ -337,12 +348,38 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     playUrl(track.streamUrl);
   }, [liveTrackTitle, liveShowName, playUrl]);
 
-  // Al terminar una canción o emisión a la carta de Google Drive, volver automáticamente a la radio en vivo
+  // Al terminar una canción: reproducir siguiente tema de la Rockola VIP o volver a la radio en vivo
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleEnded = () => {
+      if (vipQueueRef.current.length > 0) {
+        const nextVip = vipQueueRef.current[0];
+        setVipQueue((prev) => prev.slice(1));
+        setActiveVipSong(nextVip);
+
+        const track: CurrentTrack = {
+          title: nextVip.title,
+          artist: nextVip.artist,
+          album: nextVip.dedication ? `⭐ DEDICADO: "${nextVip.dedication}"` : "⭐ ROCKOLA VIP DOBLE C",
+          imageUrl: nextVip.coverUrl || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
+          streamUrl: nextVip.audioUrl,
+          isLive: false,
+          isVipSong: true,
+          vipRequester: nextVip.requestedBy,
+          dedication: nextVip.dedication,
+        };
+        setCurrentTrack(track);
+        playUrl(track.streamUrl);
+
+        chatSocket.sendChatMessage(
+          `⭐ ¡AL AIRE EN LA ROCKOLA VIP! ${nextVip.requestedBy} puso: "${nextVip.title} - ${nextVip.artist}"${nextVip.dedication ? ` (Dedicatoria: "${nextVip.dedication}")` : ""} 🎶📻`
+        );
+        return;
+      }
+
+      setActiveVipSong(null);
       if (!currentTrack.isLive) {
         playLiveStream();
       }
@@ -352,7 +389,77 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [currentTrack.isLive, playLiveStream]);
+  }, [currentTrack.isLive, playLiveStream, playUrl, chatSocket]);
+
+  const requestVipSong = useCallback(
+    (
+      req: Omit<VipSongRequest, "id" | "status" | "createdAt">,
+      playImmediately: boolean = true
+    ): boolean => {
+      const newReq: VipSongRequest = {
+        ...req,
+        id: "vip-song-" + Date.now(),
+        status: playImmediately ? "playing" : "queued",
+        createdAt: new Date().toISOString(),
+      };
+
+      if (playImmediately) {
+        setActiveVipSong(newReq);
+        const track: CurrentTrack = {
+          title: req.title,
+          artist: req.artist,
+          album: req.dedication ? `⭐ DEDICADO: "${req.dedication}"` : "⭐ ROCKOLA VIP DOBLE C",
+          imageUrl: req.coverUrl || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
+          streamUrl: req.audioUrl,
+          isLive: false,
+          isVipSong: true,
+          vipRequester: req.requestedBy,
+          dedication: req.dedication,
+        };
+        setCurrentTrack(track);
+        playUrl(track.streamUrl);
+
+        chatSocket.sendChatMessage(
+          `⭐ ¡AL AIRE AHORA EN LA ROCKOLA VIP! ${req.requestedBy} puso: "${req.title} - ${req.artist}"${
+            req.dedication ? ` (Dedicatoria: "${req.dedication}")` : ""
+          } 🎶📻`
+        );
+      } else {
+        setVipQueue((prev) => [...prev, newReq]);
+        chatSocket.sendChatMessage(
+          `⭐ ${req.requestedBy} encoló en la Rockola VIP: "${req.title} - ${req.artist}". ¡Sonará al terminar el tema actual! ⚡`
+        );
+      }
+      return true;
+    },
+    [chatSocket, playUrl]
+  );
+
+  const skipToNextVipSong = useCallback(() => {
+    if (vipQueueRef.current.length > 0) {
+      const nextVip = vipQueueRef.current[0];
+      setVipQueue((prev) => prev.slice(1));
+      setActiveVipSong(nextVip);
+
+      const track: CurrentTrack = {
+        title: nextVip.title,
+        artist: nextVip.artist,
+        album: nextVip.dedication ? `⭐ DEDICADO: "${nextVip.dedication}"` : "⭐ ROCKOLA VIP DOBLE C",
+        imageUrl: nextVip.coverUrl || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
+        streamUrl: nextVip.audioUrl,
+        isLive: false,
+        isVipSong: true,
+        vipRequester: nextVip.requestedBy,
+        dedication: nextVip.dedication,
+      };
+      setCurrentTrack(track);
+      playUrl(track.streamUrl);
+
+      chatSocket.sendChatMessage(
+        `⭐ ¡AL AIRE EN LA ROCKOLA VIP! ${nextVip.requestedBy} puso: "${nextVip.title} - ${nextVip.artist}"${nextVip.dedication ? ` (Dedicatoria: "${nextVip.dedication}")` : ""} 🎶📻`
+      );
+    }
+  }, [playUrl, chatSocket]);
 
   // Controles del reproductor (Opción 2: Reconexión Live Edge garantizada)
   const togglePlayPause = useCallback(() => {
@@ -849,6 +956,10 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     chatSocket.submitVoiceGreeting,
     chatSocket.approveVoiceGreeting,
     chatSocket.rejectVoiceGreeting,
+    vipQueue,
+    activeVipSong,
+    requestVipSong,
+    skipToNextVipSong,
     isAuthenticated,
     signOut,
     signInWithGoogle,

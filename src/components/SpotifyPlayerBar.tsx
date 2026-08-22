@@ -131,22 +131,42 @@ export const SpotifyPlayerBar = ({
         </div>
 
         <div style={{ minWidth: 0, overflow: "hidden" }}>
-          <h4
-            onClick={onExpand}
-            style={{
-              fontSize: "0.85rem",
-              fontWeight: 900,
-              textTransform: "uppercase",
-              color: "var(--primary)",
-              cursor: "pointer",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              marginBottom: "2px",
-            }}
-          >
-            {currentTrack.title}
-          </h4>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <h4
+              onClick={onExpand}
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                color: "var(--primary)",
+                cursor: "pointer",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                margin: 0,
+              }}
+            >
+              {currentTrack.title}
+            </h4>
+
+            {currentTrack.isVipSong && (
+              <span
+                style={{
+                  backgroundColor: "#FFB000",
+                  color: "black",
+                  border: "1.5px solid var(--primary)",
+                  padding: "1px 5px",
+                  fontSize: "0.55rem",
+                  fontWeight: 900,
+                  flexShrink: 0,
+                  boxShadow: "1px 1px 0px var(--primary)",
+                }}
+                title={currentTrack.dedication ? `Dedicatoria: "${currentTrack.dedication}"` : `Pedido VIP de ${currentTrack.vipRequester}`}
+              >
+                👑 VIP: {currentTrack.vipRequester}
+              </span>
+            )}
+          </div>
           <p
             style={{
               fontSize: "0.7rem",
@@ -155,6 +175,7 @@ export const SpotifyPlayerBar = ({
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              margin: "2px 0 0 0",
             }}
           >
             {currentTrack.artist}
