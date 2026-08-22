@@ -22,13 +22,13 @@ export const INITIAL_STATIONS: Station[] = [
     style: "ALL MUSIC",
   },
   {
-    id: "neonpop",
-    name: "El Espacio del Koyote Proximamente",
+    id: "l_mental",
+    name: "L-Mental",
     frequency: "Viernes 9 PM",
-    description: "El programa se trata de pedidos musicales, conversación con invitados.",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHgkKkWI_L4cptOscww4Dqg9x_1l7Emt7I7f7cP8GxYKYJzFfwnp8agBIhRPcjZJzeTgH-zj8nOeiRn7iwvHmoEpiRlSp1Kjb5TTmrMRR_oAUbZKBCZY4iDX3OZoIVLWsBpfKMB4fbJ4WN66-s_w6SyWu1T0VwPmyENDkyz3VVWSRm2UBEuqa-pewg9z6FZLUb-gOuZUtWz13j1vBrHEHV2UoAfLcYLgMRYvBzFCKJ-fFwRueGTkM-KTLbprP3-qLFhpJIIjdgRMKg",
+    description: "Casos intrigantes, misterios y análisis psicológico con la Zona Esotérica de La Seka al ritmo de Rock, Reggae y Ska.",
+    imageUrl: "/lmental.jpg",
     isLiked: true,
-    style: "PEDIDOS / INVITADOS /ALL MUSIC",
+    style: "MISTERIO / ROCK, REGGAE & SKA",
   },
   {
     id: "conversa_time",
@@ -64,16 +64,79 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
     hostHobbies: ["Batería & Percusión en Vivo", "Coleccionismo de Vinilos Raros", "Fanzines & Cultura Skate", "Café de Especialidad"],
   },
   {
-    id: "neonpop",
-    title: "El Espacio del Koyote Proximamente",
-    host: "El Koyote",
+    id: "l_mental",
+    title: "L-Mental",
+    host: "La Seka",
     timeSlot: "VIERNES 21:00 - 22:00 (9 PM)",
-    genre: "PEDIDOS / INVITADOS / ALL MUSIC",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHgkKkWI_L4cptOscww4Dqg9x_1l7Emt7I7f7cP8GxYKYJzFfwnp8agBIhRPcjZJzeTgH-zj8nOeiRn7iwvHmoEpiRlSp1Kjb5TTmrMRR_oAUbZKBCZY4iDX3OZoIVLWsBpfKMB4fbJ4WN66-s_w6SyWu1T0VwPmyENDkyz3VVWSRm2UBEuqa-pewg9z6FZLUb-gOuZUtWz13j1vBrHEHV2UoAfLcYLgMRYvBzFCKJ-fFwRueGTkM-KTLbprP3-qLFhpJIIjdgRMKg",
-    description: "El programa se trata de pedidos musicales, conversación libre con invitados y debates nocturnos.",
-    hostRole: "HOST & ENTREVISTADOR",
-    hostBio: "Espíritu libre de las noches de Radio Doble C. Conductor sin filtros que abre los micrófonos a los oyentes y a las bandas emergentes de la ciudad.",
-    hostHobbies: ["Charlas de Madrugada", "Cumbia Psicodélica & Rock", "Fotografía Urbana", "Rutas & Crónicas Callejeras"],
+    genre: "MISTERIO / PSICOLOGÍA / ROCK, REGGAE & SKA",
+    imageUrl: "/lmental.jpg",
+    description: "Un espacio donde nos encontramos con las historias más curiosas, los casos más intrigantes y los misterios que han despertado nuestra imaginación. La mente detrás de la historia.",
+    slogan: "La mente detrás de la historia",
+    hostRole: "INVESTIGACIÓN & ZONA ESOTÉRICA",
+    hostBio: "Espacio nocturno dedicado a explorar conductas extremas, personajes controversiales y casos enigmáticos que han dejado huella en la historia. Conducido junto a 'La Seka', nuestro pitonizo de las cartas del tarot y horóscopo místico, acompañados de una selecta banda sonora de clásicos del Rock, Reggae y Ska.",
+    hostHobbies: ["Casos Enigmáticos & Crónicas Históricas", "Zona Esotérica & Tarot con La Seka", "Clásicos de Rock, Reggae & Ska", "Psicología & Conducta Humana"],
+    segments: [
+      {
+        icon: "🎙️",
+        control: "Bienvenida",
+        locution: "Hay historias que nos sorprenden… casos que nos desconciertan… conductas que nos hacen preguntarnos: ¿qué pasa por la mente de una persona? Bienvenidos a L-Mental, un espacio donde nos encontramos con las historias más curiosas, los casos más intrigantes y los misterios que han despertado nuestra imaginación. Aquí exploraremos casos famosos, personajes controversiales, conductas extremas y acontecimientos que han dejado huella en la historia, tratando de ir más allá de lo evidente para conocer cada comportamiento, cada decisión y cada historia. Pero esto no termina en la mente… porque cuando llega el momento de abrirle la puerta al misterio, tendremos nuestra Zona Esotérica de la mano de una invitado muy especial: 🔮 La Seka, nuestro pitonizo, llegará con las cartas y el horóscopo con ese toque de misterio que no podía faltar en L-Mental. Y por supuesto, todo acompañado de buena música: Rock, Reggae y Ska. Esto es L-Mental: La mente detrás de la historia."
+      },
+      {
+        icon: "🎸",
+        control: "Rock 1",
+        locution: "Primer clásico de rock"
+      },
+      {
+        icon: "🕵️",
+        control: "Presentación del caso",
+        locution: "Introducción, contexto y planteamiento del caso de la semana"
+      },
+      {
+        icon: "🎸",
+        control: "Rock 2",
+        locution: "Segundo clásico de rock"
+      },
+      {
+        icon: "🧠",
+        control: "Desarrollo del caso",
+        locution: "Historia, acontecimientos principales y análisis psicológico"
+      },
+      {
+        icon: "🌴",
+        control: "Reggae 1",
+        locution: "Primer clásico de reggae"
+      },
+      {
+        icon: "🔮",
+        control: "Zona Esotérica — La Seka",
+        locution: "“Dejamos por un momento la mente y el análisis… porque ahora abrimos las puertas de una zona donde la razón se encuentra con el misterio. Ya estoy aquí… soy La Seka.” • Breve comentario sobre el caso. • Recorrido por los signos del Zodiaco. • La carta de la Seka (se lee una carta sacada al azar para alguna persona conectada). Cierre de bloque: 'Recuerda: las cartas pueden mostrar caminos, pero tú eres quien decide cuál recorrer.'"
+      },
+      {
+        icon: "🌴",
+        control: "Reggae 2",
+        locution: "Segundo clásico de reggae"
+      },
+      {
+        icon: "🧠",
+        control: "Conclusiones del caso",
+        locution: "Conclusiones, reflexión e interacción con el público conectado."
+      },
+      {
+        icon: "🎺",
+        control: "Ska 1",
+        locution: "Primer clásico de ska"
+      },
+      {
+        icon: "🎙️",
+        control: "Despedida + Ska 2",
+        locution: "Y así llegamos al final de L-Mental. Gracias por acompañarnos en este espacio donde la curiosidad, la Psicología, las historias y el misterio se encuentran para hacernos pensar, cuestionar y mirar más allá de lo evidente. Nos vamos, pero la mente nunca deja de hacerse preguntas. Nos reencontramos en el próximo programa con nuevas historias, nuevos personajes, nueva música y nuevas cosas que descubrir. Recuerda que puedes seguirnos, compartir el programa y ser parte de L-Mental enviándonos tus comentarios y preguntas. Y ahora sí… llegó el momento de despedirnos. Esto fue L-Mental: “Gracias, mentes inquietas, por acompañarnos una vez más. Ya saben, mantengan la curiosidad despierta y la mente abierta… nos encontramos en el próximo L-Mental.” ¡Buenas noches Elementales!"
+      },
+      {
+        icon: "🎺",
+        control: "Ska 2",
+        locution: "Segundo clásico de ska. Final."
+      }
+    ]
   },
   {
     id: "conversa_time",
@@ -103,7 +166,7 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
 
 export const INITIAL_PAST_BROADCASTS: PastBroadcast[] = [
   { id: "hits_beats_1", programId: "subterraneo", title: "Hits and Beats Vol. 1", date: "Hace 2 días", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-  { id: "koyote_1", programId: "neonpop", title: "El Espacio del Koyote: Intro", date: "Hace 1 semana", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { id: "l_mental_1", programId: "l_mental", title: "L-Mental Cap. 1: La Mente Detrás de la Historia & Zona Esotérica", date: "Próximamente", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
   { id: "conversa_time_1", programId: "conversa_time", title: "Conversa Time Cap. 1: Noche Bohemia Plaza San Martín", date: "Próximamente", duration: "01:00:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
   { id: "lado_c_1", programId: "lado_c", title: "Lado C Cap. 1: Especial Discografías y Concursos", date: "Próximamente", duration: "01:30:00", audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
 ];

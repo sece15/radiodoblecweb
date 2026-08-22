@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { RadioProgram } from "@/types";
-import { Heart, Share2, Play, Pause, Clock, User, Disc, Sparkles, Megaphone } from "lucide-react";
+import { Heart, Share2, Play, Pause, Clock, User, Disc, Sparkles, Megaphone, ScrollText } from "lucide-react";
 import { NeoModal } from "./common/NeoModal";
 import { InfiniteSlider } from "./common/InfiniteSlider";
 import { RadioVideosSection } from "./RadioVideosSection";
@@ -1044,9 +1044,16 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
 
               {/* Cuadro de Descripción */}
               <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
-                  DESCRIPCIÓN DEL PROGRAMA
-                </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
+                    DESCRIPCIÓN DEL PROGRAMA
+                  </span>
+                  {selectedProgram.slogan && (
+                    <span style={{ fontSize: "0.6rem", fontWeight: 900, color: "#BA1A1A" }}>
+                      ✨ “{selectedProgram.slogan}”
+                    </span>
+                  )}
+                </div>
                 <div
                   style={{
                     border: "2px solid var(--primary)",
@@ -1061,6 +1068,66 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   <p style={{ margin: 0 }}>{selectedProgram.description}</p>
                 </div>
               </div>
+
+              {/* ESCALETA / ESTRUCTURA DE CONTROLES & LOCUCIÓN */}
+              {selectedProgram.segments && selectedProgram.segments.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "5px" }}>
+                      <ScrollText size={14} style={{ color: "var(--primary)" }} /> ESCALETA &amp; GUION (CONTROLES Y LOCUCIÓN)
+                    </span>
+                    <span
+                      style={{
+                        backgroundColor: "#CCFF00",
+                        border: "1px solid var(--primary)",
+                        padding: "1px 6px",
+                        fontSize: "0.58rem",
+                        fontWeight: 900,
+                      }}
+                    >
+                      {selectedProgram.segments.length} BLOQUES
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      maxHeight: "280px",
+                      overflowY: "auto",
+                      paddingRight: "4px",
+                    }}
+                  >
+                    {selectedProgram.segments.map((seg, sIdx) => (
+                      <div
+                        key={sIdx}
+                        style={{
+                          backgroundColor: "white",
+                          border: "2px solid var(--primary)",
+                          padding: "8px 10px",
+                          boxShadow: "2px 2px 0px var(--primary)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "4px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", borderBottom: "1px dashed #ccc", paddingBottom: "3px" }}>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 900, color: "#111" }}>
+                            {seg.icon || "📻"} {seg.control}
+                          </span>
+                          <span style={{ fontSize: "0.58rem", fontWeight: 900, backgroundColor: "var(--primary-container)", padding: "1px 5px", border: "1px solid var(--primary)" }}>
+                            BLOQUE #{sIdx + 1}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: "0.7rem", lineHeight: "1.15rem", margin: 0, opacity: 0.9, whiteSpace: "pre-line" }}>
+                          {seg.locution}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* SECCIÓN DE GRABACIONES Y EMISIONES */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -1394,9 +1461,16 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
 
               {/* Sobre el Programa */}
               <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
-                  📻 CONCEPTO DEL PROGRAMA
-                </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7 }}>
+                    📻 CONCEPTO DEL PROGRAMA
+                  </span>
+                  {selectedHostProgram.slogan && (
+                    <span style={{ fontSize: "0.6rem", fontWeight: 900, color: "#BA1A1A" }}>
+                      ✨ “{selectedHostProgram.slogan}”
+                    </span>
+                  )}
+                </div>
                 <div
                   style={{
                     border: "2px solid var(--primary)",
@@ -1410,6 +1484,44 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle }: ExploreViewPr
                   <p style={{ margin: 0 }}>{selectedHostProgram.description}</p>
                 </div>
               </div>
+
+              {/* ESCALETA / GUION EN EL MODAL DEL CONDUCTOR */}
+              {selectedHostProgram.segments && selectedHostProgram.segments.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "2px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 900, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <ScrollText size={13} /> ESTRUCTURA &amp; CONTROLES DEL SHOW
+                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      maxHeight: "220px",
+                      overflowY: "auto",
+                      paddingRight: "4px",
+                    }}
+                  >
+                    {selectedHostProgram.segments.map((seg, sIdx) => (
+                      <div
+                        key={sIdx}
+                        style={{
+                          backgroundColor: "white",
+                          border: "1.5px solid var(--primary)",
+                          padding: "6px 8px",
+                          fontSize: "0.68rem",
+                          lineHeight: "1.1rem",
+                          boxShadow: "1.5px 1.5px 0px var(--primary)",
+                        }}
+                      >
+                        <div style={{ fontWeight: 900, color: "#111", marginBottom: "2px" }}>
+                          {seg.icon} {seg.control}
+                        </div>
+                        <div style={{ opacity: 0.85, whiteSpace: "pre-line" }}>{seg.locution}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </NeoModal>

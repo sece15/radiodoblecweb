@@ -8,6 +8,13 @@ export interface Station {
   style: string;
 }
 
+export interface ProgramSegment {
+  time?: string;
+  icon?: string;
+  control: string;
+  locution: string;
+}
+
 export interface RadioProgram {
   id: string;
   title: string;
@@ -16,9 +23,11 @@ export interface RadioProgram {
   genre: string;
   imageUrl: string;
   description: string;
+  slogan?: string;
   hostBio?: string;
   hostHobbies?: string[];
   hostRole?: string;
+  segments?: ProgramSegment[];
 }
 
 export interface PastBroadcast {

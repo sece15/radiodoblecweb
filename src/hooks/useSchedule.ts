@@ -65,11 +65,11 @@ export const useSchedule = () => {
             isLiveRightNow: currentDayIndex === 5 && currentHour >= 20 && currentHour < 21,
           },
           {
-            id: "neonpop",
-            title: "El Espacio del Koyote",
-            host: "El Koyote",
+            id: "l_mental",
+            title: "L-Mental",
+            host: "Locutor & La Seka",
             timeText: "21:00 - 22:00",
-            genre: "Pedidos / Invitados",
+            genre: "Misterio / Rock, Reggae & Ska",
             isLiveRightNow: currentDayIndex === 5 && currentHour >= 21 && currentHour < 22,
           },
         ];
@@ -291,11 +291,11 @@ export const useSchedule = () => {
           });
           items.push({
             timeText: "21:00 - 22:00",
-            title: "El Espacio del Koyote",
+            title: "L-Mental: La Mente Detrás de la Historia",
             daysText: "Todos los Viernes",
-            genres: "Pedidos en Vivo & Música de Autor",
-            description: "Música sin filtro, pedidos por WhatsApp y anécdotas de gira con El Koyote.",
-            host: "El Koyote",
+            genres: "Misterio, Casos Psicológicos, Zona Esotérica, Rock, Reggae & Ska",
+            description: "Historias intrigantes, análisis psicológico y Zona Esotérica con La Seka al ritmo de Rock, Reggae y Ska.",
+            host: "La Seka",
             isSpecialShow: true,
             badgeText: "🎙️ EN VIVO VIE",
           });
