@@ -39,6 +39,19 @@ export interface PastBroadcast {
   audioUrl: string;
 }
 
+export interface TrackInfo {
+  title: string;
+  artist: string;
+  album: string;
+  imageUrl: string;
+  streamUrl: string;
+  isLive: boolean;
+  stationId?: string;
+  type?: "live" | "station" | "album_song" | "past_broadcast" | "vip_exclusive";
+}
+
+export type CurrentTrack = TrackInfo;
+
 export interface Song {
   id: string;
   title: string;

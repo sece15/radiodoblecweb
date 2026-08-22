@@ -36,7 +36,7 @@ export function useCheckout(
     setIsSubmittingOrder(true);
     setOrderError(null);
 
-    const orderPayload = {
+    const payload = {
       nombre: shippingName,
       email: shippingEmail,
       telefono: shippingPhone,
@@ -46,26 +46,59 @@ export function useCheckout(
         id: i.id,
         nombre: i.product.name,
         color: i.color,
-        talle: i.size,
-        cantidad: i.quantity,
-        precio_unitario: i.product.price,
+        size: i.size,
+        quantity: i.quantity,
       })),
-      total: totalAmount,
       tx_id: paymentTxId,
       tiene_comprobante: Boolean(paymentReceiptName),
-      estado: "pendiente_verificacion",
     };
 
     if (supabase) {
-      const { error } = await supabase.from("pedidos").insert(orderPayload);
-      if (error) {
-        console.error("Error guardando pedido:", error);
-        setOrderError("Hubo un error al registrar tu pedido. Intená de nuevo.");
+      try {
+        // 1. Primary: Invoke Edge Function for secure backend processing
+        const { data, error: fnError } = await supabase.functions.invoke("process-order", {
+          body: payload,
+        });
+
+        if (fnError || !data?.success) {
+          console.warn("Edge function error, intentando inserción directa:", fnError || data);
+          // 2. Fallback: Direct table insert if Edge Function is unavailable
+          const orderPayload = {
+            nombre: shippingName,
+            email: shippingEmail,
+            telefono: shippingPhone,
+            direccion: shippingAddress,
+            ciudad: shippingCity,
+            items: cart.map((i) => ({
+              id: i.id,
+              nombre: i.product.name,
+              color: i.color,
+              talle: i.size,
+              cantidad: i.quantity,
+              precio_unitario: i.product.price,
+            })),
+            total: totalAmount,
+            tx_id: paymentTxId,
+            tiene_comprobante: Boolean(paymentReceiptName),
+            estado: "pendiente_verificacion",
+          };
+
+          const { error: dbError } = await supabase.from("pedidos").insert(orderPayload);
+          if (dbError) {
+            console.error("Error guardando pedido en BD:", dbError);
+            setOrderError("Hubo un error al registrar tu pedido. Intenta nuevamente.");
+            setIsSubmittingOrder(false);
+            return false;
+          }
+        }
+      } catch (err: unknown) {
+        console.error("Error inesperado en checkout:", err);
+        setOrderError("Error de conexión al procesar el pedido. Intenta de nuevo.");
         setIsSubmittingOrder(false);
         return false;
       }
     } else {
-      console.warn("Supabase no configurado: pedido no persistido.");
+      console.warn("Supabase no configurado: pedido en modo simulación.");
     }
 
     setIsSubmittingOrder(false);

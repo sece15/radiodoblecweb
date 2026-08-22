@@ -1,0 +1,27 @@
+# Radio Doble C (radiodoblec.com)
+
+> Radio Doble C es una estación de radio online independiente y plataforma de difusión cultural y comunitaria con estética punk-zine y neo-brutalista. Transmite música alternativa, rock subterráneo, punk, indie, hip hop, sesiones de DJ en vivo y programas temáticos las 24 horas del día.
+
+## Resumen de la Estación
+- **Nombre:** Radio Doble C
+- **Sitio Web Oficial:** https://radiodoblec.com
+- **Slogan:** Fucking Good Shit • Edición Estudio & Broadcampus
+- **Ubicación & Cobertura:** Transmisión global en streaming por internet (Habla hispana, Perú, Latinoamérica y el mundo).
+- **Géneros Musicales:** Rock, Punk, Lo-Fi, Hip Hop, Post-Punk, Indie Latino, Cumbia Clásica, Música Alternativa.
+- **Transmisión en Vivo (HLS / Audio Stream):** https://stream.radiodoblec.com/radio/8000/radio.mp3
+
+## Características Principales
+- **Reproductor Online en Vivo:** Streaming continuo con visualizador de audio en tiempo real y soporte MediaSession para controles en pantalla de bloqueo.
+- **Programas Oficiales:**
+  - *La Doce C*: Música underground, entrevistas y estrenos.
+  - *L-Mental*: Clásicos del rock, psicodelia y garage.
+  - *Conversatime*: Charlas comunitarias, debates y actualidad cultural.
+  - *Hits & Beats*: Electrónica, remixes de vinilo y sesiones de DJ en vivo.
+- **Tienda Oficial de Merchandising:** Poleras oversize de algodón peinado 240g, polerones con capucha, gorras bordadas y packs de stickers exclusivos con envíos nacionales e internacionales.
+- **Chat Comunitario en Vivo:** Sala de chat interactiva en tiempo real para oyentes con emojis y soporte de roles (Oyente, VIP, Moderador, Streamer, Admin).
+- **Emisiones Pasadas & Archivo Google Drive:** Biblioteca de grabaciones y programas anteriores disponibles a la carta.
+
+## Enlaces Clave
+- [Transmisión en Vivo](https://radiodoblec.com)
+- [Guía de Horarios y Programación Semanal](https://radiodoblec.com/horarios)
+- [Contacto y Postulación de DJs](mailto:radiodoblechseo@gmail.com)

@@ -45,15 +45,15 @@ export async function fetchStoreProducts(): Promise<Product[]> {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.warn("No se pudieron cargar productos de Supabase, usando catálogo base:", error.message);
-      return STORE_PRODUCTS;
+      console.warn("No se pudieron cargar productos de Supabase:", error.message);
+      return [];
     }
 
     if (!data || data.length === 0) {
-      return STORE_PRODUCTS;
+      return [];
     }
 
-    // Mapear productos de Supabase
+    // Mapear exclusivamente productos de Supabase
     const dbProducts: Product[] = (data as DbProductRow[]).map((item) => ({
       id: item.id,
       name: item.name,
@@ -71,14 +71,10 @@ export async function fetchStoreProducts(): Promise<Product[]> {
       careInstructions: item.care_instructions || undefined,
     }));
 
-    // Combinar productos de la base de datos con los base evitando duplicados de ID
-    const dbIds = new Set(dbProducts.map((p) => p.id));
-    const remainingBase = STORE_PRODUCTS.filter((p) => !dbIds.has(p.id));
-
-    return [...dbProducts, ...remainingBase];
+    return dbProducts;
   } catch (err) {
     console.error("Error al obtener productos:", err);
-    return STORE_PRODUCTS;
+    return [];
   }
 }
 

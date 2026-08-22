@@ -1,0 +1,32 @@
+# robots.txt for Radio Doble C (https://radiodoblec.com)
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# AI Crawlers & Generative Engine Optimization (GEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+# Sitemaps and AI Documentation
+Sitemap: https://radiodoblec.com/sitemap.xml
