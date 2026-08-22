@@ -24,12 +24,17 @@ import { Header } from "@/components/Header";
 import { CartDrawer } from "@/components/CartDrawer";
 import { CheckoutModal } from "@/components/CheckoutModal";
 import { Toast } from "@/components/Toast";
+import { VinylSpinModal } from "@/components/tools/VinylSpinModal";
+import { LiveDropNotification } from "@/components/common/LiveDropNotification";
+import { useGamification } from "@/hooks/useGamification";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
 export default function Home() {
   useWakeLock(true);
-  const { isPlaying, currentTrack, togglePlayPause, isAuthenticated } = useAudio();
+  const { isPlaying, currentTrack, togglePlayPause, isAuthenticated, listenedSeconds } = useAudio();
+  const { canSpinToday, isSpinning, spinVinyl, activeDrop, claimDrop, dismissDrop } = useGamification(listenedSeconds, isPlaying);
+  const [isSpinModalOpen, setSpinModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
     if (typeof window !== "undefined") {
@@ -106,6 +111,7 @@ export default function Home() {
         setFilteredStyle={setFilteredStyle}
         setCartOpen={setCartOpen}
         cartCount={cartCount}
+        onOpenSpin={() => setSpinModalOpen(true)}
       />
 
       {/* 2. BODY CONTENT SIDE-BY-SIDE GRID */}
@@ -299,6 +305,22 @@ export default function Home() {
         message={toastMessage}
         type={toastType}
         onClose={() => setToastMessage(null)}
+      />
+
+      {/* 10. DAILY VINYL SPIN MODAL */}
+      <VinylSpinModal
+        isOpen={isSpinModalOpen}
+        onClose={() => setSpinModalOpen(false)}
+        canSpinToday={canSpinToday}
+        isSpinning={isSpinning}
+        onSpin={spinVinyl}
+      />
+
+      {/* 11. LIVE STREAMING C-DROP TOAST */}
+      <LiveDropNotification
+        drop={activeDrop}
+        onClaim={claimDrop}
+        onDismiss={dismissDrop}
       />
     </main>
   );

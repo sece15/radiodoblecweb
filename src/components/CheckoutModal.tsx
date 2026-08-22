@@ -1,4 +1,5 @@
-import { ArrowLeft, Copy, Check, Upload, Megaphone } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Copy, Check, Upload, Tag, Megaphone } from "lucide-react";
 import { CartItem } from "@/hooks/useCart";
 import { MP_ALIAS, MP_CVU } from "@/constants";
 import { useCheckout, CheckoutStep } from "@/hooks/useCheckout";
@@ -40,9 +41,41 @@ export const CheckoutModal = ({
     submitOrder,
   } = useCheckout(step as CheckoutStep, setCheckoutStep as (step: CheckoutStep) => void);
 
+  // Discount Coupons
+  const [couponCode, setCouponCode] = useState("");
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [isFreeShipping, setIsFreeShipping] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
+
   const subtotal = cart.reduce((acc, item) => acc + parseFloat(item.product.price.replace("$", "")) * item.quantity, 0);
-  const totalAmount = subtotal + 5;
+  const discountAmount = (subtotal * discountPercent) / 100;
+  const shippingCost = isFreeShipping ? 0 : 5;
+  const totalAmount = Math.max(0, subtotal - discountAmount + shippingCost);
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  const handleApplyCoupon = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const clean = couponCode.trim().toUpperCase();
+    if (clean === "DOBLEC2026") {
+      setDiscountPercent(10);
+      setIsFreeShipping(false);
+      setCouponMessage("¡Cupón DOBLEC2026 aplicado! 10% OFF 🔥");
+    } else if (clean === "FUCKINGGOODSHIT") {
+      setDiscountPercent(15);
+      setIsFreeShipping(false);
+      setCouponMessage("¡Cupón FUCKINGGOODSHIT aplicado! 15% OFF ⚡");
+    } else if (clean === "VIPDOBLEC") {
+      setDiscountPercent(20);
+      setIsFreeShipping(false);
+      setCouponMessage("¡Cupón VIP aplicado! 20% OFF ⭐");
+    } else if (clean === "ENVIOFREE") {
+      setDiscountPercent(0);
+      setIsFreeShipping(true);
+      setCouponMessage("¡Cupón ENVIOFREE aplicado! Envío Gratis 🚚");
+    } else {
+      setCouponMessage("Cupón inválido. Prueba DOBLEC2026 o ENVIOFREE");
+    }
+  };
 
   const handleCopyAlias = () => {
     if (MP_ALIAS) navigator.clipboard.writeText(MP_ALIAS);
@@ -225,8 +258,51 @@ export const CheckoutModal = ({
               />
             </div>
 
+            {/* Cupón de descuento */}
+            <div style={{ border: "2px dashed var(--primary)", padding: "8px", backgroundColor: "white" }}>
+              <label style={{ fontSize: "0.65rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+                <Tag size={12} /> ¿TIENES UN CUPÓN DE DESCUENTO?
+              </label>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  placeholder="Ej: DOBLEC2026"
+                  style={{
+                    flex: 1,
+                    padding: "6px 8px",
+                    border: "2px solid var(--primary)",
+                    fontSize: "0.75rem",
+                    fontWeight: "bold",
+                    textTransform: "uppercase",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  className="neo-button"
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "0.68rem",
+                    fontWeight: 900,
+                    backgroundColor: "var(--primary-container)",
+                    border: "2px solid var(--primary)",
+                  }}
+                >
+                  APLICAR
+                </button>
+              </div>
+              {couponMessage && (
+                <p style={{ fontSize: "0.6rem", fontWeight: "bold", margin: "4px 0 0 0", color: discountPercent > 0 || isFreeShipping ? "#008800" : "#BA1A1A" }}>
+                  {couponMessage}
+                </p>
+              )}
+            </div>
+
             {/* Order summary mini block */}
-            <div style={{ border: "2.5px solid var(--primary)", padding: "10px", marginTop: "8px", backgroundColor: "var(--surface-container)" }}>
+            <div style={{ border: "2.5px solid var(--primary)", padding: "10px", marginTop: "4px", backgroundColor: "var(--surface-container)" }}>
               <span style={{ fontSize: "0.65rem", fontWeight: 900, display: "block", borderBottom: "1.5px solid var(--primary)", paddingBottom: "2px", marginBottom: "4px" }}>
                 RESUMEN DE COMPRA
               </span>
@@ -236,9 +312,15 @@ export const CheckoutModal = ({
                   ${subtotal.toFixed(2)}
                 </span>
               </div>
+              {discountPercent > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", fontWeight: "bold", color: "#008800" }}>
+                  <span>DESCUENTO ({discountPercent}%)</span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", fontWeight: "bold" }}>
                 <span>COSTO DE ENVÍO</span>
-                <span>$5.00</span>
+                <span>{isFreeShipping ? "GRATIS" : "$5.00"}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: 900, borderTop: "1.5px dashed var(--primary)", paddingTop: "4px", marginTop: "4px" }}>
                 <span>TOTAL A PAGAR</span>

@@ -13,6 +13,8 @@ import { SavedStationsSection } from "./profile/SavedStationsSection";
 import { VisualThemesSection } from "./profile/VisualThemesSection";
 import { AdminRoleManager } from "./profile/AdminRoleManager";
 import { EditProfileModal } from "./profile/EditProfileModal";
+import { BadgesAlbumSection } from "./profile/BadgesAlbumSection";
+import { useGamification } from "@/hooks/useGamification";
 
 interface ProfileViewProps {
   onNavigateToPlayer: () => void;
@@ -37,7 +39,10 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
     togglePlayPause,
     liveStatusText,
     listenedSeconds,
+    punkPoints,
   } = useAudio();
+
+  const { cCoins, streakDays } = useGamification(listenedSeconds, isPlaying);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
@@ -168,6 +173,16 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
         totalFavoritesCount={favoriteSongs.length + savedStations.length}
         favoriteSongsCount={favoriteSongs.length}
         savedStationsCount={savedStations.length}
+        cCoins={cCoins || punkPoints}
+        streakDays={streakDays}
+      />
+
+      {/* 2.1 BADGES & INSIGNIAS ALBUM */}
+      <BadgesAlbumSection
+        listenedSeconds={listenedSeconds}
+        streakDays={streakDays}
+        favoriteSongsCount={favoriteSongs.length}
+        cCoins={cCoins || punkPoints}
       />
 
       {/* 3. STREAMER / ADMIN NOTICE */}

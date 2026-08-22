@@ -96,6 +96,20 @@ export interface AudioStoreState {
   deleteMessage: (messageId: number) => void;
   clearChat: () => void;
 
+  // Gamificación: Puntos C (C-Puntos)
+  puntosC: number;
+  punkPoints: number;
+  addPuntosC: (pts: number) => void;
+  consumePuntosC: (pts: number) => boolean;
+  addPunkPoints: (pts: number) => void;
+  consumePunkPoints: (pts: number) => boolean;
+
+  // Saludos de Voz en Cabina
+  pendingVoiceGreetings: import("@/types").VoiceGreeting[];
+  submitVoiceGreeting: (audioUrl: string, durationSeconds: number, transcript?: string) => import("@/types").VoiceGreeting | void;
+  approveVoiceGreeting: (greetingId: string) => void;
+  rejectVoiceGreeting: (greetingId: string) => void;
+
   // Autenticación y Transmisión en Vivo
   isAuthenticated: boolean;
   signOut: () => void;
@@ -113,6 +127,16 @@ const noop = () => {};
 
 export const initialStoreState: AudioStoreState = {
   isPlaying: false,
+  puntosC: 2,
+  punkPoints: 2,
+  addPuntosC: noop,
+  consumePuntosC: () => true,
+  addPunkPoints: noop,
+  consumePunkPoints: () => true,
+  pendingVoiceGreetings: [],
+  submitVoiceGreeting: noop,
+  approveVoiceGreeting: noop,
+  rejectVoiceGreeting: noop,
   currentTrack: {
     title: "RADIO DOBLE C",
     album: "RADIO DOBLE C ONLINE",

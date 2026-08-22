@@ -81,6 +81,18 @@ export interface UserProfile {
   followersCount: string;
 }
 
+export interface VoiceGreeting {
+  id: string;
+  senderName: string;
+  senderUid?: string | null;
+  senderRole?: string;
+  audioUrl: string;
+  durationSeconds: number;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  transcript?: string;
+}
+
 export interface ChatMessage {
   id: number;
   senderName: string;
@@ -90,6 +102,7 @@ export interface ChatMessage {
   stationId: string;
   createdAt: string;
   isDeleted: boolean;
+  voiceAudioUrl?: string;
 }
 
 export interface Product {

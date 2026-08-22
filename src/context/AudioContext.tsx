@@ -70,6 +70,19 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   // Tiempo real sintonizado en segundos
   const [listenedSeconds, setListenedSeconds] = useLocalStorage<number>("doblec_listened_seconds", 4800);
 
+  // Gamificación: Puntos C (C-Puntos) y Recompensa Diaria
+  const [puntosC, setPuntosC] = useLocalStorage<number>("doblec_puntos_c", 2);
+  const [lastCheckInDate, setLastCheckInDate] = useLocalStorage<string>("doblec_last_checkin", "");
+
+  // Recompensa diaria: +1 Punto C al sintonizar la radio cada día
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    if (lastCheckInDate !== today) {
+      setLastCheckInDate(today);
+      setPuntosC((prev) => (prev || 0) + 1);
+    }
+  }, [lastCheckInDate, setLastCheckInDate, setPuntosC]);
+
   // Configuración de Tema Visual
   const [activeTheme, setActiveTheme] = useLocalStorage<string>("selected_theme", "PUNK_NEON");
 
@@ -117,7 +130,14 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const progressInterval = setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) {
-        setListenedSeconds((prev) => (prev || 0) + 1);
+        setListenedSeconds((prev) => {
+          const nextSecs = (prev || 0) + 1;
+          // Cada 30 minutos (1800s) en sintonía continua -> +1 Punto C
+          if (nextSecs % 1800 === 0) {
+            setPuntosC((pts) => (pts || 0) + 1);
+          }
+          return nextSecs;
+        });
 
         if (currentTrack.isLive) {
           setTotalTime((prev) => {
@@ -607,6 +627,22 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile((prev) => ({ ...prev, role: newRole }));
   }, [setUserProfile]);
 
+  const addPuntosC = useCallback((pts: number) => {
+    setPuntosC((prev) => (prev || 0) + pts);
+  }, [setPuntosC]);
+
+  const consumePuntosC = useCallback((pts: number) => {
+    const normRole = (userProfile.role || "").toUpperCase();
+    if (normRole.includes("VIP") || normRole.includes("ADMIN") || normRole.includes("STREAMER")) {
+      return true; // VIPs y Staff tienen pases ilimitados
+    }
+    if ((puntosC || 0) >= pts) {
+      setPuntosC((prev) => Math.max(0, (prev || 0) - pts));
+      return true;
+    }
+    return false;
+  }, [puntosC, setPuntosC, userProfile.role]);
+
   const selectTheme = useCallback((themeName: string) => {
     setActiveTheme(themeName);
   }, [setActiveTheme]);
@@ -727,6 +763,16 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       unbanUser: chatSocket.unbanUser,
       deleteMessage: chatSocket.deleteMessage,
       clearChat: chatSocket.clearChat,
+      puntosC,
+      punkPoints: puntosC,
+      addPuntosC,
+      consumePuntosC,
+      addPunkPoints: addPuntosC,
+      consumePunkPoints: consumePuntosC,
+      pendingVoiceGreetings: chatSocket.pendingVoiceGreetings,
+      submitVoiceGreeting: chatSocket.submitVoiceGreeting,
+      approveVoiceGreeting: chatSocket.approveVoiceGreeting,
+      rejectVoiceGreeting: chatSocket.rejectVoiceGreeting,
       isAuthenticated,
       signOut,
       signInWithGoogle,
@@ -796,6 +842,13 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     chatSocket.unbanUser,
     chatSocket.deleteMessage,
     chatSocket.clearChat,
+    puntosC,
+    addPuntosC,
+    consumePuntosC,
+    chatSocket.pendingVoiceGreetings,
+    chatSocket.submitVoiceGreeting,
+    chatSocket.approveVoiceGreeting,
+    chatSocket.rejectVoiceGreeting,
     isAuthenticated,
     signOut,
     signInWithGoogle,

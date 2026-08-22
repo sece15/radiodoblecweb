@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
-import { ChatMessage, SocketChatMessage, SocketChatConfig, UserProfile } from "@/types";
+import { ChatMessage, SocketChatMessage, SocketChatConfig, UserProfile, VoiceGreeting } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { DEFAULT_BANNED_WORDS } from "@/constants";
 
@@ -21,6 +21,7 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
   const [isLinksAllowed, setIsLinksAllowed] = useState(true);
   const [isCurrentUserBanned, setIsCurrentUserBanned] = useState(false);
   const [isModPanelVisible, setModPanelVisible] = useState(false);
+  const [pendingVoiceGreetings, setPendingVoiceGreetings] = useState<VoiceGreeting[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
   const userProfileRef = useRef<UserProfile>(userProfile);
@@ -205,6 +206,52 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
     }
   };
 
+  // Submit voice greeting for cabin moderation
+  const submitVoiceGreeting = (audioUrl: string, durationSeconds: number, transcript?: string) => {
+    const currentProfile = userProfileRef.current;
+    const newGreeting: VoiceGreeting = {
+      id: `vg_${Date.now()}`,
+      senderName: currentProfile.name || "Oyente Anónimo",
+      senderRole: currentProfile.role || "OYENTE",
+      audioUrl,
+      durationSeconds,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      transcript,
+    };
+    setPendingVoiceGreetings((prev) => [newGreeting, ...prev]);
+    return newGreeting;
+  };
+
+  // Moderator approves greeting to broadcast in chat/live
+  const approveVoiceGreeting = (greetingId: string) => {
+    const greeting = pendingVoiceGreetings.find((g) => g.id === greetingId);
+    if (!greeting) return;
+
+    // Send to chat as verified voice message
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        senderName: greeting.senderName,
+        senderRole: greeting.senderRole || "OYENTE",
+        messageText: `🎙️ [SALUDO AL AIRE] "${greeting.transcript || "¡Un saludo a toda la comunidad de Radio Doble C!"}"`,
+        createdAt: new Date().toISOString(),
+        stationId: "general",
+        isDeleted: false,
+        voiceAudioUrl: greeting.audioUrl,
+      },
+    ]);
+
+    // Remove from pending
+    setPendingVoiceGreetings((prev) => prev.filter((g) => g.id !== greetingId));
+  };
+
+  // Moderator rejects greeting
+  const rejectVoiceGreeting = (greetingId: string) => {
+    setPendingVoiceGreetings((prev) => prev.filter((g) => g.id !== greetingId));
+  };
+
   return {
     isLiveChatModeActive,
     setLiveChatModeActive,
@@ -218,6 +265,10 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
     isCurrentUserBanned,
     isModPanelVisible,
     setModPanelVisible,
+    pendingVoiceGreetings,
+    submitVoiceGreeting,
+    approveVoiceGreeting,
+    rejectVoiceGreeting,
     connectChatSocket,
     disconnectChatSocket,
     toggleSlowMode,

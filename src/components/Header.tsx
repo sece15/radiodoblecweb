@@ -3,10 +3,11 @@
 import { CSSProperties, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, User, ShoppingBag, Newspaper } from "lucide-react";
+import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, ShoppingBag, Sliders, User, Newspaper } from "lucide-react";
 import { RadioLogo } from "@/components/RadioLogo";
 import { HeaderNewsTicker } from "@/components/HeaderNewsTicker";
 import { NewsModal } from "@/components/NewsModal";
+import { StudioToolsModal } from "@/components/tools/StudioToolsModal";
 import { useAudio } from "@/hooks/useAudio";
 import { useNews } from "@/hooks/useNews";
 import { isVip } from "@/lib/permissions";
@@ -20,6 +21,7 @@ interface HeaderProps {
   setFilteredStyle: (style: string | null) => void;
   setCartOpen: (open: boolean) => void;
   cartCount: number;
+  onOpenSpin?: () => void;
 }
 
 export const Header = ({
@@ -29,10 +31,12 @@ export const Header = ({
   setFilteredStyle,
   setCartOpen,
   cartCount,
+  onOpenSpin,
 }: HeaderProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isStudioOpen, setStudioOpen] = useState(false);
   const { userProfile } = useAudio();
 
   // News hook integration
@@ -109,28 +113,78 @@ export const Header = ({
             position: "relative",
           }}
         >
-        {/* 1. LEFT SIDE: BUSCAR BUTTON */}
-        <button
-          onClick={() => setSearchActive(true)}
-          className="neo-button fun-hover-wobble"
-          style={{
-            padding: "7px 14px",
-            fontSize: "0.75rem",
-            fontWeight: 900,
-            backgroundColor: "var(--card-bg)",
-            boxShadow: "3px 3px 0px var(--primary)",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            cursor: "pointer",
-            transform: "rotate(-1.5deg)",
-            "--rest-rot": "-1.5deg",
-          } as CSSProperties}
-          title="Buscar estaciones, canciones y programas"
-        >
-          <Search size={14} />
-          <span>BUSCAR</span>
-        </button>
+        {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <button
+            onClick={() => setSearchActive(true)}
+            className="neo-button fun-hover-wobble"
+            style={{
+              padding: "7px 14px",
+              fontSize: "0.75rem",
+              fontWeight: 900,
+              backgroundColor: "var(--card-bg)",
+              boxShadow: "3px 3px 0px var(--primary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              cursor: "pointer",
+              transform: "rotate(-1.5deg)",
+              "--rest-rot": "-1.5deg",
+            } as CSSProperties}
+            title="Buscar estaciones, canciones y programas"
+          >
+            <Search size={14} />
+            <span>BUSCAR</span>
+          </button>
+
+          <button
+            onClick={() => setStudioOpen(true)}
+            className="neo-button fun-hover-wobble desktop-only-flex"
+            style={{
+              padding: "7px 12px",
+              fontSize: "0.72rem",
+              fontWeight: 900,
+              backgroundColor: "var(--primary-container)",
+              color: "var(--primary)",
+              boxShadow: "2.5px 2.5px 0px var(--primary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              cursor: "pointer",
+              transform: "rotate(1deg)",
+              "--rest-rot": "1deg",
+            } as CSSProperties}
+            title="Herramientas: Temporizador de apagado, Soundboard y Saludos"
+          >
+            <Sliders size={13} />
+            <span>🎛️ ESTUDIO</span>
+          </button>
+
+          {onOpenSpin && (
+            <button
+              onClick={onOpenSpin}
+              className="neo-button fun-hover-wobble desktop-only-flex"
+              style={{
+                padding: "7px 12px",
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                backgroundColor: "#CCFF00",
+                color: "#111111",
+                boxShadow: "2.5px 2.5px 0px var(--primary)",
+                border: "2px solid var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                cursor: "pointer",
+                transform: "rotate(-1deg)",
+                "--rest-rot": "-1deg",
+              } as CSSProperties}
+              title="Gira la Tornamesa Doble C gratis cada día para ganar premios y C-Coins"
+            >
+              <span>🎰 TORNAMESA C</span>
+            </button>
+          )}
+        </div>
 
         {/* 2. CENTER: LOGO (CENTERED & CLEAN) */}
         <div
@@ -541,6 +595,43 @@ export const Header = ({
               ● EN VIVO
             </span>
           </button>
+          {/* 7. ESTUDIO & FX BUTTON */}
+          <button
+            onClick={() => {
+              setIsMenuOpen(false);
+              setStudioOpen(true);
+            }}
+            className="mobile-nav-link fun-hover-wobble"
+            style={{
+              backgroundColor: "var(--primary-container)",
+              color: "var(--primary)",
+              border: "2.5px solid var(--primary)",
+              boxShadow: "3.5px 3.5px 0px var(--primary)",
+              transform: "rotate(1deg)",
+              "--rest-rot": "1deg",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "9px 14px",
+            } as CSSProperties}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Sliders size={16} />
+              <span>ESTUDIO &amp; FX (APAGADO / SOUNDS)</span>
+            </div>
+            <span
+              style={{
+                backgroundColor: "var(--primary)",
+                color: "var(--on-primary)",
+                fontSize: "0.55rem",
+                fontWeight: 900,
+                padding: "2px 6px",
+                letterSpacing: "0.8px",
+              }}
+            >
+              ⚡ HERRAMIENTAS
+            </span>
+          </button>
         </div>
 
         {/* Small radio sticker badge at bottom */}
@@ -580,6 +671,12 @@ export const Header = ({
         isLoading={isNewsLoading}
         refreshNews={refreshNews}
         lastUpdated={lastUpdated}
+      />
+
+      {/* 7. MODAL DE ESTUDIO & FX (SLEEP TIMER, SOUNDBOARD, SALUDOS) */}
+      <StudioToolsModal
+        isOpen={isStudioOpen}
+        onClose={() => setStudioOpen(false)}
       />
     </>
   );

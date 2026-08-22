@@ -1,12 +1,15 @@
 "use client";
 
-import { Clock, Star } from "lucide-react";
+import { Clock, Star, Flame } from "lucide-react";
+import { LISTENER_LEVELS } from "@/hooks/useGamification";
 
 interface ProfileStatsCardsProps {
   listenedSeconds: number;
   totalFavoritesCount: number;
   favoriteSongsCount: number;
   savedStationsCount: number;
+  cCoins?: number;
+  streakDays?: number;
 }
 
 export const ProfileStatsCards = ({
@@ -14,10 +17,20 @@ export const ProfileStatsCards = ({
   totalFavoritesCount,
   favoriteSongsCount,
   savedStationsCount,
+  cCoins = 2,
+  streakDays = 1,
 }: ProfileStatsCardsProps) => {
   const totalSeconds = listenedSeconds || 0;
   const hoursListened = Math.floor(totalSeconds / 3600);
   const minutesListened = Math.floor((totalSeconds % 3600) / 60);
+
+  // Compute Level
+  let currentLevel = LISTENER_LEVELS[0];
+  for (const lvl of LISTENER_LEVELS) {
+    if (hoursListened >= lvl.minHours) {
+      currentLevel = lvl;
+    }
+  }
 
   return (
     <div
@@ -31,20 +44,20 @@ export const ProfileStatsCards = ({
         justifyContent: "center",
       }}
     >
-      {/* Real Listening Time Card */}
+      {/* 1. Real Listening Time & Rank Card */}
       <div
         className="neo-card fun-hover-wobble"
         style={{
-          flex: "1 1 240px",
+          flex: "1 1 220px",
           padding: "16px",
-          transform: "rotate(1deg)",
+          transform: "rotate(0.5deg)",
           boxShadow: "5px 5px 0px var(--primary)",
           backgroundColor: "var(--surface-container)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase" }}>
-            TIEMPO EN SINTONÍA REAL
+            SINTONÍA & RANGO C
           </span>
           <Clock size={18} style={{ color: "var(--primary)" }} />
         </div>
@@ -57,41 +70,93 @@ export const ProfileStatsCards = ({
 
         <div
           style={{
-            width: "100%",
-            height: "12px",
-            border: "2px solid var(--primary)",
-            backgroundColor: "white",
-            padding: "1px",
+            backgroundColor: "var(--primary)",
+            color: "white",
+            padding: "3px 8px",
+            fontSize: "0.62rem",
+            fontWeight: 900,
+            width: "fit-content",
+            marginBottom: "6px",
           }}
         >
-          <div
-            style={{
-              width: `${Math.min(100, Math.max(5, (totalSeconds / 36000) * 100))}%`,
-              height: "100%",
-              backgroundColor: "var(--primary-container)",
-              transition: "width 0.5s ease",
-            }}
-          />
+          {currentLevel.icon} {currentLevel.title.toUpperCase()}
         </div>
-        <span style={{ fontSize: "0.58rem", opacity: 0.7, marginTop: "4px", display: "block" }}>
-          ⏱️ Calculado automáticamente mientras escuchas la radio.
+
+        <span style={{ fontSize: "0.58rem", opacity: 0.7, display: "block" }}>
+          ⏱️ +1 C-Coin cada 30 min de sintonía.
         </span>
       </div>
 
-      {/* Real Favorites Stats Card */}
+      {/* 2. C-Coins & Daily Streak Card (SUPER DESTACADO) */}
       <div
         className="neo-card fun-hover-wobble"
         style={{
           flex: "1 1 240px",
           padding: "16px",
-          transform: "rotate(-1deg)",
+          transform: "rotate(-0.5deg)",
+          boxShadow: "6px 6px 0px var(--primary)",
+          backgroundColor: "#CCFF00",
+          color: "#111111",
+          border: "3px solid var(--primary)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 900, textTransform: "uppercase", color: "#111" }}>
+            BILLETERA C-COINS 🪙
+          </span>
+          <Flame size={20} style={{ color: "#BA1A1A", fill: "#BA1A1A" }} />
+        </div>
+
+        <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "8px 0" }}>
+          <span style={{ fontSize: "2.4rem", fontWeight: 900, fontFamily: "Space Grotesk, sans-serif", color: "#111" }}>
+            {cCoins}
+          </span>
+          <span style={{ fontSize: "0.9rem", fontWeight: 900, color: "#111" }}>
+            {cCoins === 1 ? "C-COIN" : "C-COINS"}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          <div
+            style={{
+              backgroundColor: "white",
+              color: "#111",
+              border: "1.5px solid var(--primary)",
+              padding: "2px 8px",
+              fontSize: "0.62rem",
+              fontWeight: 900,
+            }}
+          >
+            🔥 RACHA: {streakDays} {streakDays === 1 ? "DÍA" : "DÍAS"}
+          </div>
+          <div
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "white",
+              padding: "2px 8px",
+              fontSize: "0.62rem",
+              fontWeight: 900,
+            }}
+          >
+            CANJEABLE POR MERCH & SALUDOS
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Real Favorites Stats Card */}
+      <div
+        className="neo-card fun-hover-wobble"
+        style={{
+          flex: "1 1 220px",
+          padding: "16px",
+          transform: "rotate(0.5deg)",
           boxShadow: "5px 5px 0px var(--primary)",
           backgroundColor: "var(--surface-container)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase" }}>
-            COLECCIÓN DE FAVORITOS
+            FAVORITOS
           </span>
           <Star size={18} style={{ color: "#FFCC00", fill: "#FFCC00" }} />
         </div>
@@ -110,7 +175,7 @@ export const ProfileStatsCards = ({
             backgroundColor: "var(--primary-container)",
             border: "1.5px solid var(--primary)",
             padding: "3px 8px",
-            fontSize: "0.65rem",
+            fontSize: "0.62rem",
             fontWeight: 900,
             width: "fit-content",
           }}

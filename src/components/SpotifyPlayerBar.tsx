@@ -1,6 +1,7 @@
-import { useRef, MouseEvent, TouchEvent } from "react";
+import { useRef, MouseEvent, TouchEvent, useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward, Sliders } from "lucide-react";
+import { StudioToolsModal } from "@/components/tools/StudioToolsModal";
 
 interface SpotifyPlayerBarProps {
   isChatOpen: boolean;
@@ -30,6 +31,7 @@ export const SpotifyPlayerBar = ({
     changeVolume,
   } = useAudio();
 
+  const [isStudioModalOpen, setIsStudioModalOpen] = useState(false);
   const progressTrackRef = useRef<HTMLDivElement>(null);
 
   // Format time MM:SS or negative timeshift offset
@@ -352,6 +354,25 @@ export const SpotifyPlayerBar = ({
           }}
         />
 
+        {/* Studio FX & Tools button */}
+        <button
+          onClick={() => setIsStudioModalOpen(true)}
+          className="neo-button"
+          style={{
+            padding: "6px 10px",
+            backgroundColor: "var(--primary-container)",
+            color: "var(--primary)",
+            boxShadow: "2.5px 2.5px 0px var(--primary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+          title="Herramientas de Estudio (Apagado automático, Soundboard y Saludos)"
+        >
+          <Sliders size={16} />
+        </button>
+
         {/* Chat toggle button */}
         <button
           onClick={onToggleChat}
@@ -366,10 +387,17 @@ export const SpotifyPlayerBar = ({
             justifyContent: "center",
             cursor: "pointer",
           }}
+          title="Abrir Chat en Vivo"
         >
           <MessageSquare size={16} />
         </button>
       </div>
+
+      {/* Studio & Tools Modal */}
+      <StudioToolsModal
+        isOpen={isStudioModalOpen}
+        onClose={() => setIsStudioModalOpen(false)}
+      />
     </div>
   );
 };
