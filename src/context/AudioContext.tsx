@@ -72,9 +72,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   // Tiempo real sintonizado en segundos
   const [listenedSeconds, setListenedSeconds] = useLocalStorage<number>("doblec_listened_seconds", 4800);
 
-  // Gamificación: Puntos C (C-Puntos) y Recompensa Diaria
+  // Gamificación: Puntos C (C-Puntos) sincronizados con el servidor
   const [puntosC, setPuntosC] = useLocalStorage<number>("doblec_puntos_c", 2);
-  const [lastCheckInDate, setLastCheckInDate] = useLocalStorage<string>("doblec_last_checkin", "");
 
   // Rockola VIP: Cola de canciones en espera y canción activa
   const [vipQueue, setVipQueue] = useState<VipSongRequest[]>([]);
@@ -85,20 +84,33 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     vipQueueRef.current = vipQueue;
   }, [vipQueue]);
 
-  // Recompensa diaria: +1 Punto C al sintonizar la radio cada día
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    if (lastCheckInDate !== today) {
-      setLastCheckInDate(today);
-      setPuntosC((prev) => (prev || 0) + 1);
-    }
-  }, [lastCheckInDate, setLastCheckInDate, setPuntosC]);
+  // Estados de Autenticación Supabase
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Estados Globales de Auspiciadores & Pedidos Modal
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
+  const [activeSponsorSlug, setActiveSponsorSlug] = useState<string>("ponches");
 
   // Configuración de Tema Visual
   const [activeTheme, setActiveTheme] = useLocalStorage<string>("selected_theme", "PUNK_NEON");
 
-  // Estados de Autenticación Supabase
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Recompensa diaria protegida: Reclamo único por día validado en el servidor
+  useEffect(() => {
+    const claimDailyReward = async () => {
+      if (supabase && isAuthenticated) {
+        try {
+          const { data: claimRes } = await supabase.rpc("claim_daily_coin");
+          if (claimRes?.coins !== undefined) {
+            setPuntosC(claimRes.coins);
+          }
+        } catch (err) {
+          console.warn("[ANTI-CHEAT] Error al validar recompensa diaria:", err);
+        }
+      }
+    };
+
+    claimDailyReward();
+  }, [isAuthenticated, setPuntosC]);
 
   // Integración de Custom Hooks
   const {
@@ -110,8 +122,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   } = useAzuraCastMetadata({ currentTrack, setCurrentTrack });
 
   const chatSocket = useChatSocket({ userProfile });
-
-
 
   // 1. Inicializar elemento de Audio al montar el componente
   useEffect(() => {
@@ -137,18 +147,11 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTheme]);
 
-  // Simulador de avance de reproducción y contador de tiempo real
+  // Contador de tiempo de sintonía real (Métricas de escucha limpias, sin exploit de monedas)
   useEffect(() => {
     const progressInterval = setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) {
-        setListenedSeconds((prev) => {
-          const nextSecs = (prev || 0) + 1;
-          // Cada 30 minutos (1800s) en sintonía continua -> +1 Punto C
-          if (nextSecs % 1800 === 0) {
-            setPuntosC((pts) => (pts || 0) + 1);
-          }
-          return nextSecs;
-        });
+        setListenedSeconds((prev) => (prev || 0) + 1);
 
         if (currentTrack.isLive) {
           setTotalTime((prev) => {
@@ -215,7 +218,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           try {
             const { data, error } = await supabase
               .from("profiles")
-              .select("role, username, full_name, avatar_url")
+              .select("role, username, full_name, avatar_url, puntos_c")
               .eq("id", session.user.id)
               .single();
 
@@ -223,6 +226,9 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
               if (data.role) dbRole = data.role;
               if (data.full_name || data.username) dbName = data.full_name || data.username;
               if (data.avatar_url) dbAvatar = data.avatar_url;
+              if (data.puntos_c !== undefined && data.puntos_c !== null) {
+                setPuntosC(data.puntos_c);
+              }
             }
           } catch (e) {
             console.error("Error reading profile data from Supabase:", e);
@@ -232,6 +238,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile((prev) => {
           const updated = {
             ...prev,
+            id: session.user.id,
             name: dbName.toUpperCase(),
             avatarUrl: dbAvatar,
             role: dbRole,
@@ -740,15 +747,24 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   const consumePuntosC = useCallback((pts: number) => {
     const normRole = (userProfile.role || "").toUpperCase();
-    if (normRole.includes("VIP") || normRole.includes("ADMIN") || normRole.includes("STREAMER")) {
-      return true; // VIPs y Staff tienen pases ilimitados
+    if (normRole.includes("ADMIN")) {
+      return true; // Administradores tienen acceso ilimitado
     }
     if ((puntosC || 0) >= pts) {
       setPuntosC((prev) => Math.max(0, (prev || 0) - pts));
+      if (supabase && isAuthenticated) {
+        Promise.resolve(supabase.rpc("consume_c_coins", { pts }))
+          .then(({ data: res }) => {
+            if (res && typeof res === "object" && "coins" in res && typeof (res as Record<string, unknown>).coins === "number") {
+              setPuntosC((res as Record<string, unknown>).coins as number);
+            }
+          })
+          .catch((err) => console.warn("[ANTI-CHEAT] Error al sincronizar consumo en BD:", err));
+      }
       return true;
     }
     return false;
-  }, [puntosC, setPuntosC, userProfile.role]);
+  }, [puntosC, setPuntosC, userProfile.role, isAuthenticated]);
 
   const selectTheme = useCallback((themeName: string) => {
     setActiveTheme(themeName);
@@ -890,6 +906,10 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       listenersCount,
       activeTheme,
       selectTheme,
+      isSponsorModalOpen,
+      setIsSponsorModalOpen,
+      activeSponsorSlug,
+      setActiveSponsorSlug,
     });
   }, [
     isPlaying,
@@ -970,6 +990,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     listenersCount,
     activeTheme,
     selectTheme,
+    isSponsorModalOpen,
+    activeSponsorSlug,
   ]);
 
   return <>{children}</>;

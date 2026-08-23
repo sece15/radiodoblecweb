@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { Send, User, Ban, X, Mic, Square } from "lucide-react";
+import { Send, User, Ban, X, Mic, Square, Coffee, Pizza } from "lucide-react";
 import { EmojiPicker } from "./EmojiPicker";
+import { fetchSponsorBusinesses, INITIAL_SPONSORS, SponsorBusiness } from "@/services/sponsorService";
 
 interface ChatSidebarProps {
   onClose: () => void;
@@ -66,6 +67,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     submitVoiceGreeting,
     approveVoiceGreeting,
     rejectVoiceGreeting,
+    setIsSponsorModalOpen,
+    setActiveSponsorSlug,
   } = useAudio();
 
   const [typedMessage, setTypedMessage] = useState("");
@@ -91,11 +94,41 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     }
   }, [chatMessages]);
 
+  const [isSponsorAccordionOpen, setIsSponsorAccordionOpen] = useState(false);
+  const [sponsorsList, setSponsorsList] = useState<SponsorBusiness[]>(INITIAL_SPONSORS);
+
+  useEffect(() => {
+    fetchSponsorBusinesses().then((list) => {
+      if (list && list.length > 0) {
+        setSponsorsList(list);
+      }
+    });
+  }, []);
+
   const handleSend = () => {
-    if (typedMessage.trim()) {
-      sendChatMessage(typedMessage);
+    const trimmed = typedMessage.trim();
+    if (!trimmed) return;
+
+    const lower = trimmed.toLowerCase();
+    // Interceptar comandos de pedidos y auspiciadores
+    if (
+      lower.startsWith("/pedir") ||
+      lower.startsWith("/ponche") ||
+      lower.startsWith("/auspicio") ||
+      lower.startsWith("/pizza")
+    ) {
+      if (lower.includes("pizza")) {
+        setActiveSponsorSlug("pizzas");
+      } else {
+        setActiveSponsorSlug("ponches");
+      }
+      setIsSponsorModalOpen(true);
       setTypedMessage("");
+      return;
     }
+
+    sendChatMessage(trimmed);
+    setTypedMessage("");
   };
 
   // Voice recording handlers (with Security Phase 1: Points & Speech Filter)
@@ -213,7 +246,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     if (speechRecognitionRef.current) {
       try {
         speechRecognitionRef.current.stop();
-      } catch {}
+      } catch { }
       speechRecognitionRef.current = null;
     }
     if (recordingTimerRef.current) {
@@ -230,7 +263,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     if (speechRecognitionRef.current) {
       try {
         speechRecognitionRef.current.stop();
-      } catch {}
+      } catch { }
       speechRecognitionRef.current = null;
     }
     if (recordingTimerRef.current) {
@@ -269,7 +302,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     }, 4500);
   };
 
-  const handleKeyPress = (e: KeyboardEvent) => {
+  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -689,8 +722,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                       backgroundColor: isMyMsg
                         ? "#E8FCDF"
                         : isBanned || isDeleted
-                        ? "#FFFFEEEE"
-                        : "#F7F7F7",
+                          ? "#FFFFEEEE"
+                          : "#F7F7F7",
                     }}
                   >
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -775,8 +808,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                         {isBanned
                           ? "⚠️ [USUARIO BANEADO DEL CHAT]"
                           : isDeleted
-                          ? "🗑️ [Mensaje borrado por moderación]"
-                          : msg.messageText}
+                            ? "🗑️ [Mensaje borrado por moderación]"
+                            : msg.messageText}
                       </p>
 
                       {/* Playable Voice Greeting Audio Bubble */}
@@ -832,297 +865,390 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
           zIndex: 5,
         }}
       >
-          {!isAuthenticated ? (
-            <button
-              onClick={signInWithGoogle}
-              className="neo-button fun-hover-wobble"
-              style={{
-                width: "100%",
-                backgroundColor: "var(--primary-container)",
-                padding: "10px",
-                textAlign: "center",
-                color: "var(--primary)",
-                fontWeight: 900,
-                fontSize: "0.75rem",
-                boxShadow: "3px 3px 0px var(--primary)",
-                cursor: "pointer",
-                textTransform: "uppercase",
-              }}
-            >
-              🔑 INICIAR SESIÓN CON GOOGLE PARA CHATEAR
-            </button>
-          ) : isCurrentUserBanned ? (
-            <div
-              style={{
-                width: "100%",
-                backgroundColor: "#BA1A1A",
-                padding: "8px",
-                textAlign: "center",
-                color: "white",
-                fontWeight: 900,
-                fontSize: "0.7rem",
-                border: "2px solid var(--primary)",
-              }}
-            >
-              ESTÁS BANEADO DEL CHAT
-            </div>
-          ) : isRecordingVoice ? (
-            /* In-Chat Voice Recording Panel */
-            <div
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "6px 10px",
-                backgroundColor: "#FFE5E5",
-                border: "2px solid #BA1A1A",
-                gap: "8px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    width: "10px",
-                    height: "10px",
-                    borderRadius: "50%",
-                    backgroundColor: "#BA1A1A",
-                    animation: "pulse 0.8s infinite ease-in-out",
-                  }}
-                />
-                <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "#BA1A1A" }}>
-                  GRABANDO {recordingSeconds.toString().padStart(2, "0")}/15s
-                </span>
-              </div>
-
-              <div style={{ display: "flex", gap: "4px" }}>
-                <button
-                  onClick={handleStopVoiceRecording}
-                  className="neo-button"
-                  style={{
-                    padding: "4px 8px",
-                    fontSize: "0.62rem",
-                    fontWeight: 900,
-                    backgroundColor: "#CCFF00",
-                    border: "1.5px solid var(--primary)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Square size={10} fill="currentColor" /> LISTO
-                </button>
-                <button
-                  onClick={handleCancelVoiceRecording}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "4px",
-                    color: "#BA1A1A",
-                  }}
-                  title="Cancelar"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          ) : voiceAudioUrl ? (
-            /* Recorded Audio Preview & Send */
-            <div
-              style={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px",
-                padding: "6px 8px",
-                backgroundColor: "var(--surface-container)",
-                border: "2px solid var(--primary)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.62rem", fontWeight: 900 }}>🎙️ NOTA DE VOZ LISTA:</span>
-                <button
-                  onClick={handleCancelVoiceRecording}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                  title="Descartar"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-              <audio src={voiceAudioUrl} controls style={{ width: "100%", height: "28px" }} />
-              <button
-                onClick={handleSendVoiceGreeting}
-                className="neo-button fun-hover-wobble"
+        {!isAuthenticated ? (
+          <button
+            onClick={signInWithGoogle}
+            className="neo-button fun-hover-wobble"
+            style={{
+              width: "100%",
+              backgroundColor: "var(--primary-container)",
+              padding: "10px",
+              textAlign: "center",
+              color: "var(--primary)",
+              fontWeight: 900,
+              fontSize: "0.75rem",
+              boxShadow: "3px 3px 0px var(--primary)",
+              cursor: "pointer",
+              textTransform: "uppercase",
+            }}
+          >
+            🔑 INICIAR SESIÓN CON GOOGLE PARA CHATEAR
+          </button>
+        ) : isCurrentUserBanned ? (
+          <div
+            style={{
+              width: "100%",
+              backgroundColor: "#BA1A1A",
+              padding: "8px",
+              textAlign: "center",
+              color: "white",
+              fontWeight: 900,
+              fontSize: "0.7rem",
+              border: "2px solid var(--primary)",
+            }}
+          >
+            ESTÁS BANEADO DEL CHAT
+          </div>
+        ) : isRecordingVoice ? (
+          /* In-Chat Voice Recording Panel */
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "6px 10px",
+              backgroundColor: "#FFE5E5",
+              border: "2px solid #BA1A1A",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
                 style={{
-                  backgroundColor: "var(--primary-container)",
-                  color: "var(--primary)",
-                  padding: "6px",
-                  fontSize: "0.68rem",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: "#BA1A1A",
+                  animation: "pulse 0.8s infinite ease-in-out",
+                }}
+              />
+              <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "#BA1A1A" }}>
+                GRABANDO {recordingSeconds.toString().padStart(2, "0")}/15s
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: "4px" }}>
+              <button
+                onClick={handleStopVoiceRecording}
+                className="neo-button"
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "0.62rem",
                   fontWeight: 900,
-                  border: "2px solid var(--primary)",
-                  boxShadow: "2px 2px 0px var(--primary)",
+                  backgroundColor: "#CCFF00",
+                  border: "1.5px solid var(--primary)",
                   cursor: "pointer",
                 }}
               >
-                ENVIAR SALUDO AL CHAT 🚀
+                <Square size={10} fill="currentColor" /> LISTO
+              </button>
+              <button
+                onClick={handleCancelVoiceRecording}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  color: "#BA1A1A",
+                }}
+                title="Cancelar"
+              >
+                <X size={14} />
               </button>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
-              {voiceGreetingSent && (
-                <div
-                  style={{
-                    backgroundColor: "#CCFF00",
-                    border: "1.5px solid var(--primary)",
-                    padding: "6px 8px",
-                    fontSize: "0.65rem",
-                    fontWeight: 900,
-                    textAlign: "center",
-                  }}
-                >
-                  ⏳ ¡SALUDO ENVIADO A CABINA! El locutor lo revisará antes de lanzarlo al aire (-100 C-Coins). 📻
-                </div>
-              )}
-
-              {/* Points & Quick Reactions Bar */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", paddingBottom: "2px" }}>
-                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.58rem", fontWeight: 900, opacity: 0.8 }}>REACCIÓN:</span>
-                  {["🔥", "📻", "⚡"].map((e) => (
-                    <button
-                      key={e}
-                      type="button"
-                      onClick={() => setTypedMessage((prev) => (prev + e).slice(0, 150))}
-                      style={{
-                        background: "none",
-                        border: "1.5px solid var(--primary)",
-                        borderRadius: "3px",
-                        padding: "1px 5px",
-                        fontSize: "0.85rem",
-                        cursor: "pointer",
-                        backgroundColor: "var(--card-bg)",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Puntos C Balance Pill - Destacado y Espacioso */}
-                <div
-                  style={{
-                    backgroundColor: "#CCFF00",
-                    border: "1.5px solid var(--primary)",
-                    boxShadow: "2px 2px 0px var(--primary)",
-                    padding: "2px 8px",
-                    fontSize: "0.65rem",
-                    fontWeight: 900,
-                    color: "#111111",
-                    whiteSpace: "nowrap",
-                  }}
-                  title="Puntos C acumulados por entrar a diario (+1 pt) y escuchar 30 min de radio (+1 pt). ¡Canjeables por saludos y merch!"
-                >
-                  ⚡ {puntosC || 0} PUNTOS C
-                </div>
+          </div>
+        ) : voiceAudioUrl ? (
+          /* Recorded Audio Preview & Send */
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+              padding: "6px 8px",
+              backgroundColor: "var(--surface-container)",
+              border: "2px solid var(--primary)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "0.62rem", fontWeight: 900 }}>🎙️ NOTA DE VOZ LISTA:</span>
+              <button
+                onClick={handleCancelVoiceRecording}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                title="Descartar"
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <audio src={voiceAudioUrl} controls style={{ width: "100%", height: "28px" }} />
+            <button
+              onClick={handleSendVoiceGreeting}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "var(--primary-container)",
+                color: "var(--primary)",
+                padding: "6px",
+                fontSize: "0.68rem",
+                fontWeight: 900,
+                border: "2px solid var(--primary)",
+                boxShadow: "2px 2px 0px var(--primary)",
+                cursor: "pointer",
+              }}
+            >
+              ENVIAR SALUDO AL CHAT 🚀
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+            {voiceGreetingSent && (
+              <div
+                style={{
+                  backgroundColor: "#CCFF00",
+                  border: "1.5px solid var(--primary)",
+                  padding: "6px 8px",
+                  fontSize: "0.65rem",
+                  fontWeight: 900,
+                  textAlign: "center",
+                }}
+              >
+                ⏳ ¡SALUDO ENVIADO A CABINA! El locutor lo revisará antes de lanzarlo al aire (-100 C-Coins). 📻
               </div>
+            )}
 
-              <div style={{ display: "flex", gap: "6px", alignItems: "flex-end" }}>
-                <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
-                  <textarea
-                    value={typedMessage}
-                    onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
-                    onKeyDown={handleKeyPress}
-                    onFocus={() => setIsChatInputFocused(true)}
-                    onBlur={() => setIsChatInputFocused(false)}
-                    maxLength={150}
-                    placeholder="Escribe en la sintonía..."
+            {/* Points & Quick Reactions Bar */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", paddingBottom: "2px" }}>
+              <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                <span style={{ fontSize: "0.58rem", fontWeight: 900, opacity: 0.8 }}>REACCIÓN:</span>
+                {["🔥", "📻", "⚡"].map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setTypedMessage((prev) => (prev + e).slice(0, 150))}
                     style={{
-                      width: "100%",
-                      height: "36px",
-                      minHeight: "36px",
-                      maxHeight: "80px",
-                      padding: "6px 8px 6px 8px",
-                      paddingRight: "45px",
-                      border: isChatInputFocused
-                        ? "2.5px solid var(--primary)"
-                        : "2px solid var(--primary)",
-                      outline: "none",
-                      fontSize: "0.7rem",
-                      resize: "none",
-                      fontFamily: "inherit",
-                      backgroundColor: "#FFFFFF",
-                      color: "#111111",
-                      caretColor: "#111111",
-                      cursor: "text",
-                      boxShadow: isChatInputFocused
-                        ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                        : "none",
-                      transition: "box-shadow 0.15s ease, border 0.15s ease",
-                    }}
-                  />
-                  <span
-                    style={{
-                      position: "absolute",
-                      bottom: "4px",
-                      right: "6px",
-                      fontSize: "0.55rem",
-                      fontWeight: 900,
-                      color: typedMessage.length >= 135 ? "#BA1A1A" : "gray",
-                      pointerEvents: "none",
-                      opacity: typedMessage.length > 0 ? 0.7 : 0,
-                      transition: "opacity 0.2s, color 0.2s",
-                      fontFamily: "monospace",
+                      background: "none",
+                      border: "1.5px solid var(--primary)",
+                      borderRadius: "3px",
+                      padding: "1px 5px",
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      backgroundColor: "var(--card-bg)",
+                      lineHeight: 1,
                     }}
                   >
-                    {typedMessage.length}/150
-                  </span>
-                </div>
-
-                {/* Mic Audio Greeting Button */}
-                <button
-                  type="button"
-                  onClick={handleStartVoiceRecording}
-                  className="neo-button"
-                  style={{
-                    height: "32px",
-                    padding: "0 8px",
-                    backgroundColor: "white",
-                    border: "2px solid var(--primary)",
-                    boxShadow: "2px 2px 0px var(--primary)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                  }}
-                  title="Grabar saludo de voz para cabina (Cuesta 100 C-Coins)"
-                >
-                  <Mic size={13} style={{ color: "#BA1A1A" }} />
-                </button>
-
-                <EmojiPicker
-                  onSelectEmoji={(emoji) => setTypedMessage((prev) => (prev + emoji).slice(0, 150))}
-                  dropDirection="up"
-                  buttonSize={14}
-                />
-
-                <button
-                  onClick={handleSend}
-                  className="neo-button"
-                  style={{
-                    height: "32px",
-                    padding: "0 10px",
-                    backgroundColor: "var(--primary-container)",
-                    boxShadow: "2px 2px 0px var(--primary)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Send size={12} />
-                </button>
+                    {e}
+                  </button>
+                ))}
               </div>
+
+              {/* Puntos C Balance Pill */}
+              <div
+                style={{
+                  backgroundColor: "#CCFF00",
+                  border: "1.5px solid var(--primary)",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  padding: "2px 6px",
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  color: "#111111",
+                  whiteSpace: "nowrap",
+                }}
+                title="Tus C-Coins diarias acumuladas por sintonía y ruleta."
+              >
+                ⚡ {puntosC || 0}
+              </div>
+
+              {/* Acordeón Toggle de Auspiciadores & Pedidos */}
+              <button
+                type="button"
+                onClick={() => setIsSponsorAccordionOpen((prev) => !prev)}
+                style={{
+                  backgroundColor: isSponsorAccordionOpen ? "var(--primary-container)" : "var(--surface-container, #181818)",
+                  color: isSponsorAccordionOpen ? "var(--primary)" : "var(--foreground)",
+                  border: "1.5px solid var(--primary)",
+                  borderRadius: "3px",
+                  padding: "2px 7px",
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  boxShadow: isSponsorAccordionOpen ? "2px 2px 0px var(--primary)" : "1.5px 1.5px 0px var(--primary)",
+                  whiteSpace: "nowrap",
+                }}
+                title="Abrir pedidos a auspiciadores oficiales (Ponches, Pizzas)"
+              >
+                <span style={{ color: isSponsorAccordionOpen ? "var(--primary)" : "var(--foreground)" }}>🍵 PEDIDOS</span>
+                <span style={{ fontSize: "0.55rem", color: isSponsorAccordionOpen ? "var(--primary)" : "var(--foreground)" }}>
+                  {isSponsorAccordionOpen ? "▲" : "▼"}
+                </span>
+              </button>
             </div>
-          )}
+
+            {/* Acordeón Desplegable de Auspiciadores (Ultra Compacto & Scrollable) */}
+            {isSponsorAccordionOpen && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "3px",
+                  maxHeight: "76px",
+                  overflowY: "auto",
+                  padding: "4px 6px",
+                  backgroundColor: "var(--surface-container, #161616)",
+                  border: "1.5px solid var(--primary)",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  borderRadius: "3px",
+                  marginBottom: "3px",
+                  animation: "fadeIn 0.15s ease",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              >
+                {sponsorsList.map((sponsor) => {
+                  const isBeverage = sponsor.category === "bebidas";
+                  const bg = isBeverage ? "#CCFF00" : "#FF5500";
+                  const textColor = isBeverage ? "#111111" : "#FFFFFF";
+
+                  return (
+                    <button
+                      key={sponsor.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveSponsorSlug(sponsor.slug);
+                        setIsSponsorModalOpen(true);
+                      }}
+                      className="neo-button"
+                      style={{
+                        width: "100%",
+                        fontSize: "0.60rem",
+                        fontWeight: 900,
+                        backgroundColor: bg,
+                        color: textColor,
+                        border: "1.5px solid var(--primary)",
+                        padding: "3px 6px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "4px",
+                        cursor: "pointer",
+                        boxShadow: "1.5px 1.5px 0px var(--primary)",
+                        transform: "none",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px", color: textColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {isBeverage ? <Coffee size={11} style={{ color: "#BA1A1A", flexShrink: 0 }} /> : <Pizza size={11} style={{ flexShrink: 0 }} />}
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sponsor.name.toUpperCase()}</span>
+                      </span>
+                      <span style={{ backgroundColor: "#111111", color: bg, padding: "1px 4px", fontSize: "0.52rem", borderRadius: "2px", fontWeight: 900, flexShrink: 0 }}>
+                        PRÓX.
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "6px", alignItems: "flex-end" }}>
+              <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+                <textarea
+                  rows={1}
+                  value={typedMessage}
+                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
+                  onKeyDown={handleKeyPress}
+                  onFocus={() => setIsChatInputFocused(true)}
+                  onBlur={() => setIsChatInputFocused(false)}
+                  maxLength={150}
+                  placeholder="Escribe en el chat o usa /pedir ponche..."
+                  style={{
+                    width: "100%",
+                    height: "36px",
+                    minHeight: "36px",
+                    maxHeight: "80px",
+                    padding: "6px 8px 6px 8px",
+                    paddingRight: "45px",
+                    border: isChatInputFocused
+                      ? "2.5px solid var(--primary)"
+                      : "2px solid var(--primary)",
+                    outline: "none",
+                    fontSize: "0.7rem",
+                    resize: "none",
+                    fontFamily: "inherit",
+                    backgroundColor: "#FFFFFF",
+                    color: "#111111",
+                    caretColor: "#111111",
+                    cursor: "text",
+                    boxShadow: isChatInputFocused
+                      ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
+                      : "none",
+                    transition: "box-shadow 0.15s ease, border 0.15s ease",
+                  }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: "4px",
+                    right: "6px",
+                    fontSize: "0.55rem",
+                    fontWeight: 900,
+                    color: typedMessage.length >= 135 ? "#BA1A1A" : "gray",
+                    pointerEvents: "none",
+                    opacity: typedMessage.length > 0 ? 0.7 : 0,
+                    transition: "opacity 0.2s, color 0.2s",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {typedMessage.length}/150
+                </span>
+              </div>
+
+              {/* Mic Audio Greeting Button */}
+              <button
+                type="button"
+                onClick={handleStartVoiceRecording}
+                className="neo-button"
+                style={{
+                  height: "32px",
+                  padding: "0 8px",
+                  backgroundColor: "white",
+                  border: "2px solid var(--primary)",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+                title="Grabar saludo de voz para cabina (Cuesta 100 C-Coins)"
+              >
+                <Mic size={13} style={{ color: "#BA1A1A" }} />
+              </button>
+
+              <EmojiPicker
+                onSelectEmoji={(emoji) => setTypedMessage((prev) => (prev + emoji).slice(0, 150))}
+                dropDirection="up"
+                buttonSize={14}
+              />
+
+              <button
+                onClick={handleSend}
+                className="neo-button"
+                style={{
+                  height: "32px",
+                  padding: "0 10px",
+                  backgroundColor: "var(--primary-container)",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Send size={12} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

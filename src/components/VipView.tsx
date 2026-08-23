@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { isVip } from "@/lib/permissions";
+import { isVip, isAdmin } from "@/lib/permissions";
 import { DriveAlbumsSection } from "./DriveAlbumsSection";
 import { RadioVideosSection } from "./RadioVideosSection";
 import { VipJukeboxModal } from "./vip/VipJukeboxModal";
-import { Sparkles, Crown, Lock, Music } from "lucide-react";
+import { Sparkles, Crown, Lock, Music, ShieldAlert } from "lucide-react";
 
 interface VipViewProps {
   onNavigateToPlayer: () => void;
@@ -13,6 +13,7 @@ interface VipViewProps {
 export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
   const { userProfile, vipQueue } = useAudio();
   const userIsVip = isVip(userProfile.role);
+  const userIsAdmin = isAdmin(userProfile.role);
   const [isJukeboxOpen, setIsJukeboxOpen] = useState(false);
 
   return (
@@ -72,26 +73,45 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
           </p>
 
           <div style={{ display: "flex", gap: "10px", marginTop: "4px", flexWrap: "wrap" }}>
-            <button
-              onClick={() => setIsJukeboxOpen(true)}
-              className="neo-button fun-hover-wobble"
-              style={{
-                backgroundColor: "#CCFF00",
-                color: "#111",
-                padding: "8px 16px",
-                fontSize: "0.75rem",
-                fontWeight: 900,
-                border: "2px solid var(--primary)",
-                boxShadow: "3px 3px 0px var(--primary)",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                cursor: "pointer",
-              }}
-            >
-              <Music size={14} />
-              <span>⭐ PEDIR TEMA EN LA ROCKOLA VIP ({vipQueue.length} en fila)</span>
-            </button>
+            {userIsAdmin ? (
+              <button
+                onClick={() => setIsJukeboxOpen(true)}
+                className="neo-button fun-hover-wobble"
+                style={{
+                  backgroundColor: "#CCFF00",
+                  color: "#111",
+                  padding: "8px 16px",
+                  fontSize: "0.75rem",
+                  fontWeight: 900,
+                  border: "2px solid var(--primary)",
+                  boxShadow: "3px 3px 0px var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                <Music size={14} />
+                <span>👑 INYECTAR TEMA EN AZURACAST (ADMIN • {vipQueue.length} en fila)</span>
+              </button>
+            ) : (
+              <div
+                style={{
+                  backgroundColor: "rgba(0,0,0,0.08)",
+                  color: "var(--primary)",
+                  padding: "6px 12px",
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  border: "2px dashed var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <ShieldAlert size={14} />
+                <span>🔒 ROCKOLA AL AIRE: CONTROL RESTRINGIDO A ADMINISTRADORES</span>
+              </div>
+            )}
           </div>
         </div>
       ) : (

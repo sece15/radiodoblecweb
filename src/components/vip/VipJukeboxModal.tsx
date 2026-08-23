@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, ChangeEvent, FormEvent } from "react";
-import { Upload, Crown, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2 } from "lucide-react";
+import { Upload, Crown, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, ShieldAlert } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { useAudio } from "@/hooks/useAudio";
-import { isVip } from "@/lib/permissions";
+import { isVip, isAdmin } from "@/lib/permissions";
 import { injectVipSongToAzuraCast } from "@/services/vipJukeboxService";
 
 interface VipJukeboxModalProps {
@@ -23,10 +23,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
   } = useAudio();
 
   const userIsVip = isVip(userProfile?.role || "");
+  const userIsAdmin = isAdmin(userProfile?.role || "");
   const normRole = (userProfile?.role || "").toUpperCase();
   const isStaff = normRole.includes("ADMIN") || normRole.includes("STREAMER") || normRole.includes("MOD");
 
-  const [activeTab, setActiveTab] = useState<"youtube" | "file">("youtube");
+  const [activeTab, setActiveTab] = useState<"youtube" | "file">("file");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
@@ -49,8 +50,17 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("audio/")) {
-      alert("Por favor selecciona un archivo de audio válido (.mp3, .wav, .m4a, .ogg)");
+    const isMp3 = file.name.toLowerCase().endsWith(".mp3") || file.type === "audio/mpeg" || file.type === "audio/mp3";
+    if (!isMp3) {
+      alert("⚠️ FORMATO NO ADMITIDO:\n\nPor favor sube únicamente archivos en formato MP3 (.mp3).\nLos formatos pesados como WAV no están permitidos para garantizar una transmisión al aire rápida y sin cortes.");
+      e.target.value = "";
+      return;
+    }
+
+    const maxSize = 15 * 1024 * 1024; // 15MB
+    if (file.size > maxSize) {
+      alert("⚠️ ARCHIVO DEMASIADO PESADO:\n\nEl tamaño máximo permitido para canciones MP3 es de 15MB.");
+      e.target.value = "";
       return;
     }
 
@@ -94,6 +104,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (!userIsAdmin) {
+      alert("⛔ ACCESO DENEGADO:\n\nSolo los administradores autorizados pueden inyectar música en vivo en AzuraCast.");
+      return;
+    }
+
     if (activeTab === "youtube") {
       if (!youtubeUrl.trim()) {
         alert("Por favor pega el enlace de YouTube o SoundCloud.");
@@ -110,8 +125,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     if (!userIsVip && !isStaff) {
       if ((puntosC || 0) < 150) {
         alert(
-          `🔒 LA ROCKOLA VIP ES EXCLUSIVA PARA MIEMBROS VIP O CANJE CON 150 C-COINS.\n(Tienes: ${
-            puntosC || 0
+          `🔒 LA ROCKOLA VIP ES EXCLUSIVA PARA MIEMBROS VIP O CANJE CON 150 C-COINS.\n(Tienes: ${puntosC || 0
           } C-Coins).\n\n📻 ¡Escucha la radio o sube de nivel para acumular más C-Coins!`
         );
         return;
@@ -162,6 +176,8 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           artist: effectiveArtist,
           requester: userProfile.name,
           dedication: dedication.trim() || undefined,
+          userRole: userProfile.role,
+          userId: userProfile.id,
         });
 
         requestVipSong({
@@ -173,6 +189,10 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           audioUrl: res.url || "https://stream.andrealvarado.dev/radio.mp3",
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
         });
+
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+        setUploadStepText(res.message || "¡Listo! Canción enviada a la radio ⭐");
       } else {
         const res = await injectVipSongToAzuraCast({
           file: audioFile,
@@ -180,7 +200,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           artist: artist.trim(),
           requester: userProfile.name,
           dedication: dedication.trim() || undefined,
+          userRole: userProfile.role,
+          userId: userProfile.id,
         });
+
+        console.log("[VIP MODAL SUBMIT RESULT]:", res);
 
         requestVipSong({
           title: title.trim(),
@@ -192,11 +216,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
           durationSeconds: audioDuration,
         });
-      }
 
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      setUploadStepText("¡Listo! Canción encolada al aire ⭐");
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+        setUploadStepText(res.message || "¡Listo! Canción enviada a la radio ⭐");
+      }
 
       setIsSuccess(true);
       setTimeout(() => {
@@ -232,12 +256,71 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
         }
         onClose();
       }}
-      title="⭐ LA ROCKOLA VIP • TRANSMISIÓN AL AIRE"
-      badgeText="👑 VIP JUKEBOX"
+      title="👑 TRANSMISIÓN EN VIVO • INYECCIÓN AL AIRE"
+      badgeText="🛡️ EXCLUSIVO ADMIN"
       maxWidth="550px"
       backgroundColor="var(--background)"
     >
-      {isSuccess ? (
+      {!userIsAdmin ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "24px 12px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "14px",
+          }}
+        >
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              backgroundColor: "#BA1A1A",
+              border: "3.5px solid var(--primary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "4px 4px 0px var(--primary)",
+              color: "white",
+            }}
+          >
+            <ShieldAlert size={36} />
+          </div>
+          <h3 style={{ fontSize: "1.25rem", fontWeight: 900, textTransform: "uppercase", margin: 0, color: "#BA1A1A" }}>
+            ⛔ ACCESO EXCLUSIVO ADMINISTRADORES
+          </h3>
+          <p style={{ fontSize: "0.8rem", lineHeight: "1.3", opacity: 0.9, margin: 0, maxWidth: "420px" }}>
+            Por razones de seguridad y control de la transmisión, la inyección directa de archivos MP3 en AzuraCast AutoDJ está restringida exclusivamente a usuarios con rol <strong>ADMIN</strong>.
+          </p>
+          <div
+            style={{
+              backgroundColor: "var(--surface-container)",
+              border: "2px dashed var(--primary)",
+              padding: "10px 16px",
+              fontSize: "0.75rem",
+              fontWeight: 800,
+            }}
+          >
+            Tu rol actual: <span style={{ color: "#BA1A1A" }}>{userProfile.role || "OYENTE"}</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="neo-button"
+            style={{
+              backgroundColor: "var(--primary-container)",
+              padding: "10px 20px",
+              fontSize: "0.8rem",
+              fontWeight: 900,
+              cursor: "pointer",
+              marginTop: "8px",
+            }}
+          >
+            ENTENDIDO / CERRAR
+          </button>
+        </div>
+      ) : isSuccess ? (
         <div
           style={{
             textAlign: "center",
@@ -264,7 +347,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             <Check size={36} color="black" />
           </div>
           <h3 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
-            ¡TEMA ENCOLADO CON ÉXITO! ⭐
+            ¡TEMA INYECTADO CON ÉXITO! 👑
           </h3>
           <p style={{ fontSize: "0.8rem", opacity: 0.9, margin: 0, maxWidth: "420px" }}>
             Tu pedido está encolado en la fila VIP de AzuraCast. Sonará automáticamente en la transmisión al
@@ -273,10 +356,10 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {/* VIP Status Pill */}
+          {/* Admin Status Pill */}
           <div
             style={{
-              backgroundColor: userIsVip || isStaff ? "#FFF8E1" : "var(--surface-container)",
+              backgroundColor: "#FFDE82",
               border: "2px solid var(--primary)",
               padding: "8px 12px",
               display: "flex",
@@ -289,12 +372,10 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
               <Crown style={{ color: "#BA1A1A", fill: "#FFB000" }} size={20} />
               <div>
                 <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", display: "block" }}>
-                  {userIsVip || isStaff ? "PASE VIP ACTIVO (ILIMITADO)" : "ACCESO GENERAL"}
+                  👑 SESIÓN DE ADMINISTRADOR AUTORIZADA
                 </span>
-                <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>
-                  {userIsVip || isStaff
-                    ? "Tus pedidos suenan con prioridad VIP al terminar la canción actual."
-                    : "Costo: 150 C-Coins o Membresía VIP para sonar al aire."}
+                <span style={{ fontSize: "0.6rem", opacity: 0.85 }}>
+                  Inyección directa y prioritaria al AutoDJ de AzuraCast ({userProfile.name}).
                 </span>
               </div>
             </div>
@@ -448,7 +529,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
                 <label style={{ fontSize: "0.7rem", fontWeight: 900, display: "block", marginBottom: "4px" }}>
-                  ARCHIVO DE AUDIO (MP3, WAV, M4A) *
+                  ARCHIVO DE AUDIO (SOLO FORMATO MP3) *
                 </label>
                 <div
                   style={{
@@ -463,7 +544,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
                   <input
                     key="input-file-audio"
                     type="file"
-                    accept="audio/*,.mp3,.wav,.m4a,.ogg"
+                    accept="audio/mpeg,audio/mp3,.mp3"
                     onChange={handleAudioFileChange}
                     style={{
                       position: "absolute",
@@ -494,7 +575,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
                         HAZ CLICK O ARRASTRA TU CANCIÓN AQUÍ
                       </span>
                       <span style={{ fontSize: "0.58rem", opacity: 0.7 }}>
-                        Archivos de audio de alta fidelidad hasta 25MB
+                        Formato exclusivo: MP3 (.mp3) hasta 15MB
                       </span>
                     </div>
                   )}

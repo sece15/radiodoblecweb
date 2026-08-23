@@ -25,6 +25,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { CheckoutModal } from "@/components/CheckoutModal";
 import { Toast } from "@/components/Toast";
 import { VinylSpinModal } from "@/components/tools/VinylSpinModal";
+import { SponsorOrderModal } from "@/components/sponsors/SponsorOrderModal";
 import { LiveDropNotification } from "@/components/common/LiveDropNotification";
 import { useGamification } from "@/hooks/useGamification";
 
@@ -32,7 +33,17 @@ type ActiveTab = "explore" | "store" | "profile" | "vip";
 
 export default function Home() {
   useWakeLock(true);
-  const { isPlaying, currentTrack, togglePlayPause, isAuthenticated, listenedSeconds } = useAudio();
+  const {
+    isPlaying,
+    currentTrack,
+    togglePlayPause,
+    isAuthenticated,
+    listenedSeconds,
+    userProfile,
+    isSponsorModalOpen,
+    setIsSponsorModalOpen,
+    activeSponsorSlug,
+  } = useAudio();
   const { canSpinToday, isSpinning, spinVinyl, activeDrop, claimDrop, dismissDrop } = useGamification(listenedSeconds, isPlaying);
   const [isSpinModalOpen, setSpinModalOpen] = useState(false);
 
@@ -53,6 +64,8 @@ export default function Home() {
   const [isChatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [isPlayerExpanded, setPlayerExpanded] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+  const isAnyModalOpen = isProductModalOpen || isSponsorModalOpen;
 
   // Hook integrations
   const { toastMessage, toastType, showToast, setToastMessage } = useToast();
@@ -104,15 +117,17 @@ export default function Home() {
       }}
     >
       {/* 1. TOP APP BAR */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        setSearchActive={setSearchActive}
-        setFilteredStyle={setFilteredStyle}
-        setCartOpen={setCartOpen}
-        cartCount={cartCount}
-        onOpenSpin={() => setSpinModalOpen(true)}
-      />
+      {!isAnyModalOpen && (
+        <Header
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          setSearchActive={setSearchActive}
+          setFilteredStyle={setFilteredStyle}
+          setCartOpen={setCartOpen}
+          cartCount={cartCount}
+          onOpenSpin={() => setSpinModalOpen(true)}
+        />
+      )}
 
       {/* 2. BODY CONTENT SIDE-BY-SIDE GRID */}
       <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden", position: "relative" }}>
@@ -129,11 +144,11 @@ export default function Home() {
           }}
         >
           <ZineBackgroundFrame>
-            {/* Massive body header title */}
+            {/* Body header title */}
             <div
               className="zine-header-title-container"
               style={{
-                padding: "24px 16px 8px 16px",
+                padding: "10px 16px 4px 16px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -161,102 +176,104 @@ export default function Home() {
       </div>
 
       {/* 3. PERSISTENT SPOTIFY-STYLE FOOTER PLAYER BAR OR FLOATING PLAYER */}
-      {activeTab === "store" ? (
-        /* FLOATING COMPACT PLAYER ON BOTTOM-RIGHT */
-        <div
-          onClick={() => setPlayerExpanded(true)}
-          className="neo-card store-card-hover"
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            zIndex: 1000,
-            backgroundColor: "var(--primary-container)",
-            border: "3px solid var(--primary)",
-            boxShadow: "4px 4px 0px var(--primary)",
-            padding: "8px 12px",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            cursor: "pointer",
-            transform: "rotate(-2deg)",
-            maxWidth: "240px",
-          }}
-        >
-          {/* Mini Spinning Vinyl Cover */}
+      {!isAnyModalOpen && (
+        activeTab === "store" ? (
+          /* FLOATING COMPACT PLAYER ON BOTTOM-RIGHT */
           <div
+            onClick={() => setPlayerExpanded(true)}
+            className="neo-card store-card-hover"
             style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              border: "2px solid var(--primary)",
-              overflow: "hidden",
-              flexShrink: 0,
-              animation: isPlaying ? "spin 6s linear infinite" : "none",
-            }}
-          >
-            <img
-              src={currentTrack.imageUrl}
-              alt="Vinyl"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-
-          {/* Title & Play/Pause */}
-          <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-            <div
-              style={{
-                fontSize: "0.65rem",
-                fontWeight: 900,
-                textTransform: "uppercase",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                color: "var(--primary)",
-                maxWidth: "110px",
-              }}
-            >
-              {currentTrack.title}
-            </div>
-            <div style={{ fontSize: "0.55rem", fontWeight: "bold", color: "var(--secondary)", opacity: 0.8 }}>
-              {currentTrack.artist}
-            </div>
-          </div>
-
-          {/* Compact Play/Pause button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // prevent opening full overlay
-              togglePlayPause();
-            }}
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "50%",
-              backgroundColor: "var(--card-bg)",
-              border: "2px solid var(--primary)",
+              position: "fixed",
+              bottom: "24px",
+              right: "24px",
+              zIndex: 1000,
+              backgroundColor: "var(--primary-container)",
+              border: "3px solid var(--primary)",
+              boxShadow: "4px 4px 0px var(--primary)",
+              padding: "8px 12px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              gap: "10px",
               cursor: "pointer",
-              padding: 0,
-              flexShrink: 0,
-              boxShadow: "1px 1px 0px var(--primary)",
+              transform: "rotate(-2deg)",
+              maxWidth: "240px",
             }}
           >
-            {isPlaying ? (
-              <Pause size={10} style={{ fill: "var(--primary)", color: "var(--primary)" }} />
-            ) : (
-              <Play size={10} style={{ fill: "var(--primary)", color: "var(--primary)", marginLeft: "1px" }} />
-            )}
-          </button>
-        </div>
-      ) : (
-        <SpotifyPlayerBar
-          isChatOpen={isChatSidebarOpen}
-          onToggleChat={() => setChatSidebarOpen(!isChatSidebarOpen)}
-          onExpand={() => setPlayerExpanded(true)}
-        />
+            {/* Mini Spinning Vinyl Cover */}
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                border: "2px solid var(--primary)",
+                overflow: "hidden",
+                flexShrink: 0,
+                animation: isPlaying ? "spin 6s linear infinite" : "none",
+              }}
+            >
+              <img
+                src={currentTrack.imageUrl}
+                alt="Vinyl"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </div>
+
+            {/* Title & Play/Pause */}
+            <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  color: "var(--primary)",
+                  maxWidth: "110px",
+                }}
+              >
+                {currentTrack.title}
+              </div>
+              <div style={{ fontSize: "0.55rem", fontWeight: "bold", color: "var(--secondary)", opacity: 0.8 }}>
+                {currentTrack.artist}
+              </div>
+            </div>
+
+            {/* Compact Play/Pause button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // prevent opening full overlay
+                togglePlayPause();
+              }}
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                backgroundColor: "var(--card-bg)",
+                border: "2px solid var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                padding: 0,
+                flexShrink: 0,
+                boxShadow: "1px 1px 0px var(--primary)",
+              }}
+            >
+              {isPlaying ? (
+                <Pause size={10} style={{ fill: "var(--primary)", color: "var(--primary)" }} />
+              ) : (
+                <Play size={10} style={{ fill: "var(--primary)", color: "var(--primary)", marginLeft: "1px" }} />
+              )}
+            </button>
+          </div>
+        ) : (
+          <SpotifyPlayerBar
+            isChatOpen={isChatSidebarOpen}
+            onToggleChat={() => setChatSidebarOpen(!isChatSidebarOpen)}
+            onExpand={() => setPlayerExpanded(true)}
+          />
+        )
       )}
 
       {/* 4. SEARCH OVERLAY LAYER */}
@@ -316,7 +333,15 @@ export default function Home() {
         onSpin={spinVinyl}
       />
 
-      {/* 11. LIVE STREAMING C-DROP TOAST */}
+      {/* 11. SPONSORS & ORDERING MODAL */}
+      <SponsorOrderModal
+        isOpen={isSponsorModalOpen}
+        onClose={() => setIsSponsorModalOpen(false)}
+        initialSponsorSlug={activeSponsorSlug || "ponches"}
+        userName={userProfile?.name}
+      />
+
+      {/* 12. LIVE STREAMING C-DROP TOAST */}
       <LiveDropNotification
         drop={activeDrop}
         onClaim={claimDrop}

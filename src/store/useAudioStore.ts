@@ -130,11 +130,21 @@ export interface AudioStoreState {
   listenersCount: number;
   activeTheme: string;
   selectTheme: (themeName: string) => void;
+
+  // Auspiciadores & Pedidos Modal
+  isSponsorModalOpen: boolean;
+  setIsSponsorModalOpen: (open: boolean) => void;
+  activeSponsorSlug: string;
+  setActiveSponsorSlug: (slug: string) => void;
 }
 
 const noop = () => {};
 
 export const initialStoreState: AudioStoreState = {
+  isSponsorModalOpen: false,
+  setIsSponsorModalOpen: noop,
+  activeSponsorSlug: "ponches",
+  setActiveSponsorSlug: noop,
   isPlaying: false,
   puntosC: 2,
   punkPoints: 2,

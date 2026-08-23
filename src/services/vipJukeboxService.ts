@@ -7,6 +7,8 @@ export interface InjectVipSongInput {
   artist: string;
   requester: string;
   dedication?: string;
+  userRole?: string;
+  userId?: string;
 }
 
 export interface InjectVipSongResponse {
@@ -16,6 +18,19 @@ export interface InjectVipSongResponse {
   message?: string;
   error?: string;
   url?: string;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
 }
 
 /**
@@ -34,53 +49,45 @@ export async function injectVipSongToAzuraCast(
   }
 
   try {
-    let songUrl = input.url || "";
+    let fileBase64 = "";
+    let fileName = "";
 
-    // Si el usuario subió un archivo, lo subimos directamente a Supabase Storage (soporta hasta 50MB sin límites de RAM)
+    // Si el usuario subió un archivo MP3, lo preparamos directamente en el navegador
     if (input.file) {
-      const cleanFileName = `${Date.now()}_${input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const { error: uploadErr } = await supabase.storage
-        .from("vip_songs")
-        .upload(cleanFileName, input.file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadErr) {
-        console.warn("Advertencia al subir a Supabase Storage:", uploadErr.message);
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("vip_songs")
-        .getPublicUrl(cleanFileName);
-
-      songUrl = publicUrlData?.publicUrl || "";
+      fileBase64 = await fileToBase64(input.file);
+      fileName = input.file.name;
     }
 
     const { data, error } = await supabase.functions.invoke("inject-azuracast-song", {
       body: {
-        url: songUrl,
+        fileBase64,
+        fileName,
+        url: input.url || "",
         title: input.title,
         artist: input.artist,
         requester: input.requester,
         dedication: input.dedication,
+        userRole: input.userRole || "OYENTE",
+        userId: input.userId || "",
       },
     });
+
+    console.log("[VIP SERVICE INVOKE RESULT]:", { data, error });
 
     if (error) {
       console.warn("Supabase Edge Function notice:", error.message);
       return {
         success: true,
         mode: "simulation",
-        url: songUrl,
+        url: input.url || "",
         message: "Canción encolada para sonar en la radio.",
       };
     }
 
     return {
       ...(data || {}),
-      success: true,
-      url: songUrl || data?.url,
+      success: data?.success ?? true,
+      url: input.url || data?.url,
       message: data?.message || "Canción programada con éxito.",
     };
   } catch (err) {

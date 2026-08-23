@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { supabase } from "@/lib/supabase";
 
 export interface ListenerBadge {
   id: string;
@@ -129,35 +130,64 @@ export function useGamification(listenedSeconds: number, isPlaying: boolean) {
     const current = totalHours - currentLevelInfo.minHours;
     return Math.min(100, Math.max(0, Math.round((current / (range || 1)) * 100)));
   }, [totalHours, currentLevelInfo, nextLevelInfo]);
-
   // Daily Spin Logic
   const canSpinToday = lastSpinDate !== todayStr;
 
   const spinVinyl = useCallback(async (): Promise<SpinReward> => {
-    if (!canSpinToday) {
-      throw new Error("Ya giraste la tornamesa hoy. Vuelve mañana.");
-    }
     setIsSpinning(true);
 
-    const POSSIBLE_REWARDS: SpinReward[] = [
-      { type: "c_coins", amount: 1, label: "+1 C-Coin", icon: "🪙" },
-      { type: "c_coins", amount: 2, label: "+2 C-Coins Doble C", icon: "⚡" },
-      { type: "coupon", code: "DOBLEC2026", label: "Cupón 10% OFF Tienda", icon: "🏷️" },
-      { type: "voice_pass", label: "Pase de Saludo de Voz", icon: "🎙️" },
-      { type: "c_coins", amount: 1, label: "+1 C-Coin", icon: "🪙" },
-    ];
+    if (supabase) {
+      try {
+        const { data: rpcRes, error: rpcErr } = await supabase.rpc("spin_daily_vinyl");
+        if (rpcErr || (rpcRes && !rpcRes.success && rpcRes.alreadySpun)) {
+          setIsSpinning(false);
+          throw new Error(rpcRes?.message || rpcErr?.message || "Ya giraste la tornamesa hoy. ¡Vuelve mañana!");
+        }
 
-    // Pick random reward
-    const randomIdx = Math.floor(Math.random() * POSSIBLE_REWARDS.length);
-    const chosen = POSSIBLE_REWARDS[randomIdx];
+        if (rpcRes?.success && rpcRes?.reward) {
+          const reward: SpinReward = {
+            type: rpcRes.reward.type || "c_coins",
+            label: rpcRes.reward.label,
+            icon: rpcRes.reward.icon,
+            amount: rpcRes.reward.amount,
+          };
+          if (rpcRes.coins !== undefined) {
+            setCCoins(rpcRes.coins);
+          }
+          setLastSpinDate(todayStr);
+          setIsSpinning(false);
+          setLastReward(reward);
+          return reward;
+        }
+      } catch (err) {
+        setIsSpinning(false);
+        throw err;
+      }
+    }
+
+    // Fallback Offline / Local con Probabilidad Estricta:
+    if (!canSpinToday) {
+      setIsSpinning(false);
+      throw new Error("Ya giraste la tornamesa hoy. Vuelve mañana.");
+    }
+
+    const rand = Math.random();
+    let chosen: SpinReward;
+
+    // Jackpot de 1 a 1,000,000,000 (1 en mil millones)
+    if (rand < 1e-9) {
+      chosen = { type: "c_coins", amount: 100, label: "¡JACKPOT LEGENDARIO (1 EN 1,000,000,000)! +100 C-Coins ⭐", icon: "👑" };
+    } else if (rand < 0.40) {
+      chosen = { type: "c_coins", amount: 1, label: "+1 C-Coin Doble C", icon: "🪙" };
+    } else if (rand < 0.70) {
+      chosen = { type: "coupon", code: "DOBLEC10", label: "+1 C-Coin & Cupón 10% Tienda Oficial", icon: "🏷️", amount: 1 };
+    } else {
+      chosen = { type: "voice_pass", label: "+1 C-Coin & Pase de Sintonía", icon: "🎙️", amount: 1 };
+    }
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        if (chosen.type === "c_coins" && chosen.amount) {
-          setCCoins((prev) => (prev || 0) + chosen.amount!);
-        } else if (chosen.type === "voice_pass") {
-          setCCoins((prev) => (prev || 0) + 1);
-        }
+        setCCoins((prev) => (prev || 0) + (chosen.amount || 1));
         setLastSpinDate(todayStr);
         setIsSpinning(false);
         setLastReward(chosen);
