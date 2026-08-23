@@ -22,6 +22,7 @@ export interface SponsorBusiness {
   discount_percent: number;
   logo_url?: string;
   play_store_url?: string;
+  has_delivery?: boolean; // Define si tiene habilitado el flujo de pedidos/delivery
   is_active: boolean;
   menu_items: SponsorMenuItem[];
 }
@@ -54,6 +55,7 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
     tagline: "La radio online alternativa e independiente de Huánuco 📻⚡",
     about: "Emisora de radio online y plataforma de streaming digital 24/7 en alta fidelidad. Transmisión continua de rock, hip-hop, cultura alternativa y espacios abiertos para la comunidad.",
     category: "radio",
+    has_delivery: false,
     logo_url: "/RADIO.png",
     whatsapp_number: "51962900000",
     address: "Huánuco, Perú - Transmisión Online 24/7",
@@ -86,6 +88,7 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
     tagline: "El primer control de inventario y stock con Inteligencia Artificial 📸🤖📦",
     about: "¿Cansado de perder dinero porque no sabes cuánta mercancía tienes? Mikaja es el primer Control de Inventario y Stock con IA. Olvida escribir nombres largos: toma una foto a tus productos y nuestro agente inteligente se encarga de llenar el inventario, ordenar el stock en tiempo real y calcular tus ganancias diarias sin errores. Ideal para tiendas de ropa, abarrotes, bodegas y emprendimientos.",
     category: "diseño",
+    has_delivery: false,
     logo_url: "/sponsors/mikaja.png",
     play_store_url: "https://play.google.com/store/apps/details?id=com.sece.inventarioapp&hl=es_NI",
     whatsapp_number: "51962900002",
@@ -127,6 +130,7 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
     tagline: "Sala de ensayos acústica para bandas y músicos en Huánuco 🎸🥁🤘",
     about: "Sala de ensayos profesional ubicada en Huánuco. Equipada con batería acústica completa, amplificadores de guitarra y bajo, micrófonos para voces y tratamiento acústico para que tu banda ensaye con el mejor sonido.",
     category: "servicios",
+    has_delivery: false,
     logo_url: "/sponsors/koyote.jpg",
     whatsapp_number: "51946576566",
     address: "Huánuco - Sala de Ensayos para Bandas",
@@ -166,6 +170,7 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
     slug: "ponches",
     tagline: "Los ponches calientes más energéticos y tradicionales de la ciudad 🍵⚡",
     category: "bebidas",
+    has_delivery: true,
     whatsapp_number: "51962900000",
     address: "Jr. Huánuco #540 (A 2 cuadras de la Plaza)",
     discount_code: "DOBLECPONCHE",
@@ -174,18 +179,18 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
     menu_items: [
       {
         id: "p1",
-        name: "Ponche Especial de Habas con Algarrobina y Huevo",
-        price: 8.0,
-        description: "Tradicional, caliente, energizante con canela y clavo.",
+        name: "Ponche Especial Energético de Maca & Quinua",
+        price: 8.5,
+        description: "Elaborado con maca negra, quinua tostada, canela, clavo y leche fresca.",
         icon: "🍵",
         is_popular: true,
       },
       {
         id: "p2",
-        name: "Ponche de Maca Negra & Quinua Real",
-        price: 9.0,
-        description: "Potencia pura para la noche radial.",
-        icon: "⚡",
+        name: "Pan Artesanal Huaneño con Queso Caliente",
+        price: 4.5,
+        description: "Pan de piso tradicional recién salido del horno con queso andino derretido.",
+        icon: "🧀",
         is_popular: true,
       },
       {
@@ -196,14 +201,6 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
         icon: "🥛",
         is_popular: false,
       },
-      {
-        id: "p4",
-        name: "Combo Dúo Nocturno (2 Ponches Especiales + 2 Panes con Queso)",
-        price: 20.0,
-        description: "El combo preferido de los oyentes nocturnos de Radio Doble C.",
-        icon: "🥖",
-        is_popular: true,
-      },
     ],
   },
   {
@@ -212,6 +209,7 @@ export const INITIAL_SPONSORS: SponsorBusiness[] = [
     slug: "pizzas",
     tagline: "Masa artesanal a la piedra y salsa secreta 🍕🤘",
     category: "comida",
+    has_delivery: true,
     whatsapp_number: "51962900001",
     address: "Av. Los Próceres #120",
     discount_code: "DOBLECPIZZA",
@@ -256,24 +254,38 @@ export async function fetchSponsorBusinesses(): Promise<SponsorBusiness[]> {
       .eq("is_active", true);
 
     if (error || !data || data.length === 0) {
-      return INITIAL_SPONSORS;
+      return INITIAL_SPONSORS.map((sp) => {
+        if (typeof window !== "undefined") {
+          const stored = localStorage.getItem(`sponsor_delivery_override_${sp.id}`);
+          if (stored !== null) return { ...sp, has_delivery: stored === "true" };
+        }
+        return sp;
+      });
     }
 
-    const dbList: SponsorBusiness[] = data.map((item) => ({
-      id: item.id,
-      name: item.name,
-      slug: item.slug,
-      tagline: item.tagline || "",
-      about: item.about,
-      logo_url: item.logo_url,
-      category: item.category || "comida",
-      whatsapp_number: item.whatsapp_number,
-      address: item.address,
-      discount_code: item.discount_code || "RADIODOBLEC",
-      discount_percent: item.discount_percent || 10,
-      menu_items: Array.isArray(item.menu_items) ? item.menu_items : [],
-      is_active: item.is_active ?? true,
-    }));
+    const dbList: SponsorBusiness[] = data.map((item) => {
+      let localOverride: boolean | undefined = undefined;
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(`sponsor_delivery_override_${item.id}`);
+        if (stored !== null) localOverride = stored === "true";
+      }
+      return {
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        tagline: item.tagline || "",
+        about: item.about,
+        logo_url: item.logo_url,
+        category: item.category || "comida",
+        has_delivery: localOverride !== undefined ? localOverride : (item.has_delivery !== undefined ? Boolean(item.has_delivery) : (item.category === "comida" || item.category === "bebidas")),
+        whatsapp_number: item.whatsapp_number,
+        address: item.address,
+        discount_code: item.discount_code || "RADIODOBLEC",
+        discount_percent: item.discount_percent || 10,
+        menu_items: Array.isArray(item.menu_items) ? item.menu_items : [],
+        is_active: item.is_active ?? true,
+      };
+    });
 
     // Asegurar que marcas iniciales (MIKAJA, Koyote, Doble C) siempre estén presentes
     const combined = [...dbList];
@@ -288,9 +300,20 @@ export async function fetchSponsorBusinesses(): Promise<SponsorBusiness[]> {
           ...combined[existsIndex],
           about: combined[existsIndex].about || init.about,
           logo_url: combined[existsIndex].logo_url || init.logo_url,
+          has_delivery: combined[existsIndex].has_delivery !== undefined ? combined[existsIndex].has_delivery : init.has_delivery,
         };
       }
     });
+
+    // Aplicar overrides locales si existen
+    if (typeof window !== "undefined") {
+      combined.forEach((sp, idx) => {
+        const stored = localStorage.getItem(`sponsor_delivery_override_${sp.id}`);
+        if (stored !== null) {
+          combined[idx].has_delivery = stored === "true";
+        }
+      });
+    }
 
     return combined;
   } catch (err) {
@@ -338,7 +361,8 @@ export async function submitSponsorOrder(input: CreateSponsorOrderInput): Promis
 }
 
 export async function updateSponsorWhatsApp(sponsorId: string, newNumber: string): Promise<boolean> {
-  if (!supabase) return true;
+  if (!supabase) return false;
+
   try {
     const { error } = await supabase
       .from("sponsor_businesses")
@@ -347,6 +371,25 @@ export async function updateSponsorWhatsApp(sponsorId: string, newNumber: string
     return !error;
   } catch (err) {
     console.error("Error al actualizar número de auspiciador:", err);
+    return false;
+  }
+}
+
+export async function updateSponsorDeliveryMode(sponsorId: string, hasDelivery: boolean): Promise<boolean> {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(`sponsor_delivery_override_${sponsorId}`, String(hasDelivery));
+  }
+
+  if (!supabase) return true;
+
+  try {
+    const { error } = await supabase
+      .from("sponsor_businesses")
+      .update({ has_delivery: hasDelivery })
+      .eq("id", sponsorId);
+    return !error;
+  } catch (err) {
+    console.error("Error al actualizar modo delivery del auspiciador:", err);
     return false;
   }
 }

@@ -78,18 +78,24 @@ export const SponsorOrderModal: React.FC<SponsorOrderModalProps> = ({
     };
   }, []);
 
+  // Solo marcas con servicio de pedidos y delivery (Comida y Bebidas)
+  const deliverySponsors = useMemo(() => {
+    const filtered = sponsors.filter((s) => s.category === "comida" || s.category === "bebidas");
+    return filtered.length > 0 ? filtered : sponsors;
+  }, [sponsors]);
+
   // Cálculo puramente derivado (sin useEffect ni renders en cascada)
   const currentSponsor = useMemo(() => {
     if (selectedSponsorIdOverride) {
-      const found = sponsors.find((s) => s.id === selectedSponsorIdOverride);
+      const found = deliverySponsors.find((s) => s.id === selectedSponsorIdOverride);
       if (found) return found;
     }
     if (initialSponsorSlug) {
-      const foundBySlug = sponsors.find((s) => s.slug === initialSponsorSlug);
+      const foundBySlug = deliverySponsors.find((s) => s.slug === initialSponsorSlug);
       if (foundBySlug) return foundBySlug;
     }
-    return sponsors[0] || INITIAL_SPONSORS[0];
-  }, [sponsors, selectedSponsorIdOverride, initialSponsorSlug]);
+    return deliverySponsors[0] || INITIAL_SPONSORS[0];
+  }, [deliverySponsors, selectedSponsorIdOverride, initialSponsorSlug]);
 
   const currentAdminPhone = adminPhoneOverrides[currentSponsor?.id] ?? currentSponsor?.whatsapp_number ?? "";
 
@@ -235,9 +241,9 @@ export const SponsorOrderModal: React.FC<SponsorOrderModalProps> = ({
       backgroundColor="var(--background)"
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", color: "var(--foreground)" }}>
-        {/* Selector de Negocios Auspiciadores */}
+        {/* Selector de Negocios Auspiciadores con Delivery */}
         <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "2px" }}>
-          {sponsors.map((s) => {
+          {deliverySponsors.map((s) => {
             const isSelected = s.id === currentSponsor.id;
             return (
               <button

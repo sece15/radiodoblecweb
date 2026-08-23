@@ -1106,7 +1106,9 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                   boxSizing: "border-box",
                 }}
               >
-                {sponsorsList.map((sponsor) => {
+                {sponsorsList
+                  .filter((s) => s.category === "comida" || s.category === "bebidas")
+                  .map((sponsor) => {
                   const isBeverage = sponsor.category === "bebidas";
                   const bg = isBeverage ? "#CCFF00" : "#FF5500";
                   const textColor = isBeverage ? "#111111" : "#FFFFFF";

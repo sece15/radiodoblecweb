@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { NeoModal } from "../common/NeoModal";
-import { SponsorBusiness } from "@/services/sponsorService";
-import { MessageCircle, MapPin, Tag, Sparkles, ExternalLink } from "lucide-react";
+import { SponsorBusiness, updateSponsorDeliveryMode } from "@/services/sponsorService";
+import { MessageCircle, MapPin, Tag, Sparkles, ExternalLink, Shield, Settings2, RefreshCw } from "lucide-react";
+import { useAudio } from "@/hooks/useAudio";
+import { isAdmin } from "@/lib/permissions";
 
 interface BrandInfoModalProps {
   isOpen: boolean;
@@ -18,7 +20,34 @@ export const BrandInfoModal: React.FC<BrandInfoModalProps> = ({
   brand,
   onOpenOrderModal,
 }) => {
+  const { userProfile } = useAudio();
+  const userIsAdmin = isAdmin(userProfile?.role || "");
+
+  // Estado local para overrides de administración en tiempo real
+  const [overrideDelivery, setOverrideDelivery] = useState<Record<string, boolean>>({});
+  const [isUpdatingDelivery, setIsUpdatingDelivery] = useState(false);
+
   if (!brand) return null;
+
+  // Cálculo derivado puro (0 renders en cascada y sincronización inmediata)
+  const hasDeliveryState =
+    overrideDelivery[brand.id] !== undefined
+      ? overrideDelivery[brand.id]
+      : (brand.has_delivery ?? (brand.category === "comida" || brand.category === "bebidas"));
+
+  const handleToggleDeliveryMode = async () => {
+    if (!brand || isUpdatingDelivery) return;
+    setIsUpdatingDelivery(true);
+    const nextState = !hasDeliveryState;
+    try {
+      await updateSponsorDeliveryMode(brand.id, nextState);
+      setOverrideDelivery((prev) => ({ ...prev, [brand.id]: nextState }));
+    } catch (e) {
+      console.error("Error al actualizar modo delivery:", e);
+    } finally {
+      setIsUpdatingDelivery(false);
+    }
+  };
 
   const handleWhatsAppChat = () => {
     const phone = brand.whatsapp_number.replace(/[^0-9]/g, "");
@@ -28,7 +57,7 @@ export const BrandInfoModal: React.FC<BrandInfoModalProps> = ({
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
   };
 
-  const isFoodOrBeverage = brand.category === "comida" || brand.category === "bebidas";
+  const isFoodOrBeverage = hasDeliveryState;
 
   return (
     <NeoModal
@@ -40,6 +69,72 @@ export const BrandInfoModal: React.FC<BrandInfoModalProps> = ({
       backgroundColor="var(--background)"
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "14px", color: "var(--foreground)" }}>
+        {/* Panel de Control Admin para la Marca */}
+        {userIsAdmin && (
+          <div
+            className="neo-card"
+            style={{
+              backgroundColor: "var(--primary-container)",
+              border: "2px solid var(--primary)",
+              boxShadow: "3px 3px 0px var(--primary)",
+              padding: "10px 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 900, color: "var(--primary)", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Shield size={14} style={{ color: "#BA1A1A" }} /> 🛡️ ADMIN: OPCIÓN DE AUSPICIO ({brand.name.split(" ")[0]})
+              </span>
+              <span style={{ fontSize: "0.58rem", fontWeight: 900, backgroundColor: "#BA1A1A", color: "#FFF", padding: "1px 6px", borderRadius: "3px" }}>
+                MODO ADMIN
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700 }}>
+                Tipo de Auspicio:{" "}
+                <span style={{ fontWeight: 900, color: hasDeliveryState ? "#22c55e" : "#0066FF" }}>
+                  {hasDeliveryState ? "🛵 PEDIDOS & DELIVERY ACTIVO" : "🏷️ SOLO VITRINA DE MARCA / SERVICIOS"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleDeliveryMode}
+                disabled={isUpdatingDelivery}
+                className="neo-button"
+                style={{
+                  padding: "5px 10px",
+                  fontSize: "0.70rem",
+                  fontWeight: 900,
+                  backgroundColor: hasDeliveryState ? "#FF5500" : "#22c55e",
+                  color: "#FFFFFF",
+                  border: "2px solid var(--primary)",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                {isUpdatingDelivery ? (
+                  <RefreshCw size={12} className="animate-spin" />
+                ) : (
+                  <Settings2 size={13} />
+                )}
+                <span>
+                  {hasDeliveryState ? "CAMBIAR A SOLO VITRINA" : "HABILITAR PEDIDOS DELIVERY"}
+                </span>
+              </button>
+            </div>
+            <div style={{ fontSize: "0.62rem", opacity: 0.85, color: "var(--foreground)" }}>
+              💡 Al habilitar &quot;Pedidos &amp; Delivery&quot;, la marca aparecerá en el carrito de compras y acordeón de pedidos. Al dejarlo en &quot;Solo Vitrina&quot;, se presentará con su bio y contacto.
+            </div>
+          </div>
+        )}
+
         {/* Cabecera Principal de la Marca */}
         <div
           className="neo-card"
