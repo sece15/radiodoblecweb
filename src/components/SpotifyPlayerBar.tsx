@@ -81,7 +81,7 @@ export const SpotifyPlayerBar = ({
           minWidth: "180px",
         }}
       >
-        {/* 1. VINILO GIRATORIO REDONDO (Sin marco cuadrado) */}
+        {/* 1. VINILO GIRATORIO REDONDO (Puro disco de vinilo, sin efecto de botón) */}
         <div
           onClick={onExpand}
           title="Abrir reproductor"
@@ -90,8 +90,8 @@ export const SpotifyPlayerBar = ({
             height: "52px",
             borderRadius: "50%",
             background: "radial-gradient(circle, #2a2a2a 0%, #111111 40%, #1e1e1e 65%, #080808 100%)",
-            border: "2.5px solid var(--primary)",
-            boxShadow: "2.5px 2.5px 0px var(--primary)",
+            border: "1.5px solid #111111",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
             marginRight: "12px",
             cursor: "pointer",
             flexShrink: 0,
@@ -101,7 +101,6 @@ export const SpotifyPlayerBar = ({
             justifyContent: "center",
             animation: "spin 5s linear infinite",
             animationPlayState: isPlaying ? "running" : "paused",
-            transition: "transform 0.2s ease",
           }}
         >
           {/* Surcos de vinilo (grooves) */}

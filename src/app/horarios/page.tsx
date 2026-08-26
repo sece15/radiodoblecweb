@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ZineBackgroundFrame } from "@/components/ZineBackgroundFrame";
 import { SpotifyPlayerBar } from "@/components/SpotifyPlayerBar";
@@ -12,7 +12,9 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { RadioLogo } from "@/components/RadioLogo";
 import { DAYS_OF_WEEK } from "@/constants";
 import { useSchedule } from "@/hooks/useSchedule";
-import { MusicScheduleBlock } from "@/types";
+import type { MusicScheduleBlock } from "@/types";
+import { VipJukeboxModal } from "@/components/vip/VipJukeboxModal";
+import { supabase } from "@/lib/supabase";
 import {
   Clock,
   Search,
@@ -30,6 +32,8 @@ import {
   Grid,
   List,
   Calendar,
+  Crown,
+  Volume2,
 } from "lucide-react";
 
 export default function HorariosPage() {
@@ -54,6 +58,47 @@ export default function HorariosPage() {
   const [isPlayerExpanded, setPlayerExpanded] = useState(false);
   const [isChatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isJukeboxOpen, setIsJukeboxOpen] = useState(false);
+  const [rocolaRequests, setRocolaRequests] = useState<Array<{
+    id: string;
+    title: string;
+    artist: string;
+    requester: string;
+    dedication?: string;
+    status: string;
+    coins_paid?: number;
+    created_at: string;
+  }>>([]);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from("vip_song_requests")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(8);
+
+        if (!error && data) {
+          // Ordenar: Quien donó más C-Coins lidera en el Puesto #1 absoluto
+          const sorted = [...data].sort((a, b) => {
+            const coinsA = a.coins_paid || (a.status === "interrupted_live" ? 2000 : 1000);
+            const coinsB = b.coins_paid || (b.status === "interrupted_live" ? 2000 : 1000);
+            if (coinsB !== coinsA) return coinsB - coinsA;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+          setRocolaRequests(sorted);
+        }
+      } catch (err) {
+        console.warn("Error fetching rocola ranking:", err);
+      }
+    };
+
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 7000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handlePrint = () => {
     if (typeof window !== "undefined") {
@@ -282,6 +327,327 @@ export default function HorariosPage() {
                 Programación y música de la semana (Lunes a Domingo) en Radio Doble C. Revisa qué canciones y géneros suenan las 24 horas y los programas especiales en vivo de los Viernes y Sábados.
               </p>
             </div>
+
+            {/* ========================================================================= */}
+            {/* 👑 DESTACADO: LA HORA ROCOLA VIP • BATALLA POR EL #1 DEL DIAL              */}
+            {/* ========================================================================= */}
+            <section
+              className="neo-card scanlines"
+              style={{
+                backgroundColor: "#FFFBEA",
+                border: "4px solid var(--primary)",
+                boxShadow: "6px 6px 0px var(--primary)",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {/* Top Banner Header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  borderBottom: "3px solid var(--primary)",
+                  paddingBottom: "12px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      backgroundColor: "#FFB000",
+                      color: "#111",
+                      padding: "6px 12px",
+                      fontSize: "0.78rem",
+                      fontWeight: 900,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      border: "2px solid var(--primary)",
+                      boxShadow: "2px 2px 0px var(--primary)",
+                      transform: "rotate(-1deg)",
+                    }}
+                  >
+                    <Crown size={16} style={{ color: "#BA1A1A", fill: "#BA1A1A" }} />
+                    PROGRAMA ESPECIAL 24/7 &amp; HORARIO ESTELAR 22:00
+                  </div>
+                  <h2
+                    style={{
+                      fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      margin: 0,
+                      letterSpacing: "-0.5px",
+                      color: "var(--primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    🔥 LA HORA ROCOLA VIP: EL REY DEL DIAL
+                  </h2>
+                </div>
+
+                <button
+                  onClick={() => setIsJukeboxOpen(true)}
+                  className="neo-button fun-hover-wobble"
+                  style={{
+                    backgroundColor: "#CCFF00",
+                    color: "#161E00",
+                    border: "2.5px solid var(--primary)",
+                    padding: "10px 18px",
+                    fontSize: "0.82rem",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "3.5px 3.5px 0px var(--primary)",
+                    transform: "rotate(0.5deg)",
+                  }}
+                >
+                  <Zap size={16} style={{ fill: "#161E00" }} />
+                  ⚡ SUBIR MI CANCIÓN (ABRIR ROCOLA)
+                </button>
+              </div>
+
+              {/* Description & Gamification Rules */}
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  lineHeight: "1.3rem",
+                  fontWeight: 700,
+                  margin: 0,
+                  color: "var(--primary)",
+                  opacity: 0.9,
+                }}
+              >
+                🎮 <strong>¿Cómo funciona la Batalla de la Rocola?</strong> Sube tu canción favorita en MP3 o YouTube. El oyente que invierta más <strong>C-Coins</strong> aparece en <strong>PRIMERA FILA (Puesto #1)</strong> y suena en vivo en la radio. Las solicitudes con menos coins quedan ordenadas en cola abajo esperando su turno. ¡Supera el récord y corona tu tema al aire!
+              </p>
+
+              {/* Dynamic Live Leaderboard */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 900, letterSpacing: "1px", color: "var(--primary)" }}>
+                    🏆 RANKING EN VIVO • QUIÉN MANDA EN LA RADIO
+                  </span>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 900, opacity: 0.75 }}>
+                    ACTUALIZADO AL SEGUNDO
+                  </span>
+                </div>
+
+                {rocolaRequests.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {/* #1 SPOT - THE KING OF THE DIAL */}
+                    {(() => {
+                      const top1 = rocolaRequests[0];
+                      const coins = top1.coins_paid || (top1.status === "interrupted_live" ? 2000 : 1000);
+                      return (
+                        <div
+                          style={{
+                            backgroundColor: "#FFDE82",
+                            border: "3px solid var(--primary)",
+                            boxShadow: "4px 4px 0px var(--primary)",
+                            padding: "14px 16px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "12px",
+                            position: "relative",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 300px" }}>
+                            {/* Crown & Disc */}
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "48px",
+                                backgroundColor: "#111",
+                                color: "#FFDE82",
+                                border: "2px solid var(--primary)",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                position: "relative",
+                              }}
+                            >
+                              <Crown size={24} style={{ color: "#FFB000", fill: "#FFB000" }} />
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  bottom: "-4px",
+                                  right: "-4px",
+                                  backgroundColor: "#BA1A1A",
+                                  color: "white",
+                                  fontSize: "0.55rem",
+                                  fontWeight: 900,
+                                  padding: "1px 4px",
+                                  borderRadius: "4px",
+                                }}
+                              >
+                                #1
+                              </span>
+                            </div>
+
+                            {/* Details */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: "0.88rem", fontWeight: 900, textTransform: "uppercase", color: "#111" }}>
+                                  👑 {top1.requester || "Oyente VIP"}
+                                </span>
+                                <span
+                                  style={{
+                                    backgroundColor: "#BA1A1A",
+                                    color: "white",
+                                    fontSize: "0.58rem",
+                                    fontWeight: 900,
+                                    padding: "2px 6px",
+                                    borderRadius: "2px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                  }}
+                                >
+                                  <Volume2 size={11} /> SONANDO / REY DEL DIAL
+                                </span>
+                              </div>
+                              <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#222" }}>
+                                🎵 {top1.title} — <span style={{ opacity: 0.85 }}>{top1.artist}</span>
+                              </span>
+                              {top1.dedication && (
+                                <span style={{ fontSize: "0.68rem", fontStyle: "italic", opacity: 0.85, color: "#444" }}>
+                                  💬 &ldquo;{top1.dedication.split("|")[0].trim()}&rdquo;
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Coins Badge */}
+                          <div
+                            style={{
+                              backgroundColor: "#161E00",
+                              color: "#CCFF00",
+                              border: "2px solid var(--primary)",
+                              padding: "6px 14px",
+                              fontSize: "0.82rem",
+                              fontWeight: 900,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              boxShadow: "2px 2px 0px var(--primary)",
+                            }}
+                          >
+                            <Flame size={16} style={{ color: "#FFB000", fill: "#FFB000" }} />
+                            {coins.toLocaleString()} C-COINS
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* #2, #3, #4 SPOTS (WAITING QUEUE) */}
+                    {rocolaRequests.slice(1, 5).map((req, idx) => {
+                      const pos = idx + 2;
+                      const coins = req.coins_paid || (req.status === "interrupted_live" ? 2000 : 1000);
+                      return (
+                        <div
+                          key={req.id || idx}
+                          style={{
+                            backgroundColor: "var(--card-bg)",
+                            border: "2px solid var(--primary)",
+                            boxShadow: "2px 2px 0px var(--primary)",
+                            padding: "10px 14px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "10px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 250px" }}>
+                            <span
+                              style={{
+                                width: "26px",
+                                height: "26px",
+                                backgroundColor: pos === 2 ? "#D8D8D8" : "#CD7F32",
+                                color: "#111",
+                                fontWeight: 900,
+                                fontSize: "0.72rem",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "1.5px solid var(--primary)",
+                                flexShrink: 0,
+                              }}
+                            >
+                              #{pos}
+                            </span>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                              <span style={{ fontSize: "0.75rem", fontWeight: 900 }}>
+                                {req.requester} • <span style={{ opacity: 0.85, fontWeight: 700 }}>{req.title} ({req.artist})</span>
+                              </span>
+                              <span style={{ fontSize: "0.62rem", opacity: 0.75 }}>
+                                En cola de reproducción
+                              </span>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              backgroundColor: "var(--surface-container)",
+                              border: "1.5px solid var(--primary)",
+                              padding: "3px 8px",
+                              fontSize: "0.68rem",
+                              fontWeight: 900,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <Flame size={12} style={{ color: "#BA1A1A" }} />
+                            {coins.toLocaleString()} Coins
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      backgroundColor: "var(--card-bg)",
+                      border: "2px dashed var(--primary)",
+                      padding: "18px",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <Crown size={28} style={{ opacity: 0.4 }} />
+                    <span style={{ fontSize: "0.8rem", fontWeight: 900 }}>
+                      ¡El trono de la radio está disponible!
+                    </span>
+                    <span style={{ fontSize: "0.72rem", opacity: 0.85, maxWidth: "450px" }}>
+                      Sé el primer oyente en subir tu canción con C-Coins y coronarte en el puesto #1 al aire.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </section>
 
             {/* CONTROLS BAR: SEARCH, DAY SELECTOR & SCROLL BUTTONS */}
             <div
@@ -1118,6 +1484,9 @@ export default function HorariosPage() {
 
       {/* TOAST NOTIFICATION */}
       <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage(null)} />
+
+      {/* ROCOLA VIP JUKEBOX MODAL */}
+      <VipJukeboxModal isOpen={isJukeboxOpen} onClose={() => setIsJukeboxOpen(false)} />
     </main>
   );
 }

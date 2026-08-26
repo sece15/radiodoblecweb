@@ -52,7 +52,37 @@ export const useSchedule = () => {
   }, [searchQuery]);
 
   // Special programs schedule mapping for Friday, Saturday & Sunday
+  // Special programs schedule mapping for Friday, Saturday, Sunday & Daily Rocola VIP
   const getSpecialProgramsForSlot = (timeSlotId: string, dayId: string): SpecialProgramSchedule[] | null => {
+    // 🌟 LA HORA ROCOLA VIP - Todos los días de 22:00 a 23:00 (10 PM a 11 PM)
+    if (timeSlotId === "block_chill_night") {
+      const isRocolaLive = currentHour >= 22 && currentHour < 23;
+      const rocolaProgram: SpecialProgramSchedule = {
+        id: "hora_rocola_vip",
+        title: "🔥 La Hora Rocola VIP",
+        host: "Batalla de C-Coins • Rey del Dial",
+        timeText: "22:00 - 23:00 (10 PM)",
+        genre: "👑 Peticiones en Vivo • Sube tu Canción",
+        isLiveRightNow: isRocolaLive,
+      };
+
+      if (dayId === "vie") {
+        return [
+          rocolaProgram,
+          {
+            id: "subterraneo",
+            title: "Hits and Beats",
+            host: "JS",
+            timeText: "23:00 - 00:00",
+            genre: "All Music / Baterías",
+            isLiveRightNow: currentDayIndex === 5 && currentHour >= 23,
+          },
+        ];
+      }
+
+      return [rocolaProgram];
+    }
+
     if (dayId === "vie") {
       if (timeSlotId === "block_primetime") {
         return [
@@ -71,18 +101,6 @@ export const useSchedule = () => {
             timeText: "21:00 - 22:00",
             genre: "Misterio / Rock, Reggae & Ska",
             isLiveRightNow: currentDayIndex === 5 && currentHour >= 21 && currentHour < 22,
-          },
-        ];
-      }
-      if (timeSlotId === "block_chill_night") {
-        return [
-          {
-            id: "subterraneo",
-            title: "Hits and Beats",
-            host: "JS",
-            timeText: "23:00 - 00:00",
-            genre: "All Music / Baterías",
-            isLiveRightNow: currentDayIndex === 5 && currentHour >= 23,
           },
         ];
       }
