@@ -29,6 +29,9 @@ export const LISTENER_LEVELS = [
   { level: 5, minHours: 50, title: "Capitán Doble C", icon: "👑", color: "#FFB000" },
 ];
 
+export const CONTINUOUS_DROP_REQUIRED_SECS = 3 * 3600; // 3 horas continuas = 10,800s
+export const INTERMITTENT_DROP_REQUIRED_SECS = 8 * 3600; // 8 horas intermitentes = 28,800s
+
 export function useGamification(listenedSeconds: number, isPlaying: boolean) {
   // 1. C-Coins (formerly puntos)
   const [cCoins, setCCoins] = useLocalStorage<number>("doblec_c_coins", 2);
@@ -42,13 +45,24 @@ export function useGamification(listenedSeconds: number, isPlaying: boolean) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [lastReward, setLastReward] = useState<SpinReward | null>(null);
 
-  // 4. Live C-Drops (Surprise Drops while listening)
-  const sessionListeningSecsRef = useRef(0);
+  // 4. Live C-Drops (Surprise Drops: 3h continuas u 8h intermitentes, máx 1 vez al día, 1 C-Coin)
+  const continuousListeningSecsRef = useRef(0);
+  const [lastDropDate, setLastDropDate] = useLocalStorage<string>("doblec_last_cdrop_date", "");
+  const [, setDailyListenedSecs] = useLocalStorage<number>("doblec_daily_listened_secs", 0);
+  const [dailyListenedDate, setDailyListenedDate] = useLocalStorage<string>("doblec_daily_listened_date", "");
   const [activeDrop, setActiveDrop] = useState<{ id: string; amount: number; message: string } | null>(null);
 
   // Today's date string YYYY-MM-DD
   const getTodayStr = () => new Date().toISOString().split("T")[0];
   const todayStr = getTodayStr();
+
+  // Reset daily accumulated listening seconds if day changed
+  useEffect(() => {
+    if (dailyListenedDate !== todayStr) {
+      setDailyListenedDate(todayStr);
+      setDailyListenedSecs(0);
+    }
+  }, [dailyListenedDate, todayStr, setDailyListenedDate, setDailyListenedSecs]);
 
   // Streak verification logic
   useEffect(() => {
@@ -78,30 +92,51 @@ export function useGamification(listenedSeconds: number, isPlaying: boolean) {
     }
   }, [lastActiveDate, todayStr, setLastActiveDate, setStreakDays, setCCoins]);
 
-  // C-Drop timer while playing (every 20 mins = 1200s of active session)
+  // C-Drop timer while playing (3h continuas u 8h intermitentes en el día)
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+      // Al pausar o detenerse, se reinicia la cuenta continua
+      continuousListeningSecsRef.current = 0;
+      return;
+    }
 
     const interval = setInterval(() => {
-      sessionListeningSecsRef.current += 1;
-      if (sessionListeningSecsRef.current > 0 && sessionListeningSecsRef.current % 1200 === 0 && !activeDrop) {
-        setActiveDrop({
-          id: `drop_${Date.now()}`,
-          amount: 1,
-          message: "¡C-DROP EN VIVO! Has estado 20 min en sintonía continua.",
-        });
-      }
+      continuousListeningSecsRef.current += 1;
+
+      setDailyListenedSecs((prev) => {
+        const currentDaily = (prev || 0) + 1;
+        const alreadyClaimedToday = lastDropDate === todayStr;
+
+        if (!alreadyClaimedToday && !activeDrop) {
+          if (continuousListeningSecsRef.current >= CONTINUOUS_DROP_REQUIRED_SECS) {
+            setActiveDrop({
+              id: `drop_continuous_${todayStr}_${Date.now()}`,
+              amount: 1,
+              message: "¡C-DROP EN VIVO! Has estado 3 horas en sintonía continua.",
+            });
+          } else if (currentDaily >= INTERMITTENT_DROP_REQUIRED_SECS) {
+            setActiveDrop({
+              id: `drop_intermittent_${todayStr}_${Date.now()}`,
+              amount: 1,
+              message: "¡C-DROP EN VIVO! Has acumulado 8 horas de sintonía en el día.",
+            });
+          }
+        }
+
+        return currentDaily;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, activeDrop]);
+  }, [isPlaying, activeDrop, lastDropDate, todayStr, setDailyListenedSecs]);
 
   const claimDrop = useCallback(() => {
     if (activeDrop) {
-      setCCoins((prev) => (prev || 0) + activeDrop.amount);
+      setCCoins((prev) => (prev || 0) + 1);
+      setLastDropDate(todayStr);
       setActiveDrop(null);
     }
-  }, [activeDrop, setCCoins]);
+  }, [activeDrop, setCCoins, setLastDropDate, todayStr]);
 
   const dismissDrop = useCallback(() => {
     setActiveDrop(null);

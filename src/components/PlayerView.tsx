@@ -318,8 +318,11 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                   }}
                 >
                   <img
-                    src={currentTrack.imageUrl}
+                    src={currentTrack.imageUrl || "/RADIO.png"}
                     alt="Carátula"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
+                    }}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
                 </div>

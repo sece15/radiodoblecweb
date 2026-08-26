@@ -41,7 +41,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     title: "RADIO DOBLE C",
     album: "RADIO DOBLE C ONLINE",
     artist: "Capitán Doble C",
-    imageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
+    imageUrl: "/RADIO.png",
     streamUrl: DEFAULT_STREAM,
     isLive: true,
   });
@@ -345,8 +345,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       title: liveTrackTitle,
       album: liveShowName,
       artist: "Doble C Live",
-      imageUrl:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR",
+      imageUrl: "/RADIO.png",
       streamUrl: DEFAULT_STREAM,
       isLive: true,
     };

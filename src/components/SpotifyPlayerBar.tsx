@@ -102,8 +102,11 @@ export const SpotifyPlayerBar = ({
           }}
         >
           <img
-            src={currentTrack.imageUrl}
+            src={currentTrack.imageUrl || "/RADIO.png"}
             alt="Track"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
+            }}
             style={{
               width: "92%",
               height: "92%",

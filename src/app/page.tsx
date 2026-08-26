@@ -212,8 +212,11 @@ export default function Home() {
               }}
             >
               <img
-                src={currentTrack.imageUrl}
+                src={currentTrack.imageUrl || "/RADIO.png"}
                 alt="Vinyl"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
+                }}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>

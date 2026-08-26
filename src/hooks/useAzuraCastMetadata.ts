@@ -140,9 +140,14 @@ export const useAzuraCastMetadata = ({
               }
             }
 
-            const defaultStationLogo =
-              "https://lh3.googleusercontent.com/aida-public/AB6AXuDapmQW3vhLP9WO0dJXf731iBQP4L3vryyue8qjAHbCCdhZx42hiiWA6GcJKGLpebk7kEW0UuBIXJBoJ7Gd69h_p_gQU8gFIBBJJ5slsyjibwjdml7p2PlIyNc6WtPMe2et-yhWUwWor8PnILszsb7shglb9mqqyBe3cZ6J2QVn3HEuvjR3ulGpfmvlp1AxMNeDiKyFm0JMnrTTnJj5uRvPH5wr6wg0RIkqJ5t9-rdqEHB7C1vDmpnhx_6SIT3Ta-gWEMigNGCQk9pR";
-            const finalArtUrl = artUrl || defaultStationLogo;
+            const defaultStationLogo = "/RADIO.png";
+            const isMissingOrGenericArt =
+              !artUrl ||
+              artUrl.includes("default") ||
+              artUrl.includes("generic") ||
+              artUrl.includes("station") ||
+              artUrl.includes("googleusercontent.com");
+            const finalArtUrl = !isMissingOrGenericArt && artUrl ? artUrl : defaultStationLogo;
 
             if (currentTrack.streamUrl.includes("/live.m3u8") || currentTrack.streamUrl === DEFAULT_STREAM) {
               setCurrentTrack((prev) => {
