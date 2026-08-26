@@ -536,23 +536,45 @@ export default function HorariosPage() {
                             </div>
                           </div>
 
-                          {/* Coins Badge */}
-                          <div
-                            style={{
-                              backgroundColor: "#161E00",
-                              color: "#CCFF00",
-                              border: "2px solid var(--primary)",
-                              padding: "6px 14px",
-                              fontSize: "0.82rem",
-                              fontWeight: 900,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              boxShadow: "2px 2px 0px var(--primary)",
-                            }}
-                          >
-                            <Flame size={16} style={{ color: "#FFB000", fill: "#FFB000" }} />
-                            {coins.toLocaleString()} C-COINS
+                          {/* Coins Badge & Destronar Action */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                            <div
+                              style={{
+                                backgroundColor: "#161E00",
+                                color: "#CCFF00",
+                                border: "2px solid var(--primary)",
+                                padding: "6px 12px",
+                                fontSize: "0.82rem",
+                                fontWeight: 900,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                boxShadow: "2px 2px 0px var(--primary)",
+                              }}
+                            >
+                              <Flame size={16} style={{ color: "#FFB000", fill: "#FFB000" }} />
+                              {coins.toLocaleString()} C-COINS
+                            </div>
+
+                            <button
+                              onClick={() => setIsJukeboxOpen(true)}
+                              className="neo-button fun-hover-wobble"
+                              style={{
+                                backgroundColor: "#BA1A1A",
+                                color: "white",
+                                border: "2px solid var(--primary)",
+                                padding: "6px 12px",
+                                fontSize: "0.72rem",
+                                fontWeight: 900,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                boxShadow: "2px 2px 0px var(--primary)",
+                              }}
+                            >
+                              ⚔️ DESTRONAR AL #1
+                            </button>
                           </div>
                         </div>
                       );

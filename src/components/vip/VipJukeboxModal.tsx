@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, ChangeEvent, FormEvent } from "react";
-import { Upload, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, Zap, Flame, Music } from "lucide-react";
+import { useState, useRef, ChangeEvent, FormEvent } from "react";
+import { Upload, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, Zap, Flame, Crown } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { useAudio } from "@/hooks/useAudio";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { isAdmin } from "@/lib/permissions";
 import { injectVipSongToAzuraCast } from "@/services/vipJukeboxService";
 
 interface VipJukeboxModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultCoins?: number;
 }
 
-export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
+export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJukeboxModalProps) => {
   const {
     userProfile,
     vipQueue,
@@ -21,6 +21,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     puntosC,
     consumePuntosC,
     skipToNextVipSong,
+    sendChatMessage,
   } = useAudio();
 
   const userIsAdmin = isAdmin(userProfile?.role || "");
@@ -43,22 +44,10 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
   const [uploadStepText, setUploadStepText] = useState("");
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const BASE_ROCOLA_COST = 1000;
-  const [playMode, setPlayMode] = useState<"normal" | "interrupt">("interrupt");
-  const [interruptCost, setInterruptCost] = useLocalStorage<number>("doblec_rocola_cut_cost", BASE_ROCOLA_COST);
-  const [lastCutTime, setLastCutTime] = useLocalStorage<number>("doblec_rocola_cut_timestamp", 0);
-
-  // Auto-reset cut cost back to base (1,000 C-Coins) if more than 10 mins have passed without cuts
-  useEffect(() => {
-    const now = Date.now();
-    if (lastCutTime > 0 && now - lastCutTime > 10 * 60 * 1000 && interruptCost > BASE_ROCOLA_COST) {
-      setInterruptCost(BASE_ROCOLA_COST);
-    }
-  }, [lastCutTime, interruptCost, setInterruptCost, BASE_ROCOLA_COST]);
+  const [selectedBid, setSelectedBid] = useState<number>(defaultCoins);
+  const [customBidInput, setCustomBidInput] = useState<string>("");
 
   if (!isOpen) return null;
-
-  const requiredCost = playMode === "interrupt" ? interruptCost : BASE_ROCOLA_COST;
 
   const handleAudioFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -130,19 +119,21 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
       }
     }
 
-    // Coins Verification (Admin has free pass, other users pay requiredCost)
+    const parsedCustom = customBidInput ? parseInt(customBidInput, 10) : 0;
+    const effectiveCost = parsedCustom >= 1000 ? parsedCustom : selectedBid;
+    const isInterrupt = effectiveCost >= 2000;
+
+    // Coins Verification (Admin has free pass, other users pay effectiveCost)
     if (!userIsAdmin && !isStaff) {
-      if ((puntosC || 0) < requiredCost) {
+      if ((puntosC || 0) < effectiveCost) {
         alert(
           `🔒 SALDO INSUFICIENTE:\n\n` +
-          (playMode === "interrupt"
-            ? `¡Para cortar la canción en vivo y dominar el aire necesitas ${requiredCost} C-Coins!`
-            : `¡Para encolar una canción en la rocola necesitas ${requiredCost} C-Coin!`) +
-          `\n\nTu saldo actual: ${puntosC || 0} C-Coins.\n📻 ¡Escucha la radio o gira la tornamesa diaria para ganar más monedas!`
+          `Para enviar tu canción con ${effectiveCost.toLocaleString()} C-Coins necesitas recargar tu saldo.` +
+          `\n\nTu saldo actual: ${(puntosC || 0).toLocaleString()} C-Coins.\n📻 ¡Escucha la radio o gira la tornamesa diaria para ganar más monedas!`
         );
         return;
       }
-      consumePuntosC(requiredCost);
+      consumePuntosC(effectiveCost);
     }
 
     if (previewAudioRef.current) {
@@ -158,11 +149,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev < 40) {
-          setUploadStepText(playMode === "interrupt" ? "Cortando en vivo..." : "Enviando a la radio...");
+          setUploadStepText(isInterrupt ? "Cortando en vivo..." : "Enviando a la radio...");
           return prev + 6;
         }
         if (prev < 80) {
-          setUploadStepText(playMode === "interrupt" ? "Transmitiendo al aire..." : "Encolando canción...");
+          setUploadStepText(isInterrupt ? "Transmitiendo al aire..." : "Encolando canción...");
           return prev + 4;
         }
         if (prev < 92) {
@@ -174,8 +165,6 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     }, 180);
 
     try {
-      const isInterrupt = playMode === "interrupt";
-
       if (activeTab === "youtube") {
         const effectiveTitle = title.trim() || "Tema YouTube";
         const effectiveArtist = artist.trim() || "YouTube / Web";
@@ -189,6 +178,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           userRole: userProfile.role,
           userId: userProfile.id,
           forceSkip: isInterrupt,
+          coinsPaid: effectiveCost,
         });
 
         requestVipSong({
@@ -201,10 +191,14 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
         });
 
-        if (isInterrupt) {
-          // Duplicar el costo de corte para la próxima batalla (base 1,000 -> 2,000 -> 4,000...)
-          setInterruptCost((prev) => (prev || BASE_ROCOLA_COST) * 2);
-          setLastCutTime(Date.now());
+        // Broadcast de Destronamiento en vivo al Chat
+        try {
+          if (sendChatMessage) {
+            const crownEmoji = effectiveCost >= 3500 ? "👑" : "⚡";
+            sendChatMessage(`${crownEmoji} ¡BATALLA DE ROCOLA! @${userProfile.name} aportó ${effectiveCost.toLocaleString()} C-Coins y coronó su tema al aire: "${effectiveTitle} - ${effectiveArtist}"!`);
+          }
+        } catch (chatErr) {
+          console.warn("Notice chat broadcast:", chatErr);
         }
 
         clearInterval(progressInterval);
@@ -220,6 +214,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           userRole: userProfile.role,
           userId: userProfile.id,
           forceSkip: isInterrupt,
+          coinsPaid: effectiveCost,
         });
 
         console.log("[VIP MODAL SUBMIT RESULT]:", res);
@@ -235,10 +230,14 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           durationSeconds: audioDuration,
         });
 
-        if (isInterrupt) {
-          // Duplicar el costo de corte para la próxima batalla (base 1,000 -> 2,000 -> 4,000...)
-          setInterruptCost((prev) => (prev || BASE_ROCOLA_COST) * 2);
-          setLastCutTime(Date.now());
+        // Broadcast de Destronamiento en vivo al Chat
+        try {
+          if (sendChatMessage) {
+            const crownEmoji = effectiveCost >= 3500 ? "👑" : "⚡";
+            sendChatMessage(`${crownEmoji} ¡BATALLA DE ROCOLA! @${userProfile.name} aportó ${effectiveCost.toLocaleString()} C-Coins y coronó su tema al aire: "${title.trim()} - ${artist.trim()}"!`);
+          }
+        } catch (chatErr) {
+          console.warn("Notice chat broadcast:", chatErr);
         }
 
         clearInterval(progressInterval);
@@ -312,11 +311,11 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             <Check size={36} color="black" />
           </div>
           <h3 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
-            {playMode === "interrupt" ? "⚡ ¡CORTE EN VIVO EJECUTADO!" : "¡TEMA ENCOLADO CON ÉXITO! 📻"}
+            {selectedBid >= 2000 ? "⚡ ¡CORTE EN VIVO EJECUTADO!" : "¡TEMA ENCOLADO CON ÉXITO! 📻"}
           </h3>
           <p style={{ fontSize: "0.8rem", opacity: 0.9, margin: 0, maxWidth: "420px" }}>
-            {playMode === "interrupt"
-              ? "Tu canción ha cortado la transmisión en vivo y ya está sonando para todos los oyentes de Radio Doble C. ¡La tarifa para interrumpirte se ha duplicado!"
+            {selectedBid >= 2000
+              ? "Tu canción ha cortado la transmisión en vivo y ya está sonando para todos los oyentes de Radio Doble C."
               : "Tu pedido está en la fila de AzuraCast y sonará en la transmisión al terminar la canción en curso."}
           </p>
         </div>
@@ -362,90 +361,133 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             </div>
           </div>
 
-          {/* MODE SELECTOR: CORTE INMEDIATO VS ENCOLAR NORMAL */}
+          {/* ========================================================================= */}
+          {/* ⚔️ BATALLA DE PUJAS / EL REY DEL DIAL (TIER SELECTOR)                     */}
+          {/* ========================================================================= */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "8px",
               backgroundColor: "#FFF8E1",
-              padding: "8px",
-              border: "2px solid var(--primary)",
+              padding: "10px 12px",
+              border: "2.5px solid var(--primary)",
               boxShadow: "3px 3px 0px var(--primary)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
             }}
           >
-            {/* Opción 1: Cortar en vivo */}
-            <div
-              onClick={() => setPlayMode("interrupt")}
-              style={{
-                backgroundColor: playMode === "interrupt" ? "#CCFF00" : "white",
-                border: playMode === "interrupt" ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
-                boxShadow: playMode === "interrupt" ? "2px 2px 0px var(--primary)" : "none",
-                padding: "8px",
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.72rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Zap size={14} color="#BA1A1A" /> CORTAR EN VIVO ⚡
-                </span>
-                <span
-                  style={{
-                    backgroundColor: "#BA1A1A",
-                    color: "white",
-                    fontSize: "0.6rem",
-                    fontWeight: 900,
-                    padding: "2px 5px",
-                    borderRadius: "3px",
-                  }}
-                >
-                  {userIsAdmin ? "GRATIS" : `${interruptCost.toLocaleString()} C-COINS`}
-                </span>
-              </div>
-              <p style={{ fontSize: "0.58rem", margin: 0, lineHeight: "1.2", opacity: 0.85 }}>
-                Corta la canción actual y suena al segundo 1. (El próximo corte cuesta el doble).
-              </p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.74rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "5px" }}>
+                <Crown size={15} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
+                BATALLA DE C-COINS • ELIGE TU POSICIÓN AL AIRE
+              </span>
+              <span style={{ fontSize: "0.6rem", fontWeight: 900, opacity: 0.8 }}>
+                QUIEN PAGA MÁS QUEDA #1
+              </span>
             </div>
 
-            {/* Opción 2: Encolar normal */}
-            <div
-              onClick={() => setPlayMode("normal")}
-              style={{
-                backgroundColor: playMode === "normal" ? "#CCFF00" : "white",
-                border: playMode === "normal" ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
-                boxShadow: playMode === "normal" ? "2px 2px 0px var(--primary)" : "none",
-                padding: "8px",
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.72rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Music size={14} color="var(--primary)" /> ENCOLAR NORMAL
-                </span>
-                <span
-                  style={{
-                    backgroundColor: "var(--primary)",
-                    color: "var(--on-primary)",
-                    fontSize: "0.6rem",
-                    fontWeight: 900,
-                    padding: "2px 5px",
-                    borderRadius: "3px",
-                  }}
-                >
-                  {userIsAdmin ? "GRATIS" : `${BASE_ROCOLA_COST.toLocaleString()} C-COINS`}
-                </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+              {/* Opción 1: 1,000 Coins */}
+              <div
+                onClick={() => { setSelectedBid(1000); setCustomBidInput(""); }}
+                style={{
+                  backgroundColor: selectedBid === 1000 && !customBidInput ? "#CCFF00" : "white",
+                  border: selectedBid === 1000 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>📻 Encolar</span>
+                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#111", color: "#CCFF00", padding: "1px 4px" }}>1,000</span>
+                </div>
+                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>Espera su turno en cola.</span>
               </div>
-              <p style={{ fontSize: "0.58rem", margin: 0, lineHeight: "1.2", opacity: 0.85 }}>
-                Sonará en la radio en cuanto termine la canción actual.
-              </p>
+
+              {/* Opción 2: 2,000 Coins */}
+              <div
+                onClick={() => { setSelectedBid(2000); setCustomBidInput(""); }}
+                style={{
+                  backgroundColor: selectedBid === 2000 && !customBidInput ? "#CCFF00" : "white",
+                  border: selectedBid === 2000 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>⚡ Corte en Vivo</span>
+                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#BA1A1A", color: "white", padding: "1px 4px" }}>2,000</span>
+                </div>
+                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>Corta y entra al instante.</span>
+              </div>
+
+              {/* Opción 3: 3,500 Coins */}
+              <div
+                onClick={() => { setSelectedBid(3500); setCustomBidInput(""); }}
+                style={{
+                  backgroundColor: selectedBid === 3500 && !customBidInput ? "#FFDE82" : "white",
+                  border: selectedBid === 3500 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>👑 Conquistar #1</span>
+                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#B8860B", color: "white", padding: "1px 4px" }}>3,500</span>
+                </div>
+                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>Destrona y lidera primera fila.</span>
+              </div>
+
+              {/* Opción 4: 5,000 Coins */}
+              <div
+                onClick={() => { setSelectedBid(5000); setCustomBidInput(""); }}
+                style={{
+                  backgroundColor: selectedBid === 5000 && !customBidInput ? "#FFD700" : "white",
+                  border: selectedBid === 5000 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>🔥 Corona Suprema</span>
+                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#111", color: "#FFD700", padding: "1px 4px" }}>5,000</span>
+                </div>
+                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>#1 Indiscutible + Anuncio Chat.</span>
+              </div>
+            </div>
+
+            {/* Custom Coins Bid */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <label style={{ fontSize: "0.62rem", fontWeight: 900, whiteSpace: "nowrap" }}>
+                O PUJA PERSONALIZADA:
+              </label>
+              <input
+                type="number"
+                min="1000"
+                step="500"
+                placeholder="Ej. 6000"
+                value={customBidInput}
+                onChange={(e) => setCustomBidInput(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "4px 8px",
+                  fontSize: "0.7rem",
+                  border: "1.5px solid var(--primary)",
+                  fontWeight: 900,
+                  backgroundColor: customBidInput ? "#FFDE82" : "white",
+                }}
+              />
             </div>
           </div>
 
@@ -831,47 +873,63 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           )}
 
           {/* SUBMIT BUTTON */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="neo-button fun-hover-wobble"
-            style={{
-              backgroundColor: isSubmitting ? "#E0E0E0" : "#CCFF00",
-              color: "#111111",
-              padding: "11px",
-              fontSize: "0.82rem",
-              fontWeight: 900,
-              border: "2.5px solid var(--primary)",
-              boxShadow: "3.5px 3.5px 0px var(--primary)",
-              cursor: isSubmitting ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              marginTop: "2px",
-              opacity: isSubmitting ? 0.8 : 1,
-            }}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>
-                  {playMode === "interrupt"
-                    ? `CORTANDO EN VIVO (${Math.min(100, Math.round(uploadProgress))}%) ⚡`
-                    : `ENCOLANDO EN ROCOLA (${Math.min(100, Math.round(uploadProgress))}%) 📡`}
-                </span>
-              </>
-            ) : (
-              <>
-                {playMode === "interrupt" ? <Zap size={16} color="#BA1A1A" /> : <Sparkles size={16} />}
-                <span>
-                  {playMode === "interrupt"
-                    ? `⚡ CORTAR Y TRANSMITIR AHORA MISMO (-${userIsAdmin ? "0" : requiredCost.toLocaleString()} C-COINS)`
-                    : `📻 ENCOLAR EN LA ROCOLA (-${userIsAdmin ? "0" : BASE_ROCOLA_COST.toLocaleString()} C-COINS)`}
-                </span>
-              </>
-            )}
-          </button>
+          {(() => {
+            const parsedCustom = customBidInput ? parseInt(customBidInput, 10) : 0;
+            const effectiveCost = parsedCustom >= 1000 ? parsedCustom : selectedBid;
+            const isInterrupt = effectiveCost >= 2000;
+
+            return (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="neo-button fun-hover-wobble"
+                style={{
+                  backgroundColor: isSubmitting ? "#E0E0E0" : effectiveCost >= 3500 ? "#FFDE82" : "#CCFF00",
+                  color: "#111111",
+                  padding: "11px",
+                  fontSize: "0.82rem",
+                  fontWeight: 900,
+                  border: "2.5px solid var(--primary)",
+                  boxShadow: "3.5px 3.5px 0px var(--primary)",
+                  cursor: isSubmitting ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  marginTop: "2px",
+                  opacity: isSubmitting ? 0.8 : 1,
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>
+                      {isInterrupt
+                        ? `CORTANDO EN VIVO (${Math.min(100, Math.round(uploadProgress))}%) ⚡`
+                        : `ENCOLANDO EN ROCOLA (${Math.min(100, Math.round(uploadProgress))}%) 📡`}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {effectiveCost >= 3500 ? (
+                      <Crown size={18} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
+                    ) : isInterrupt ? (
+                      <Zap size={16} color="#BA1A1A" />
+                    ) : (
+                      <Sparkles size={16} />
+                    )}
+                    <span>
+                      {effectiveCost >= 3500
+                        ? `👑 CONQUISTAR PUESTO #1 AL AIRE (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`
+                        : isInterrupt
+                          ? `⚡ CORTAR Y TRANSMITIR AHORA MISMO (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`
+                          : `📻 ENCOLAR EN LA ROCOLA (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`}
+                    </span>
+                  </>
+                )}
+              </button>
+            );
+          })()}
         </form>
       )}
     </NeoModal>

@@ -3,7 +3,7 @@
 import { CSSProperties, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Search, ShoppingCart, Calendar, Menu, X, Radio, Sparkles, ShoppingBag, User, Newspaper } from "lucide-react";
+import { Search, ShoppingCart, Calendar, Menu, X, Radio, ShoppingBag, User, Newspaper, Crown } from "lucide-react";
 import { RadioLogo } from "@/components/RadioLogo";
 import { HeaderNewsTicker } from "@/components/HeaderNewsTicker";
 import { NewsModal } from "@/components/NewsModal";
@@ -184,30 +184,28 @@ export const Header = ({
 
           {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {/* VIP Badge (Desktop only if VIP) */}
-            {isVipUser && (
-              <button
-                onClick={() => handleNavClick("vip")}
-                className="neo-button fun-hover-wobble desktop-only-flex"
-                style={{
-                  padding: "6px 12px",
-                  fontSize: "0.72rem",
-                  fontWeight: 900,
-                  backgroundColor: isVipTab ? "#CCFF00" : "#FFDE82",
-                  color: "#111111",
-                  boxShadow: isVipTab ? "1px 1px 0px var(--primary)" : "2.5px 2.5px 0px var(--primary)",
-                  cursor: "pointer",
-                  transform: isVipTab ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1.5deg)",
-                  "--rest-rot": isVipTab ? "0deg" : "1.5deg",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                } as CSSProperties}
-              >
-                <Sparkles size={13} />
-                ZONA VIP ⭐
-              </button>
-            )}
+            {/* Rocola VIP Badge (Desktop) */}
+            <button
+              onClick={() => handleNavClick("vip")}
+              className="neo-button fun-hover-wobble desktop-only-flex"
+              style={{
+                padding: "6px 12px",
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                backgroundColor: isVipTab ? "#CCFF00" : "#FFDE82",
+                color: "#111111",
+                boxShadow: isVipTab ? "1px 1px 0px var(--primary)" : "2.5px 2.5px 0px var(--primary)",
+                cursor: "pointer",
+                transform: isVipTab ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1.5deg)",
+                "--rest-rot": isVipTab ? "0deg" : "1.5deg",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              } as CSSProperties}
+            >
+              <Crown size={14} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
+              ROCOLA VIP 👑
+            </button>
 
             {/* Cart Button */}
             <button
@@ -474,8 +472,8 @@ export const Header = ({
             } as CSSProperties}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Sparkles size={16} />
-              <span>ZONA VIP ⭐</span>
+              <Crown size={16} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
+              <span>ROCOLA VIP 👑</span>
             </div>
             {isVipTab && (
               <span

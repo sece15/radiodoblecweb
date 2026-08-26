@@ -10,6 +10,7 @@ export interface InjectVipSongInput {
   userRole?: string;
   userId?: string;
   forceSkip?: boolean;
+  coinsPaid?: number;
 }
 
 export interface InjectVipSongResponse {
@@ -72,6 +73,7 @@ export async function injectVipSongToAzuraCast(
         userRole: input.userRole || "OYENTE",
         userId: input.userId || "",
         forceSkip: !!input.forceSkip,
+        coinsPaid: input.coinsPaid,
       },
     });
 
