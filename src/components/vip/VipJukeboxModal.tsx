@@ -152,29 +152,21 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
 
     setIsSubmitting(true);
     setUploadProgress(12);
-    setUploadStepText(
-      activeTab === "youtube"
-        ? "Conectando con el extractor antibloqueo... 🔗"
-        : "Preparando y empaquetando audio... 📁"
-    );
+    setUploadStepText("Cargando tema...");
 
-    // Barra de progreso interactiva y fluida
+    // Barra de progreso fluida y minimalista
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
-        if (prev < 35) {
-          setUploadStepText("Transmitiendo al servidor de Radio Doble C... 📡");
+        if (prev < 40) {
+          setUploadStepText(playMode === "interrupt" ? "Cortando en vivo..." : "Enviando a la radio...");
           return prev + 6;
         }
-        if (prev < 68) {
-          setUploadStepText(
-            playMode === "interrupt"
-              ? "⚡ Ejecutando corte de canción en vivo..."
-              : "Optimizando flujo de audio a 320kbps... ⚡"
-          );
+        if (prev < 80) {
+          setUploadStepText(playMode === "interrupt" ? "Transmitiendo al aire..." : "Encolando canción...");
           return prev + 4;
         }
-        if (prev < 88) {
-          setUploadStepText("Inyectando en la transmisión de AzuraCast... 📻");
+        if (prev < 92) {
+          setUploadStepText("Casi listo...");
           return prev + 2;
         }
         return prev;
@@ -217,7 +209,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
 
         clearInterval(progressInterval);
         setUploadProgress(100);
-        setUploadStepText(res.message || "¡Listo! Canción enviada a la radio ⭐");
+        setUploadStepText("¡Listo! Canción enviada a la radio ⭐");
       } else {
         const res = await injectVipSongToAzuraCast({
           file: audioFile,
@@ -251,7 +243,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
 
         clearInterval(progressInterval);
         setUploadProgress(100);
-        setUploadStepText(res.message || "¡Listo! Canción enviada a la radio ⭐");
+        setUploadStepText("¡Listo! Canción enviada a la radio ⭐");
       }
 
       setIsSuccess(true);
