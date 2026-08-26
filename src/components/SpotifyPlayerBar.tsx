@@ -81,56 +81,95 @@ export const SpotifyPlayerBar = ({
           minWidth: "180px",
         }}
       >
+        {/* 1. VINILO GIRATORIO REDONDO (Sin marco cuadrado) */}
         <div
           onClick={onExpand}
+          title="Abrir reproductor"
           style={{
-            width: "56px",
-            height: "56px",
-            border: "3px solid var(--primary)",
-            boxShadow: "2px 2px 0px var(--primary)",
-            backgroundColor: "white",
+            width: "52px",
+            height: "52px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, #2a2a2a 0%, #111111 40%, #1e1e1e 65%, #080808 100%)",
+            border: "2.5px solid var(--primary)",
+            boxShadow: "2.5px 2.5px 0px var(--primary)",
             marginRight: "12px",
             cursor: "pointer",
-            overflow: "hidden",
             flexShrink: 0,
-            transform: isPlaying ? "rotate(1.5deg)" : "none",
-            transition: "transform 0.3s ease",
             position: "relative",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            animation: "spin 5s linear infinite",
+            animationPlayState: isPlaying ? "running" : "paused",
+            transition: "transform 0.2s ease",
           }}
         >
-          <img
-            src={currentTrack.imageUrl || "/RADIO.png"}
-            alt="Track"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
-            }}
-            style={{
-              width: "92%",
-              height: "92%",
-              objectFit: "cover",
-              borderRadius: "50%",
-              animation: isPlaying ? "spin 20s linear infinite" : "none",
-            }}
-          />
-          {/* Vinyl center spindle hole */}
+          {/* Surcos de vinilo (grooves) */}
           <div
             style={{
               position: "absolute",
-              top: "50%",
-              left: "50%",
-              width: "10px",
-              height: "10px",
-              backgroundColor: "white",
-              border: "2px solid var(--primary)",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
-              transform: "translate(-50%, -50%)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
               pointerEvents: "none",
-              zIndex: 2,
             }}
-          ></div>
+          />
+          <div
+            style={{
+              position: "absolute",
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* Pegatina circular central del vinilo con la carátula/logo */}
+          <div
+            style={{
+              width: "24px",
+              height: "24px",
+              borderRadius: "50%",
+              border: "1.5px solid #000000",
+              overflow: "hidden",
+              position: "relative",
+              backgroundColor: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 0 4px rgba(0,0,0,0.5)",
+              zIndex: 1,
+            }}
+          >
+            <img
+              src={currentTrack.imageUrl || "/RADIO.png"}
+              alt="Track"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
+              }}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+
+          {/* Agujero central del vinilo */}
+          <div
+            style={{
+              position: "absolute",
+              width: "6px",
+              height: "6px",
+              backgroundColor: "var(--background)",
+              border: "1.5px solid var(--primary)",
+              borderRadius: "50%",
+              zIndex: 3,
+              pointerEvents: "none",
+            }}
+          />
         </div>
 
         <div style={{ minWidth: 0, overflow: "hidden" }}>

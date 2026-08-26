@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { isVip, isAdmin } from "@/lib/permissions";
+import { isVip } from "@/lib/permissions";
 import { DriveAlbumsSection } from "./DriveAlbumsSection";
 import { RadioVideosSection } from "./RadioVideosSection";
 import { VipJukeboxModal } from "./vip/VipJukeboxModal";
-import { Sparkles, Crown, Lock, Music, ShieldAlert } from "lucide-react";
+import { Sparkles, Crown, Lock, Music } from "lucide-react";
 
 interface VipViewProps {
   onNavigateToPlayer: () => void;
@@ -13,7 +13,6 @@ interface VipViewProps {
 export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
   const { userProfile, vipQueue } = useAudio();
   const userIsVip = isVip(userProfile.role);
-  const userIsAdmin = isAdmin(userProfile.role);
   const [isJukeboxOpen, setIsJukeboxOpen] = useState(false);
 
   return (
@@ -73,45 +72,26 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
           </p>
 
           <div style={{ display: "flex", gap: "10px", marginTop: "4px", flexWrap: "wrap" }}>
-            {userIsAdmin ? (
-              <button
-                onClick={() => setIsJukeboxOpen(true)}
-                className="neo-button fun-hover-wobble"
-                style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111",
-                  padding: "8px 16px",
-                  fontSize: "0.75rem",
-                  fontWeight: 900,
-                  border: "2px solid var(--primary)",
-                  boxShadow: "3px 3px 0px var(--primary)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                <Music size={14} />
-                <span>👑 INYECTAR TEMA EN AZURACAST (ADMIN • {vipQueue.length} en fila)</span>
-              </button>
-            ) : (
-              <div
-                style={{
-                  backgroundColor: "rgba(0,0,0,0.08)",
-                  color: "var(--primary)",
-                  padding: "6px 12px",
-                  fontSize: "0.7rem",
-                  fontWeight: 800,
-                  border: "2px dashed var(--primary)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                <ShieldAlert size={14} />
-                <span>🔒 ROCKOLA AL AIRE: CONTROL RESTRINGIDO A ADMINISTRADORES</span>
-              </div>
-            )}
+            <button
+              onClick={() => setIsJukeboxOpen(true)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "#CCFF00",
+                color: "#111",
+                padding: "8px 16px",
+                fontSize: "0.75rem",
+                fontWeight: 900,
+                border: "2px solid var(--primary)",
+                boxShadow: "3px 3px 0px var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+              }}
+            >
+              <Music size={14} />
+              <span>📻 METER TEMA A LA ROCOLA (BATALLA DE COINS ⚡ • {vipQueue.length} en fila)</span>
+            </button>
           </div>
         </div>
       ) : (
@@ -153,27 +133,50 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
             Esta sección contiene los discos underground completos de Radio Doble C, sesiones de autor y producciones independientes en alta fidelidad. Suscríbete al Club VIP para desbloquear la escucha completa y descargas directas.
           </p>
 
-          <a
-            href="https://wa.me/51999999999?text=Hola%2C%20quiero%20suscribirme%20al%20Club%20VIP%20de%20Radio%20Doble%20C"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="neo-button fun-hover-wobble"
-            style={{
-              backgroundColor: "var(--primary-container)",
-              padding: "12px 20px",
-              fontSize: "0.85rem",
-              fontWeight: 900,
-              width: "fit-content",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: "4px 4px 0px var(--primary)",
-              textDecoration: "none",
-              color: "inherit",
-            }}
-          >
-            <Sparkles size={16} /> OBTENER MEMBRESÍA VIP ⚡
-          </a>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => setIsJukeboxOpen(true)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "#CCFF00",
+                color: "#111",
+                padding: "12px 20px",
+                fontSize: "0.85rem",
+                fontWeight: 900,
+                border: "2.5px solid var(--primary)",
+                boxShadow: "4px 4px 0px var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+              }}
+            >
+              <Music size={16} />
+              <span>📻 METER TEMA A LA ROCOLA (BATALLA DE COINS ⚡)</span>
+            </button>
+
+            <a
+              href="https://wa.me/51999999999?text=Hola%2C%20quiero%20suscribirme%20al%20Club%20VIP%20de%20Radio%20Doble%20C"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "var(--primary-container)",
+                padding: "12px 20px",
+                fontSize: "0.85rem",
+                fontWeight: 900,
+                width: "fit-content",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "4px 4px 0px var(--primary)",
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              <Sparkles size={16} /> OBTENER MEMBRESÍA VIP ⚡
+            </a>
+          </div>
         </div>
       )}
 

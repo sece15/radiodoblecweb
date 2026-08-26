@@ -9,6 +9,7 @@ export interface InjectVipSongInput {
   dedication?: string;
   userRole?: string;
   userId?: string;
+  forceSkip?: boolean;
 }
 
 export interface InjectVipSongResponse {
@@ -18,6 +19,7 @@ export interface InjectVipSongResponse {
   message?: string;
   error?: string;
   url?: string;
+  skippedNow?: boolean;
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -69,6 +71,7 @@ export async function injectVipSongToAzuraCast(
         dedication: input.dedication,
         userRole: input.userRole || "OYENTE",
         userId: input.userId || "",
+        forceSkip: !!input.forceSkip,
       },
     });
 

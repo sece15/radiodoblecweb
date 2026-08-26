@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, ChangeEvent, FormEvent } from "react";
-import { Upload, Crown, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, ShieldAlert } from "lucide-react";
+import { useState, useEffect, useRef, ChangeEvent, FormEvent } from "react";
+import { Upload, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, Zap, Flame, Music } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { useAudio } from "@/hooks/useAudio";
-import { isVip, isAdmin } from "@/lib/permissions";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { isAdmin } from "@/lib/permissions";
 import { injectVipSongToAzuraCast } from "@/services/vipJukeboxService";
 
 interface VipJukeboxModalProps {
@@ -22,7 +23,6 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     skipToNextVipSong,
   } = useAudio();
 
-  const userIsVip = isVip(userProfile?.role || "");
   const userIsAdmin = isAdmin(userProfile?.role || "");
   const normRole = (userProfile?.role || "").toUpperCase();
   const isStaff = normRole.includes("ADMIN") || normRole.includes("STREAMER") || normRole.includes("MOD");
@@ -41,10 +41,24 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStepText, setUploadStepText] = useState("");
-
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const BASE_ROCOLA_COST = 1000;
+  const [playMode, setPlayMode] = useState<"normal" | "interrupt">("interrupt");
+  const [interruptCost, setInterruptCost] = useLocalStorage<number>("doblec_rocola_cut_cost", BASE_ROCOLA_COST);
+  const [lastCutTime, setLastCutTime] = useLocalStorage<number>("doblec_rocola_cut_timestamp", 0);
+
+  // Auto-reset cut cost back to base (1,000 C-Coins) if more than 10 mins have passed without cuts
+  useEffect(() => {
+    const now = Date.now();
+    if (lastCutTime > 0 && now - lastCutTime > 10 * 60 * 1000 && interruptCost > BASE_ROCOLA_COST) {
+      setInterruptCost(BASE_ROCOLA_COST);
+    }
+  }, [lastCutTime, interruptCost, setInterruptCost, BASE_ROCOLA_COST]);
+
   if (!isOpen) return null;
+
+  const requiredCost = playMode === "interrupt" ? interruptCost : BASE_ROCOLA_COST;
 
   const handleAudioFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,11 +118,6 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!userIsAdmin) {
-      alert("⛔ ACCESO DENEGADO:\n\nSolo los administradores autorizados pueden inyectar música en vivo en AzuraCast.");
-      return;
-    }
-
     if (activeTab === "youtube") {
       if (!youtubeUrl.trim()) {
         alert("Por favor pega el enlace de YouTube o SoundCloud.");
@@ -121,16 +130,19 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
       }
     }
 
-    // VIP / Coins Verification
-    if (!userIsVip && !isStaff) {
-      if ((puntosC || 0) < 150) {
+    // Coins Verification (Admin has free pass, other users pay requiredCost)
+    if (!userIsAdmin && !isStaff) {
+      if ((puntosC || 0) < requiredCost) {
         alert(
-          `🔒 LA ROCKOLA VIP ES EXCLUSIVA PARA MIEMBROS VIP O CANJE CON 150 C-COINS.\n(Tienes: ${puntosC || 0
-          } C-Coins).\n\n📻 ¡Escucha la radio o sube de nivel para acumular más C-Coins!`
+          `🔒 SALDO INSUFICIENTE:\n\n` +
+          (playMode === "interrupt"
+            ? `¡Para cortar la canción en vivo y dominar el aire necesitas ${requiredCost} C-Coins!`
+            : `¡Para encolar una canción en la rocola necesitas ${requiredCost} C-Coin!`) +
+          `\n\nTu saldo actual: ${puntosC || 0} C-Coins.\n📻 ¡Escucha la radio o gira la tornamesa diaria para ganar más monedas!`
         );
         return;
       }
-      consumePuntosC(150);
+      consumePuntosC(requiredCost);
     }
 
     if (previewAudioRef.current) {
@@ -154,11 +166,15 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           return prev + 6;
         }
         if (prev < 68) {
-          setUploadStepText("Optimizando flujo de audio a 320kbps... ⚡");
+          setUploadStepText(
+            playMode === "interrupt"
+              ? "⚡ Ejecutando corte de canción en vivo..."
+              : "Optimizando flujo de audio a 320kbps... ⚡"
+          );
           return prev + 4;
         }
         if (prev < 88) {
-          setUploadStepText("Inyectando en la cola de AzuraCast AutoDJ... 📻");
+          setUploadStepText("Inyectando en la transmisión de AzuraCast... 📻");
           return prev + 2;
         }
         return prev;
@@ -166,6 +182,8 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     }, 180);
 
     try {
+      const isInterrupt = playMode === "interrupt";
+
       if (activeTab === "youtube") {
         const effectiveTitle = title.trim() || "Tema YouTube";
         const effectiveArtist = artist.trim() || "YouTube / Web";
@@ -178,6 +196,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           dedication: dedication.trim() || undefined,
           userRole: userProfile.role,
           userId: userProfile.id,
+          forceSkip: isInterrupt,
         });
 
         requestVipSong({
@@ -189,6 +208,12 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           audioUrl: res.url || "https://stream.andrealvarado.dev/radio.mp3",
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
         });
+
+        if (isInterrupt) {
+          // Duplicar el costo de corte para la próxima batalla (base 1,000 -> 2,000 -> 4,000...)
+          setInterruptCost((prev) => (prev || BASE_ROCOLA_COST) * 2);
+          setLastCutTime(Date.now());
+        }
 
         clearInterval(progressInterval);
         setUploadProgress(100);
@@ -202,6 +227,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           dedication: dedication.trim() || undefined,
           userRole: userProfile.role,
           userId: userProfile.id,
+          forceSkip: isInterrupt,
         });
 
         console.log("[VIP MODAL SUBMIT RESULT]:", res);
@@ -216,6 +242,12 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
           coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
           durationSeconds: audioDuration,
         });
+
+        if (isInterrupt) {
+          // Duplicar el costo de corte para la próxima batalla (base 1,000 -> 2,000 -> 4,000...)
+          setInterruptCost((prev) => (prev || BASE_ROCOLA_COST) * 2);
+          setLastCutTime(Date.now());
+        }
 
         clearInterval(progressInterval);
         setUploadProgress(100);
@@ -239,7 +271,7 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
     } catch (err) {
       clearInterval(progressInterval);
       console.error("Error al procesar pedido VIP:", err);
-      alert("Hubo un detalle al enviar el pedido, pero se intentará encolar en el reproductor.");
+      alert("Hubo un detalle al enviar el pedido a la radio.");
     } finally {
       clearInterval(progressInterval);
       setIsSubmitting(false);
@@ -256,71 +288,12 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
         }
         onClose();
       }}
-      title="👑 TRANSMISIÓN EN VIVO • INYECCIÓN AL AIRE"
-      badgeText="🛡️ EXCLUSIVO ADMIN"
+      title="📻 ROCOLA EN VIVO • TRANSMISIÓN DE OYENTES"
+      badgeText="⚡ BATALLA DE COINS"
       maxWidth="550px"
       backgroundColor="var(--background)"
     >
-      {!userIsAdmin ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "24px 12px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "14px",
-          }}
-        >
-          <div
-            style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "50%",
-              backgroundColor: "#BA1A1A",
-              border: "3.5px solid var(--primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "4px 4px 0px var(--primary)",
-              color: "white",
-            }}
-          >
-            <ShieldAlert size={36} />
-          </div>
-          <h3 style={{ fontSize: "1.25rem", fontWeight: 900, textTransform: "uppercase", margin: 0, color: "#BA1A1A" }}>
-            ⛔ ACCESO EXCLUSIVO ADMINISTRADORES
-          </h3>
-          <p style={{ fontSize: "0.8rem", lineHeight: "1.3", opacity: 0.9, margin: 0, maxWidth: "420px" }}>
-            Por razones de seguridad y control de la transmisión, la inyección directa de archivos MP3 en AzuraCast AutoDJ está restringida exclusivamente a usuarios con rol <strong>ADMIN</strong>.
-          </p>
-          <div
-            style={{
-              backgroundColor: "var(--surface-container)",
-              border: "2px dashed var(--primary)",
-              padding: "10px 16px",
-              fontSize: "0.75rem",
-              fontWeight: 800,
-            }}
-          >
-            Tu rol actual: <span style={{ color: "#BA1A1A" }}>{userProfile.role || "OYENTE"}</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="neo-button"
-            style={{
-              backgroundColor: "var(--primary-container)",
-              padding: "10px 20px",
-              fontSize: "0.8rem",
-              fontWeight: 900,
-              cursor: "pointer",
-              marginTop: "8px",
-            }}
-          >
-            ENTENDIDO / CERRAR
-          </button>
-        </div>
-      ) : isSuccess ? (
+      {isSuccess ? (
         <div
           style={{
             textAlign: "center",
@@ -347,16 +320,17 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             <Check size={36} color="black" />
           </div>
           <h3 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
-            ¡TEMA INYECTADO CON ÉXITO! 👑
+            {playMode === "interrupt" ? "⚡ ¡CORTE EN VIVO EJECUTADO!" : "¡TEMA ENCOLADO CON ÉXITO! 📻"}
           </h3>
           <p style={{ fontSize: "0.8rem", opacity: 0.9, margin: 0, maxWidth: "420px" }}>
-            Tu pedido está encolado en la fila VIP de AzuraCast. Sonará automáticamente en la transmisión al
-            terminar la canción que está actualmente al aire.
+            {playMode === "interrupt"
+              ? "Tu canción ha cortado la transmisión en vivo y ya está sonando para todos los oyentes de Radio Doble C. ¡La tarifa para interrumpirte se ha duplicado!"
+              : "Tu pedido está en la fila de AzuraCast y sonará en la transmisión al terminar la canción en curso."}
           </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {/* Admin Status Pill */}
+          {/* User Status & Balance Pill */}
           <div
             style={{
               backgroundColor: "#FFDE82",
@@ -369,13 +343,15 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Crown style={{ color: "#BA1A1A", fill: "#FFB000" }} size={20} />
+              <Flame style={{ color: "#BA1A1A" }} size={20} />
               <div>
                 <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", display: "block" }}>
-                  👑 SESIÓN DE ADMINISTRADOR AUTORIZADA
+                  📻 ROCOLA EN VIVO • {userProfile?.name || "Oyente"}
                 </span>
                 <span style={{ fontSize: "0.6rem", opacity: 0.85 }}>
-                  Inyección directa y prioritaria al AutoDJ de AzuraCast ({userProfile.name}).
+                  {userIsAdmin
+                    ? "Acceso de Administrador (Pase libre)"
+                    : "¡Sube tu música y haz que todos en la radio la escuchen!"}
                 </span>
               </div>
             </div>
@@ -384,12 +360,100 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
               style={{
                 backgroundColor: "var(--primary)",
                 color: "var(--on-primary)",
-                padding: "3px 8px",
-                fontSize: "0.65rem",
+                padding: "4px 9px",
+                fontSize: "0.7rem",
                 fontWeight: 900,
+                border: "1.5px solid var(--primary-container)",
               }}
             >
               ⚡ {puntosC || 0} C-COINS
+            </div>
+          </div>
+
+          {/* MODE SELECTOR: CORTE INMEDIATO VS ENCOLAR NORMAL */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "8px",
+              backgroundColor: "#FFF8E1",
+              padding: "8px",
+              border: "2px solid var(--primary)",
+              boxShadow: "3px 3px 0px var(--primary)",
+            }}
+          >
+            {/* Opción 1: Cortar en vivo */}
+            <div
+              onClick={() => setPlayMode("interrupt")}
+              style={{
+                backgroundColor: playMode === "interrupt" ? "#CCFF00" : "white",
+                border: playMode === "interrupt" ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
+                boxShadow: playMode === "interrupt" ? "2px 2px 0px var(--primary)" : "none",
+                padding: "8px",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Zap size={14} color="#BA1A1A" /> CORTAR EN VIVO ⚡
+                </span>
+                <span
+                  style={{
+                    backgroundColor: "#BA1A1A",
+                    color: "white",
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    padding: "2px 5px",
+                    borderRadius: "3px",
+                  }}
+                >
+                  {userIsAdmin ? "GRATIS" : `${interruptCost.toLocaleString()} C-COINS`}
+                </span>
+              </div>
+              <p style={{ fontSize: "0.58rem", margin: 0, lineHeight: "1.2", opacity: 0.85 }}>
+                Corta la canción actual y suena al segundo 1. (El próximo corte cuesta el doble).
+              </p>
+            </div>
+
+            {/* Opción 2: Encolar normal */}
+            <div
+              onClick={() => setPlayMode("normal")}
+              style={{
+                backgroundColor: playMode === "normal" ? "#CCFF00" : "white",
+                border: playMode === "normal" ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
+                boxShadow: playMode === "normal" ? "2px 2px 0px var(--primary)" : "none",
+                padding: "8px",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Music size={14} color="var(--primary)" /> ENCOLAR NORMAL
+                </span>
+                <span
+                  style={{
+                    backgroundColor: "var(--primary)",
+                    color: "var(--on-primary)",
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    padding: "2px 5px",
+                    borderRadius: "3px",
+                  }}
+                >
+                  {userIsAdmin ? "GRATIS" : `${BASE_ROCOLA_COST.toLocaleString()} C-COINS`}
+                </span>
+              </div>
+              <p style={{ fontSize: "0.58rem", margin: 0, lineHeight: "1.2", opacity: 0.85 }}>
+                Sonará en la radio en cuanto termine la canción actual.
+              </p>
             </div>
           </div>
 
@@ -799,12 +863,20 @@ export const VipJukeboxModal = ({ isOpen, onClose }: VipJukeboxModalProps) => {
             {isSubmitting ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                <span>TRANSMITIENDO Y PROGRAMANDO ({Math.min(100, Math.round(uploadProgress))}%) 📡</span>
+                <span>
+                  {playMode === "interrupt"
+                    ? `CORTANDO EN VIVO (${Math.min(100, Math.round(uploadProgress))}%) ⚡`
+                    : `ENCOLANDO EN ROCOLA (${Math.min(100, Math.round(uploadProgress))}%) 📡`}
+                </span>
               </>
             ) : (
               <>
-                <Sparkles size={16} />
-                <span>ENVIAR CANCIÓN A LA ROCKOLA VIP ⭐</span>
+                {playMode === "interrupt" ? <Zap size={16} color="#BA1A1A" /> : <Sparkles size={16} />}
+                <span>
+                  {playMode === "interrupt"
+                    ? `⚡ CORTAR Y TRANSMITIR AHORA MISMO (-${userIsAdmin ? "0" : requiredCost.toLocaleString()} C-COINS)`
+                    : `📻 ENCOLAR EN LA ROCOLA (-${userIsAdmin ? "0" : BASE_ROCOLA_COST.toLocaleString()} C-COINS)`}
+                </span>
               </>
             )}
           </button>
