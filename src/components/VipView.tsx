@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { VipJukeboxModal } from "./vip/VipJukeboxModal";
+import { CoinRechargeModal } from "./vip/CoinRechargeModal";
 import { supabase } from "@/lib/supabase";
 import {
   Crown,
@@ -10,7 +11,8 @@ import {
   Flame,
   Volume2,
   Trophy,
-  Swords
+  Swords,
+  Coins,
 } from "lucide-react";
 
 interface VipViewProps {
@@ -20,6 +22,7 @@ interface VipViewProps {
 export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
   const { userProfile, puntosC, playLiveStream, isPlaying } = useAudio();
   const [isJukeboxOpen, setIsJukeboxOpen] = useState(false);
+  const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [selectedBidCoins, setSelectedBidCoins] = useState(2000);
   const [rocolaRequests, setRocolaRequests] = useState<Array<{
     id: string;
@@ -143,18 +146,40 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
             </span>
           </div>
 
-          <div
-            style={{
-              backgroundColor: "#161E00",
-              color: "#CCFF00",
-              border: "2px solid var(--primary)",
-              padding: "4px 12px",
-              fontSize: "0.78rem",
-              fontWeight: 900,
-              boxShadow: "2px 2px 0px var(--primary)",
-            }}
-          >
-            👤 @{userProfile?.name || "Oyente"} • ⚡ {(puntosC || 0).toLocaleString()} C-COINS
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                backgroundColor: "#161E00",
+                color: "#CCFF00",
+                border: "2px solid var(--primary)",
+                padding: "4px 12px",
+                fontSize: "0.78rem",
+                fontWeight: 900,
+                boxShadow: "2px 2px 0px var(--primary)",
+              }}
+            >
+              👤 @{userProfile?.name || "Oyente"} • ⚡ {(puntosC || 0).toLocaleString()} C-COINS
+            </div>
+
+            <button
+              onClick={() => setIsRechargeOpen(true)}
+              className="neo-button fun-hover-wobble"
+              style={{
+                backgroundColor: "#FFB000",
+                color: "#111",
+                border: "2px solid var(--primary)",
+                padding: "4px 10px",
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                boxShadow: "2px 2px 0px var(--primary)",
+              }}
+            >
+              <Coins size={14} /> ➕ RECARGAR COINS
+            </button>
           </div>
         </div>
 
@@ -589,6 +614,12 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
         isOpen={isJukeboxOpen}
         onClose={() => setIsJukeboxOpen(false)}
         defaultCoins={selectedBidCoins}
+      />
+
+      {/* 5. MODAL RECARGA DE C-COINS */}
+      <CoinRechargeModal
+        isOpen={isRechargeOpen}
+        onClose={() => setIsRechargeOpen(false)}
       />
     </div>
   );

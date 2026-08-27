@@ -3,6 +3,7 @@
 import { useState, useRef, ChangeEvent, FormEvent } from "react";
 import { Upload, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, Zap, Flame, Crown } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
+import { CoinRechargeModal } from "./CoinRechargeModal";
 import { useAudio } from "@/hooks/useAudio";
 import { isAdmin } from "@/lib/permissions";
 import { injectVipSongToAzuraCast } from "@/services/vipJukeboxService";
@@ -28,6 +29,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
   const normRole = (userProfile?.role || "").toUpperCase();
   const isStaff = normRole.includes("ADMIN") || normRole.includes("STREAMER") || normRole.includes("MOD");
 
+  const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"youtube" | "file">("file");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -126,11 +128,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
     // Coins Verification (Admin has free pass, other users pay effectiveCost)
     if (!userIsAdmin && !isStaff) {
       if ((puntosC || 0) < effectiveCost) {
-        alert(
-          `🔒 SALDO INSUFICIENTE:\n\n` +
-          `Para enviar tu canción con ${effectiveCost.toLocaleString()} C-Coins necesitas recargar tu saldo.` +
-          `\n\nTu saldo actual: ${(puntosC || 0).toLocaleString()} C-Coins.\n📻 ¡Escucha la radio o gira la tornamesa diaria para ganar más monedas!`
-        );
+        setIsRechargeOpen(true);
         return;
       }
       consumePuntosC(effectiveCost);
@@ -932,6 +930,12 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
           })()}
         </form>
       )}
+
+      {/* MODAL RECARGA DE C-COINS */}
+      <CoinRechargeModal
+        isOpen={isRechargeOpen}
+        onClose={() => setIsRechargeOpen(false)}
+      />
     </NeoModal>
   );
 };
