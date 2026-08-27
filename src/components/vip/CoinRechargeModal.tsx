@@ -45,8 +45,10 @@ export const CoinRechargeModal = ({
       });
 
       if (res.init_point) {
-        // Redirigir a la pasarela de Mercado Pago de forma segura
-        window.location.assign(res.init_point);
+        // Abrir en pestaña nueva para que la radio siga sonando sin interrupciones
+        window.open(res.init_point, "_blank", "noopener,noreferrer");
+        setIsLoading(false);
+        onClose();
       } else {
         throw new Error(res.error || "No se pudo generar el enlace de pago.");
       }
