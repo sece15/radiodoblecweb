@@ -78,7 +78,7 @@ export interface CreatePreferenceResult {
 
 export async function createMercadoPagoPreference(params: CreatePreferenceParams): Promise<CreatePreferenceResult> {
   if (!supabase) {
-    throw new Error("Supabase client is not initialized.");
+    throw new Error("El cliente de Supabase no está inicializado.");
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://radiodoblec.com";
@@ -94,8 +94,8 @@ export async function createMercadoPagoPreference(params: CreatePreferenceParams
   });
 
   if (error) {
-    console.error("[MERCADO PAGO SERVICE ERROR]:", error);
-    throw new Error(error.message || "Error al conectar con la pasarela de pagos.");
+    console.error("[MERCADO PAGO EDGE FUNCTION ERROR]:", error);
+    throw new Error(error.message || "Error al conectar con la pasarela de Mercado Pago.");
   }
 
   return data as CreatePreferenceResult;
