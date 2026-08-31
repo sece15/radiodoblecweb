@@ -27,6 +27,7 @@ export interface RadioProgram {
   hostBio?: string;
   hostHobbies?: string[];
   hostRole?: string;
+  showStructure?: string;
   segments?: ProgramSegment[];
 }
 

@@ -76,6 +76,7 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
     hostRole: "LOCUTOR & MENTE CREATIVA",
     hostBio: "La voz y mente creativa de L-Mental. Cada viernes conduce la exploración de casos misteriosos, psicología y conductas extremas. La noche se complementa con la “Xona esotérica”, un espacio para descifrar el tarot y el horóscopo, acompañado por la mejor selección de rock, reggae y ska.",
     hostHobbies: ["Casos Enigmáticos & Crónicas Históricas", "Lectura del Tarot & Horóscopo en la Xona Esotérica", "Clásicos de Rock, Reggae & Ska", "Psicología & Conducta Humana"],
+    showStructure: "Bienvenidos a L-Mental, un espacio donde la Psicología, las historias, el misterio y la música se encuentran para explorar aquello que muchas veces permanece oculto a simple vista.\n\nAquí conoceremos casos intrigantes, personajes controversiales, comportamientos curiosos y acontecimientos que han despertado la imaginación colectiva, buscando comprender, cuestionar y mirar cada historia desde una perspectiva diferente.\n\nY cuando la mente nos lleve hasta los límites de lo desconocido, abriremos las puertas de nuestra Xona Esotérica, donde el misticismo, las cartas y el horóscopo tendrán su propio espacio.\n\nTodo acompañado por una fina selección de Rock, Reggae y Ska, porque cada historia también tiene su propia banda sonora.\n\nUn programa para escuchar, pensar, cuestionar y dejarse sorprender.\n\nPorque detrás de cada historia… existe una mente. Esto es L-Mental.",
   },
   {
     id: "conversa_time",

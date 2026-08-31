@@ -201,6 +201,28 @@ const ProgramRecordingsContent = ({
           </div>
         </div>
 
+        {/* ESTRUCTURA DEL SHOW */}
+        {program.showStructure && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "5px" }}>
+              <ScrollText size={14} style={{ color: "var(--primary)" }} /> 🎙️ ESTRUCTURA DEL SHOW
+            </span>
+            <div
+              style={{
+                border: "2px solid var(--primary)",
+                backgroundColor: "white",
+                padding: "10px 12px",
+                fontSize: "0.73rem",
+                lineHeight: "1.3rem",
+                boxShadow: "2px 2px 0px var(--primary)",
+                whiteSpace: "pre-line",
+              }}
+            >
+              {program.showStructure}
+            </div>
+          </div>
+        )}
+
         {/* ESCALETA / GUION */}
         {program.segments && program.segments.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>

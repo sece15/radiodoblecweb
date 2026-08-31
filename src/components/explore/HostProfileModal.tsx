@@ -229,6 +229,28 @@ export const HostProfileModal = ({
             </div>
           </div>
 
+          {/* ESTRUCTURA DEL SHOW */}
+          {program.showStructure && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+              <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", opacity: 0.7, display: "flex", alignItems: "center", gap: "4px" }}>
+                <ScrollText size={12} /> 🎙️ ESTRUCTURA DEL SHOW
+              </span>
+              <div
+                style={{
+                  border: "2px solid var(--primary)",
+                  backgroundColor: "#FDFBF7",
+                  padding: "10px",
+                  fontSize: "0.72rem",
+                  lineHeight: "1.25rem",
+                  boxShadow: "2px 2px 0px var(--primary)",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {program.showStructure}
+              </div>
+            </div>
+          )}
+
           {/* ESCALETA / GUION */}
           {program.segments && program.segments.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "2px" }}>
