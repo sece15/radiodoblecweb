@@ -25,7 +25,7 @@ export const INITIAL_STATIONS: Station[] = [
     id: "l_mental",
     name: "L-Mental",
     frequency: "Viernes 9 PM",
-    description: "Casos intrigantes, misterios y análisis psicológico con la Zona Esotérica de La Seka al ritmo de Rock, Reggae y Ska.",
+    description: "En L-Mental nos adentramos en enigmas oscuros, personajes controversiales, comportamientos extremos y acontecimientos que han dejado huella, explorándolos desde la psicología, la curiosidad y el misterio.",
     imageUrl: "/lmental.jpg",
     isLiked: true,
     style: "MISTERIO / ROCK, REGGAE & SKA",
@@ -63,133 +63,19 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
     hostRole: "BATERISTA & LOCUTOR",
     hostBio: "Músico, baterista y explorador de los grooves más profundos del funk, rock y ritmos afroperuanos. Dedicado a rescatar joyas percusivas de todas las épocas.",
     hostHobbies: ["Batería & Percusión en Vivo", "Coleccionismo de Vinilos Raros", "Fanzines & Cultura Skate", "Café de Especialidad"],
-    segments: [
-      {
-        icon: "🎙️",
-        control: "Bienvenida & Apertura Sonora",
-        locution: "¡Buenas noches a todos los amantes del pulso y el ritmo! Bienvenidos a Hits and Beats, un documental sonoro donde descubrimos la vida, la música, las historias y el legado de los bateristas que transformaron nuestra manera de escuchar. Hoy nos sumergimos en las fauces del ritmo, desglosando patrones legendarios y joyas percusivas que cambiaron la historia de la música."
-      },
-      {
-        icon: "🥁",
-        control: "Groove 1",
-        locution: "Primer clásico con ritmo legendario y desglose de percusión."
-      },
-      {
-        icon: "🔍",
-        control: "El Baterista de la Semana",
-        locution: "Introducción, contexto biográfico y técnica del baterista o percusionista destacado."
-      },
-      {
-        icon: "🥁",
-        control: "Groove 2",
-        locution: "Segundo track con patrón rítmico histórico."
-      },
-      {
-        icon: "🎛️",
-        control: "Fauces del Ritmo & Técnica de Grabación",
-        locution: "Análisis de patrones rítmicos, técnicas de grabación de cassette a digital, dinámicas de hi-hat, bombo y tarola."
-      },
-      {
-        icon: "⚡",
-        control: "Funk / Rock Breakdown",
-        locution: "Clásico de funk o rock con groove destacado."
-      },
-      {
-        icon: "🎙️",
-        control: "El Legado del Ritmo",
-        locution: "Historias de sesiones de estudio míticas, anécdotas de giras y la huella del baterista en la cultura musical."
-      },
-      {
-        icon: "🥁",
-        control: "Fusión Afrobeat & Raíces",
-        locution: "Fusión percusiva y raíces rítmicas afroperuanas / latinas."
-      },
-      {
-        icon: "🧠",
-        control: "Conclusiones Rítmicas",
-        locution: "Reflexión final sobre la evolución de la batería y comentarios de los oyentes conectados."
-      },
-      {
-        icon: "🎙️",
-        control: "Despedida + Track Final",
-        locution: "Llegamos al final de esta sesión de Hits and Beats. Recuerden que el ritmo nunca se detiene: sigan sintiendo el golpe y explorando el groove. ¡Nos escuchamos el próximo viernes a las 11 PM en Radio Doble C!"
-      }
-    ]
   },
   {
     id: "l_mental",
     title: "L-Mental",
-    host: "La Seka",
+    host: "Gerardo “La Seka” B. Gallardo",
     timeSlot: "VIERNES 21:00 - 22:00 (9 PM)",
     genre: "MISTERIO / PSICOLOGÍA / ROCK, REGGAE & SKA",
     imageUrl: "/lmental.jpg",
-    description: "Un espacio donde nos encontramos con las historias más curiosas, los casos más intrigantes y los misterios que han despertado nuestra imaginación. La mente detrás de la historia.",
-    slogan: "La mente detrás de la historia",
-    hostRole: "LOCUTOR & PITONIZO ESOTÉRICO",
-    hostBio: "Locutor y mente inquieta detrás de L-Mental. Conduce cada viernes la exploración de casos misteriosos, psicología y conductas extremas, además de abrir las cartas del tarot y el horóscopo en la Zona Esotérica, todo acompañado por una selecta banda sonora de Rock, Reggae y Ska.",
-    hostHobbies: ["Casos Enigmáticos & Crónicas Históricas", "Lectura del Tarot & Horóscopo", "Clásicos de Rock, Reggae & Ska", "Psicología & Conducta Humana"],
-    segments: [
-      {
-        icon: "🎙️",
-        control: "Bienvenida",
-        locution: "Hay historias que nos sorprenden… casos que nos desconciertan… conductas que nos hacen preguntarnos: ¿qué pasa por la mente de una persona? Bienvenidos a L-Mental, un espacio donde nos encontramos con las historias más curiosas, los casos más intrigantes y los misterios que han despertado nuestra imaginación. Aquí exploraremos casos famosos, personajes controversiales, conductas extremas y acontecimientos que han dejado huella en la historia, tratando de ir más allá de lo evidente para conocer cada comportamiento, cada decisión y cada historia. Pero esto no termina en la mente… porque cuando llega el momento de abrirle la puerta al misterio, tendremos nuestra Zona Esotérica: yo mismo, su pitonizo La Seka, llegaré con las cartas y el horóscopo con ese toque de misterio que no podía faltar en L-Mental. Y por supuesto, todo acompañado de buena música: Rock, Reggae y Ska. Esto es L-Mental: La mente detrás de la historia."
-      },
-      {
-        icon: "🎸",
-        control: "Rock 1",
-        locution: "Primer clásico de rock"
-      },
-      {
-        icon: "🕵️",
-        control: "Presentación del caso",
-        locution: "Introducción, contexto y planteamiento del caso de la semana"
-      },
-      {
-        icon: "🎸",
-        control: "Rock 2",
-        locution: "Segundo clásico de rock"
-      },
-      {
-        icon: "🧠",
-        control: "Desarrollo del caso",
-        locution: "Historia, acontecimientos principales y análisis psicológico"
-      },
-      {
-        icon: "🌴",
-        control: "Reggae 1",
-        locution: "Primer clásico de reggae"
-      },
-      {
-        icon: "🔮",
-        control: "Zona Esotérica — La Seka",
-        locution: "“Dejamos por un momento la mente y el análisis… porque ahora abrimos las puertas de una zona donde la razón se encuentra con el misterio. Ya estoy aquí… soy La Seka.” • Breve comentario sobre el caso. • Recorrido por los signos del Zodiaco. • La carta de la Seka (se lee una carta sacada al azar para alguna persona conectada). Cierre de bloque: 'Recuerda: las cartas pueden mostrar caminos, pero tú eres quien decide cuál recorrer.'"
-      },
-      {
-        icon: "🌴",
-        control: "Reggae 2",
-        locution: "Segundo clásico de reggae"
-      },
-      {
-        icon: "🧠",
-        control: "Conclusiones del caso",
-        locution: "Conclusiones, reflexión e interacción con el público conectado."
-      },
-      {
-        icon: "🎺",
-        control: "Ska 1",
-        locution: "Primer clásico de ska"
-      },
-      {
-        icon: "🎙️",
-        control: "Despedida + Ska 2",
-        locution: "Y así llegamos al final de L-Mental. Gracias por acompañarnos en este espacio donde la curiosidad, la Psicología, las historias y el misterio se encuentran para hacernos pensar, cuestionar y mirar más allá de lo evidente. Nos vamos, pero la mente nunca deja de hacerse preguntas. Nos reencontramos en el próximo programa con nuevas historias, nuevos personajes, nueva música y nuevas cosas que descubrir. Recuerda que puedes seguirnos, compartir el programa y ser parte de L-Mental enviándonos tus comentarios y preguntas. Y ahora sí… llegó el momento de despedirnos. Esto fue L-Mental: “Gracias, mentes inquietas, por acompañarnos una vez más. Ya saben, mantengan la curiosidad despierta y la mente abierta… nos encontramos en el próximo L-Mental.” ¡Buenas noches Elementales!"
-      },
-      {
-        icon: "🎺",
-        control: "Ska 2",
-        locution: "Segundo clásico de ska. Final."
-      }
-    ]
+    description: "En L-Mental nos adentramos en enigmas oscuros, personajes controversiales, comportamientos extremos y acontecimientos que han dejado huella, explorándolos desde la psicología, la curiosidad y el misterio.",
+    slogan: "Porque detrás de cada historia… existe una mente",
+    hostRole: "LOCUTOR & MENTE CREATIVA",
+    hostBio: "La voz y mente creativa de L-Mental. Cada viernes conduce la exploración de casos misteriosos, psicología y conductas extremas. La noche se complementa con la “Xona esotérica”, un espacio para descifrar el tarot y el horóscopo, acompañado por la mejor selección de rock, reggae y ska.",
+    hostHobbies: ["Casos Enigmáticos & Crónicas Históricas", "Lectura del Tarot & Horóscopo en la Xona Esotérica", "Clásicos de Rock, Reggae & Ska", "Psicología & Conducta Humana"],
   },
   {
     id: "conversa_time",
@@ -203,58 +89,6 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
     hostRole: "PERIODISTA CULTURAL & LOCUTORA",
     hostBio: "Comunicadora y cronista cultural. Apasionada por documentar la movida artística de Lima, las calles históricas y las historias detrás de cada canción.",
     hostHobbies: ["Crónicas & Reportajes Nocturnos", "Plaza San Martín & Noches Bohemias", "Cine Independiente", "Exploración de Nuevas Bandas"],
-    segments: [
-      {
-        icon: "🎙️",
-        control: "Bienvenida & Introducción",
-        locution: "¡Muy buenas noches! Bienvenidos a Conversa Time, su magazine musical nocturno por Radio Doble C. Un espacio donde recorremos las calles, las historias y los sonidos de la noche bohemia. Hoy tenemos microinformativo con lanzamientos locales, crónicas desde la Plaza San Martín y charlas íntimas sobre la autogestión en la escena artística independiente."
-      },
-      {
-        icon: "🎵",
-        control: "Playlist Apertura",
-        locution: "Primer tema de la selección musical nocturna."
-      },
-      {
-        icon: "📰",
-        control: "Microinformativo Playlist",
-        locution: "Novedades de la escena independiente, agenda cultural, estrenos y lanzamientos de la semana."
-      },
-      {
-        icon: "🎵",
-        control: "Tema Local 1",
-        locution: "Canción destacada de artista o banda emergente limeña."
-      },
-      {
-        icon: "🏙️",
-        control: "Crónica de Noche Bohemia",
-        locution: "Reportaje nocturno, calles históricas, tertulias artísticas y relatos de la vida nocturna en la Plaza San Martín."
-      },
-      {
-        icon: "🎵",
-        control: "Tema Local 2",
-        locution: "Corte acústico o sesión exclusiva en directo."
-      },
-      {
-        icon: "🎙️",
-        control: "En Cabina / Charla de Artista",
-        locution: "Conversación íntima con bandas locales, producción autogestionada y anécdotas de tocadas."
-      },
-      {
-        icon: "🎵",
-        control: "Recomendación Musical",
-        locution: "Descubrimiento sonoro seleccionado de la escena underground."
-      },
-      {
-        icon: "💬",
-        control: "Interacción con la Audiencia",
-        locution: "Lectura de mensajes en directo, pedidos musicales y saludos a los oyentes conectados."
-      },
-      {
-        icon: "🎙️",
-        control: "Despedida + Cierre Musical",
-        locution: "Así cerramos una noche más de Conversa Time. Gracias por acompañarnos entre café, crónicas y buena música. Sigan apoyando la movida local y nos reencontramos el próximo viernes a las 8 PM por Radio Doble C."
-      }
-    ]
   },
   {
     id: "lado_c",
@@ -268,58 +102,6 @@ export const INITIAL_PROGRAMS: RadioProgram[] = [
     hostRole: "DÚO DE CRÍTICA & MELÓMANOS",
     hostBio: "Dúo especializado en sumergirse de lleno en la historia de los álbumes. Analizan pista por pista, debaten discografías legendarias y retan a la audiencia con trivias de archivo.",
     hostHobbies: ["Puntuación de Discografías", "Cultura Cassette & Vinilo", "Trivias de Rock & Álbumes de Culto", "Debates Musicales"],
-    segments: [
-      {
-        icon: "🎙️",
-        control: "Bienvenida & Arranque Melómano",
-        locution: "¡Qué tal gente melómana! Bienvenidos a Lado C, el programa de los sábados donde nos sumergimos de lleno en los álbumes que marcaron época. Hoy venimos listos para desempolvar el archivo: batalla de discografías, análisis pista por pista, joyas en vinilo y nuestras clásicas trivias donde ustedes ponen el veredicto."
-      },
-      {
-        icon: "🎸",
-        control: "Track Clásico 1",
-        locution: "Tema emblemático para abrir el debate discográfico."
-      },
-      {
-        icon: "💿",
-        control: "El Álbum de la Semana",
-        locution: "Introducción al disco en debate, contexto histórico, alineación de la banda y detalles de producción."
-      },
-      {
-        icon: "🎸",
-        control: "Track Clásico 2",
-        locution: "Tema seleccionado del disco analizado."
-      },
-      {
-        icon: "🔍",
-        control: "Análisis Pista por Pista",
-        locution: "Revisión crítica de los lados A y B, composiciones destacadas, rarezas y anécdotas de grabación."
-      },
-      {
-        icon: "📦",
-        control: "Unboxing de Vinilos & Joyas",
-        locution: "Curiosidades de coleccionismo, ediciones especiales en vinilo y cassette, arte de portada y créditos ocultos."
-      },
-      {
-        icon: "🎸",
-        control: "Lado B / Rareza",
-        locution: "Canción lado B o pista oculta de colección."
-      },
-      {
-        icon: "🏆",
-        control: "Puntuación de Discografía",
-        locution: "Veredicto de Marx y Anthony: calificación del álbum y comparación con el resto de la carrera del artista."
-      },
-      {
-        icon: "🎯",
-        control: "Trivia Melómana & Concurso",
-        locution: "Desafío de archivo musical con preguntas en vivo y participación del público conectado."
-      },
-      {
-        icon: "🎙️",
-        control: "Despedida + Cierre",
-        locution: "Llegamos al final de este Lado C. Gracias por debatir y compartir la pasión por la música en formato físico. Sigan cuidando sus vinilos y nos encontramos el próximo sábado a las 5 PM en Radio Doble C."
-      }
-    ]
   },
 ];
 

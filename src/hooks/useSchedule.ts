@@ -97,7 +97,7 @@ export const useSchedule = () => {
           {
             id: "l_mental",
             title: "L-Mental",
-            host: "La Seka",
+            host: "Gerardo “La Seka” B. Gallardo",
             timeText: "21:00 - 22:00",
             genre: "Misterio / Rock, Reggae & Ska",
             isLiveRightNow: currentDayIndex === 5 && currentHour >= 21 && currentHour < 22,
@@ -311,9 +311,9 @@ export const useSchedule = () => {
             timeText: "21:00 - 22:00",
             title: "L-Mental: La Mente Detrás de la Historia",
             daysText: "Todos los Viernes",
-            genres: "Misterio, Casos Psicológicos, Zona Esotérica, Rock, Reggae & Ska",
-            description: "Historias intrigantes, análisis psicológico y Zona Esotérica con La Seka al ritmo de Rock, Reggae y Ska.",
-            host: "La Seka",
+            genres: "Misterio, Psicología, Xona Esotérica, Rock, Reggae & Ska",
+            description: "Enigmas oscuros, psicología, personajes controversiales y la Xona Esotérica con Gerardo “La Seka” B. Gallardo.",
+            host: "Gerardo “La Seka” B. Gallardo",
             isSpecialShow: true,
             badgeText: "🎙️ EN VIVO VIE",
           });
