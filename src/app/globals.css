@@ -682,14 +682,247 @@ button {
   }
 }
 
-/* --- FULL SCREEN PLAYER VIEW SPLIT LAYOUT RESPONSIVENESS --- */
+/* --- FULL SCREEN PLAYER VIEW RESPONSIVE SYSTEM --- */
+.player-view-container {
+  padding: 40px 24px;
+  overflow: hidden;
+  justify-content: center;
+}
+
+.player-mobile-tabs {
+  display: none !important;
+}
+
+.player-mobile-chat-cta-wrapper {
+  display: none !important;
+}
+
+@keyframes ctaPulse {
+  0%, 100% {
+    transform: scale(1) rotate(-0.5deg);
+    box-shadow: 4px 4px 0px var(--primary);
+  }
+  50% {
+    transform: scale(1.02) rotate(0.5deg);
+    box-shadow: 4px 4px 0px var(--primary), 0 0 18px rgba(204, 255, 0, 0.85);
+  }
+}
+
+.player-mobile-chat-cta {
+  width: 100%;
+  background-color: var(--primary-container) !important;
+  color: var(--primary) !important;
+  border: 3.5px solid var(--primary) !important;
+  box-shadow: 4px 4px 0px var(--primary) !important;
+  padding: 12px 14px !important;
+  cursor: pointer;
+  animation: ctaPulse 2.8s ease-in-out infinite;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.player-mobile-chat-cta:active {
+  transform: translate(2px, 2px) scale(0.98) !important;
+  box-shadow: 2px 2px 0px var(--primary) !important;
+}
+
 @media (max-width: 868px) {
+  .player-view-container {
+    padding: 10px 14px !important;
+    overflow: hidden !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    justify-content: center !important;
+    display: flex !important;
+  }
+
+  .player-close-button {
+    top: 10px !important;
+    right: 12px !important;
+    padding: 5px 12px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .player-mobile-tabs {
+    display: flex !important;
+    width: 100%;
+    max-width: 360px;
+    margin-top: 0px !important;
+    margin-bottom: 8px !important;
+    gap: 6px !important;
+    z-index: 15;
+  }
+
+  .player-mobile-tabs .neo-button {
+    padding: 6px 8px !important;
+    font-size: 0.68rem !important;
+  }
+
+  .player-mobile-chat-cta-wrapper {
+    display: block !important;
+    width: 100%;
+    margin-top: 2px;
+  }
+
   .player-view-split-container {
     flex-direction: column !important;
-    gap: 20px !important;
+    gap: 0px !important;
+    width: 100% !important;
+    max-width: 370px !important;
+    align-items: center !important;
   }
-  .player-view-chat-panel {
-    display: none !important; /* Hide chat on mobile screens for full screen player overlay */
+
+  /* Balanced Deck Panel on Mobile (Same height and presence as chat panel) */
+  .player-view-deck-panel {
+    padding: 16px 18px !important;
+    gap: 10px !important;
+    max-width: 370px !important;
+    width: 100% !important;
+    height: calc(100dvh - 80px) !important;
+    box-shadow: 6px 6px 0px var(--primary) !important;
+    border-width: 3.5px !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  /* Balanced vinyl disc & album art */
+  .player-vinyl-disc-container {
+    width: min(175px, 24vh) !important;
+    height: min(175px, 24vh) !important;
+    margin-top: 2px !important;
+  }
+
+  .player-vinyl-album-art {
+    width: min(80px, 11vh) !important;
+    height: min(80px, 11vh) !important;
+  }
+
+  /* Balanced metadata & letters */
+  .player-track-metadata {
+    gap: 4px !important;
+  }
+
+  .player-track-title {
+    font-size: 0.95rem !important;
+    padding: 4px 14px !important;
+    line-height: 1.25rem !important;
+  }
+
+  .player-track-artist {
+    font-size: 0.72rem !important;
+    margin: 0 !important;
+  }
+
+  /* Balanced seekbar */
+  .player-seek-container {
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+
+  .player-seek-container .neo-slider-track {
+    height: 20px !important;
+    border-width: 2.5px !important;
+  }
+
+  .player-seek-container .neo-slider-thumb {
+    width: 18px !important;
+    height: 26px !important;
+    top: -5px !important;
+  }
+
+  .player-seek-container span {
+    font-size: 0.62rem !important;
+    width: 32px !important;
+  }
+
+  /* Balanced playback controls */
+  .player-controls-row {
+    gap: 18px !important;
+  }
+
+  .player-control-btn-secondary {
+    width: 44px !important;
+    height: 44px !important;
+    border-width: 3px !important;
+    box-shadow: 2.5px 2.5px 0px var(--primary) !important;
+  }
+
+  .player-control-btn-secondary svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .player-control-btn-main {
+    width: 60px !important;
+    height: 60px !important;
+    border-width: 3.5px !important;
+    box-shadow: 4px 4px 0px var(--primary) !important;
+  }
+
+  .player-control-btn-main svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* Eye-catching CTA button with great thumb reach */
+  .player-mobile-chat-cta {
+    padding: 9px 12px !important;
+    gap: 4px !important;
+    border-width: 3px !important;
+    box-shadow: 3.5px 3.5px 0px var(--primary) !important;
+  }
+
+  .player-mobile-chat-cta-title {
+    font-size: 0.88rem !important;
+    line-height: 1.05rem !important;
+  }
+
+  .player-mobile-chat-cta-sub {
+    font-size: 0.6rem !important;
+  }
+
+  .player-mobile-chat-cta-icon {
+    font-size: 1.25rem !important;
+  }
+
+  .player-mobile-chat-cta-badge {
+    font-size: 0.52rem !important;
+    padding: 2px 6px !important;
+  }
+
+  .player-mobile-chat-cta-arrow {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* When mobile view is on player mode */
+  .player-view-split-container.tab-player .player-view-deck-panel {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 370px !important;
+  }
+  .player-view-split-container.tab-player .player-view-chat-panel {
+    display: none !important;
+  }
+
+  /* When mobile view is on chat mode */
+  .player-view-split-container.tab-chat .player-view-deck-panel {
+    display: none !important;
+  }
+  .player-view-split-container.tab-chat .player-view-chat-panel {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 370px !important;
+    height: calc(100dvh - 80px) !important;
+    min-height: unset !important;
+    transform: none !important;
   }
 }
 

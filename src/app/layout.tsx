@@ -86,6 +86,12 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/RADIO-2026.png",
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Radio Doble C",
+  },
 };
 
 export default function RootLayout({

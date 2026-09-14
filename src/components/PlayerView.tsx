@@ -1,13 +1,17 @@
-import { useRef, useState, useEffect, MouseEvent, TouchEvent, KeyboardEvent } from "react";
+import { useRef, useState, MouseEvent, TouchEvent } from "react";
 import { useAudio } from "@/hooks/useAudio";
-import { Play, Pause, Volume2, VolumeX, FastForward, Send, User } from "lucide-react";
-import { EmojiPicker } from "./EmojiPicker";
+import { Play, Pause, Volume2, VolumeX, FastForward, User } from "lucide-react";
+import { ChatMessageList } from "./chat/ChatMessageList";
+import { ChatInputBar } from "./chat/ChatInputBar";
+import { RadioImage } from "./common/RadioImage";
+import { formatProgressTime, formatTotalTime } from "@/lib/audioFormatters";
 
 interface PlayerViewProps {
   onClose: () => void;
+  initialTab?: "player" | "chat";
 }
 
-export const PlayerView = ({ onClose }: PlayerViewProps) => {
+export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) => {
   const {
     isPlaying,
     currentTrack,
@@ -31,74 +35,10 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
   } = useAudio();
 
   const progressTrackRef = useRef<HTMLDivElement>(null);
-  const [typedMessage, setTypedMessage] = useState("");
-  const [isChatInputFocused, setIsChatInputFocused] = useState(false);
-  const messageFeedRef = useRef<HTMLDivElement>(null);
+  const [mobileTab, setMobileTab] = useState<"player" | "chat">(initialTab);
 
-  useEffect(() => {
-    if (messageFeedRef.current) {
-      messageFeedRef.current.scrollTop = messageFeedRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  const handleSend = () => {
-    if (typedMessage.trim()) {
-      sendChatMessage(typedMessage);
-      setTypedMessage("");
-    }
-  };
-
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const getRoleBadgeColor = (role: string) => {
-    const r = role.toUpperCase();
-    if (r.includes("ADMIN")) return "#FFB000";
-    if (r.includes("STREAMER") || r.includes("BROADCASTER")) return "#BA1A1A";
-    if (r.includes("MOD") || r.includes("MODERADOR")) return "#E87A00";
-    if (r.includes("VIP")) return "#008B8B";
-    if (r.includes("BOT")) return "#1A1D10";
-    return "#444933";
-  };
-
-  const getRoleBadgeText = (role: string) => {
-    const r = role.toUpperCase();
-    if (r.includes("ADMIN")) return "👑 ADMIN";
-    if (r.includes("STREAMER") || r.includes("BROADCASTER")) return "🎙️ STREAMER";
-    if (r.includes("MOD") || r.includes("MODERADOR")) return "🛡️ MOD";
-    if (r.includes("VIP")) return "⭐ VIP";
-    if (r.includes("BOT")) return "🤖 BOT";
-    return "OYENTE";
-  };
-
-  // Format time MM:SS or negative timeshift offset
-  const formatTime = (secs: number) => {
-    if (secs < 0) return secs.toString();
-    const mins = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${mins.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const formatProgressTime = () => {
-    if (currentTrack.isLive) {
-      if (progress >= 0.95) {
-        return "LIVE";
-      } else {
-        const offsetSecs = Math.round((progress - 1) * totalTime);
-        return formatTime(offsetSecs);
-      }
-    }
-    return formatTime(currentTime);
-  };
-
-  const formatTotalTime = () => {
-    if (currentTrack.isLive) return "LIVE";
-    return formatTime(totalTime);
-  };
+  const progressTime = formatProgressTime(currentTrack.isLive, progress, currentTime, totalTime);
+  const totalTimeStr = formatTotalTime(currentTrack.isLive, totalTime);
 
   // Click & Drag Progress Calculator
   const handleProgressAction = (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
@@ -112,6 +52,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
 
   return (
     <div
+      className="player-view-container"
       style={{
         position: "fixed",
         top: 0,
@@ -123,9 +64,6 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 24px",
-        overflow: "hidden",
       }}
     >
       {/* BACKGROUND DECORATIONS (PUNK DRIPS & MELTING SMILEYS) */}
@@ -202,6 +140,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
       {/* A. CLOSE BUTTON */}
       <button
         onClick={onClose}
+        className="player-close-button"
         style={{
           position: "absolute",
           top: "24px",
@@ -222,9 +161,56 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
         CERRAR X
       </button>
 
+      {/* MOBILE TABS (ONLY VISIBLE ON PHONES / TABLETS) */}
+      <div className="player-mobile-tabs">
+        <button
+          onClick={() => setMobileTab("player")}
+          className="neo-button"
+          style={{
+            flex: 1,
+            padding: "8px 10px",
+            fontSize: "0.72rem",
+            backgroundColor: mobileTab === "player" ? "var(--primary)" : "var(--card-bg)",
+            color: mobileTab === "player" ? "var(--on-primary)" : "var(--primary)",
+            border: "3px solid var(--primary)",
+            boxShadow: mobileTab === "player" ? "1px 1px 0px var(--primary)" : "3px 3px 0px var(--primary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            fontWeight: 900,
+          }}
+        >
+          <span>💿</span>
+          <span>REPRODUCTOR</span>
+        </button>
+
+        <button
+          onClick={() => setMobileTab("chat")}
+          className="neo-button"
+          style={{
+            flex: 1,
+            padding: "8px 10px",
+            fontSize: "0.72rem",
+            backgroundColor: mobileTab === "chat" ? "var(--primary-container)" : "var(--card-bg)",
+            color: "var(--primary)",
+            border: "3px solid var(--primary)",
+            boxShadow: mobileTab === "chat" ? "1px 1px 0px var(--primary)" : "3px 3px 0px var(--primary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            fontWeight: 900,
+          }}
+        >
+          <span style={{ display: "inline-flex", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#BA1A1A" }} className="pulse-dot" />
+          <span>CHAT EN VIVO</span>
+        </button>
+      </div>
+
       {/* SPLIT CONTAINER FOR SIDE-BY-SIDE VIEW */}
       <div
-        className="player-view-split-container"
+        className={`player-view-split-container tab-${mobileTab}`}
         style={{
           display: "flex",
           flexDirection: "row",
@@ -238,7 +224,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
       >
         {/* B. LADO IZQUIERDO: REPRODUCTOR (CUADRO DE AHORA) */}
         <div
-          className="neo-card"
+          className="neo-card player-view-deck-panel"
           style={{
             backgroundColor: "var(--card-bg)",
             border: "4px solid var(--primary)",
@@ -255,27 +241,8 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
             flexShrink: 0,
           }}
         >
-          {/* Stickers overlays */}
-          <div
-            style={{
-              position: "absolute",
-              top: "-20px",
-              left: "20px",
-              backgroundColor: "var(--primary-container)",
-              color: "var(--primary)",
-              padding: "4px 10px",
-              fontSize: "0.65rem",
-              fontWeight: "black",
-              border: "2px solid var(--primary)",
-              transform: "rotate(-8deg)",
-              boxShadow: "2px 2px 0px var(--primary)",
-            }}
-          >
-            ★ REPRODUCTOR PUNK ★
-          </div>
-
           {/* 1. SPINNING VINYL RECORD ART */}
-          <div style={{ position: "relative", width: "220px", height: "220px", marginTop: "8px" }}>
+          <div className="player-vinyl-disc-container" style={{ position: "relative", width: "220px", height: "220px", marginTop: "8px" }}>
             {/* Vinyl background disc */}
             <div
               style={{
@@ -308,6 +275,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
               >
                 {/* Album art cover at the center */}
                 <div
+                  className="player-vinyl-album-art"
                   style={{
                     width: "100px",
                     height: "100px",
@@ -317,12 +285,10 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                     boxShadow: "0 0 10px rgba(0,0,0,0.5)",
                   }}
                 >
-                  <img
-                    src={currentTrack.imageUrl || "/RADIO.png"}
+                  <RadioImage
+                    src={currentTrack.imageUrl}
+                    fallbackSrc="/RADIO.png"
                     alt="Carátula"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
-                    }}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
                 </div>
@@ -363,8 +329,9 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
           </div>
 
           {/* 2. TRACK METADATA */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", width: "100%" }}>
+          <div className="player-track-metadata" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", width: "100%" }}>
             <h2
+              className="player-track-title"
               style={{
                 backgroundColor: "var(--primary)",
                 color: "var(--on-primary)",
@@ -384,6 +351,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
               {currentTrack.title}
             </h2>
             <p
+              className="player-track-artist"
               style={{
                 fontSize: "0.8rem",
                 fontWeight: 900,
@@ -396,9 +364,9 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
           </div>
 
           {/* 3. SEEK PROGRESS BAR */}
-          <div style={{ display: "flex", width: "100%", alignItems: "center", gap: "10px", padding: "0 4px" }}>
+          <div className="player-seek-container" style={{ display: "flex", width: "100%", alignItems: "center", gap: "10px", padding: "0 4px" }}>
             <span style={{ fontSize: "0.65rem", fontWeight: "bold", width: "35px", textAlign: "right" }}>
-              {formatProgressTime()}
+              {progressTime}
             </span>
 
             <div
@@ -412,16 +380,16 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
             </div>
 
             <span style={{ fontSize: "0.65rem", fontWeight: "bold", width: "35px", textAlign: "left" }}>
-              {formatTotalTime()}
+              {totalTimeStr}
             </span>
           </div>
 
           {/* 4. CONTROL BUTTONS */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "24px", width: "100%" }}>
+          <div className="player-controls-row" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "24px", width: "100%" }}>
             {/* Mute toggle button */}
             <button
               onClick={toggleMute}
-              className="neo-button-circular"
+              className="neo-button-circular player-control-btn-secondary"
               style={{
                 width: "50px",
                 height: "50px",
@@ -440,7 +408,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
             {/* Large circular Play/Pause button */}
             <button
               onClick={togglePlayPause}
-              className="neo-button-circular"
+              className="neo-button-circular player-control-btn-main"
               style={{
                 width: "72px",
                 height: "72px",
@@ -463,7 +431,7 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
             {/* Catch-up Live button */}
             <button
               onClick={seekToLiveEdge}
-              className="neo-button-circular"
+              className="neo-button-circular player-control-btn-secondary"
               style={{
                 width: "50px",
                 height: "50px",
@@ -478,6 +446,69 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
               disabled={!currentTrack.isLive}
             >
               <FastForward size={20} />
+            </button>
+          </div>
+
+          {/* 5. BOTÓN ULTRA LLAMATIVO PARA CHAT EN MÓVIL */}
+          <div className="player-mobile-chat-cta-wrapper">
+            <button
+              onClick={() => setMobileTab("chat")}
+              className="player-mobile-chat-cta"
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div
+                  className="player-mobile-chat-cta-badge"
+                  style={{
+                    backgroundColor: "var(--primary)",
+                    color: "var(--on-primary)",
+                    fontSize: "0.55rem",
+                    fontWeight: 900,
+                    padding: "2px 6px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#FF0D43" }} className="pulse-dot" />
+                  SALA EN DIRECTO
+                </div>
+                <div style={{ fontSize: "0.6rem", fontWeight: 900, color: "var(--primary)" }}>
+                  👥 {listenersCount} OYENTES
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginTop: "2px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="player-mobile-chat-cta-icon" style={{ fontSize: "1.4rem" }}>💬</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span className="player-mobile-chat-cta-title" style={{ fontSize: "0.95rem", fontWeight: 900, textTransform: "uppercase", lineHeight: "1.1rem" }}>
+                      ¡ENTRAR AL CHAT EN VIVO!
+                    </span>
+                    <span className="player-mobile-chat-cta-sub" style={{ fontSize: "0.65rem", fontWeight: "bold", opacity: 0.85, marginTop: "2px" }}>
+                      Envía saludos, pide tus temas y habla con la comunidad
+                    </span>
+                  </div>
+                </div>
+                <div
+                  className="player-mobile-chat-cta-arrow"
+                  style={{
+                    backgroundColor: "var(--primary)",
+                    color: "var(--on-primary)",
+                    width: "28px",
+                    height: "28px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                    fontSize: "0.85rem",
+                    flexShrink: 0,
+                    boxShadow: "2px 2px 0px var(--primary)",
+                  }}
+                >
+                  👉
+                </div>
+              </div>
             </button>
           </div>
         </div>
@@ -516,224 +547,158 @@ export const PlayerView = ({ onClose }: PlayerViewProps) => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "12px 16px",
+                padding: "10px 14px",
                 borderBottom: "3px solid var(--primary)",
                 backgroundColor: "var(--primary-container)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <div style={{ width: "8px", height: "8px", backgroundColor: "#BA1A1A", borderRadius: "50%" }}></div>
-                <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
-                  CHAT EN VIVO
-                </span>
-                <div
-                  style={{
-                    backgroundColor: "var(--primary)",
-                    padding: "1px 6px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2px",
-                    fontSize: "0.55rem",
-                    color: "var(--on-primary)",
-                    fontWeight: 900,
-                  }}
-                >
-                  <User size={8} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-                  {listenersCount}
-                </div>
-              </div>
-            </div>
-
-            {/* Chat Feed */}
-            <div
-              ref={messageFeedRef}
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor: "var(--background)",
-              }}
-            >
-              {chatMessages.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 20px", opacity: 0.5 }}>
-                  <p style={{ fontSize: "0.75rem", fontWeight: "bold" }}>EL SILENCIO DE LAS ONDAS...</p>
-                  <p style={{ fontSize: "0.6rem", marginTop: "4px" }}>Haz algo de ruido.</p>
-                </div>
-              ) : (
-                chatMessages.map((msg) => {
-                  const isBanned = bannedUsers.has(msg.senderName.toUpperCase());
-                  const isDeleted = deletedMessageIds.has(msg.id);
-                  return (
-                    <div
-                      key={msg.id}
-                      style={{
-                        padding: "8px 12px",
-                        borderBottom: "1.5px solid var(--primary)",
-                        backgroundColor: "var(--card-bg)",
-                      }}
-                    >
-                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span
-                            style={{
-                              backgroundColor: getRoleBadgeColor(msg.senderRole),
-                              color: "white",
-                              fontSize: "0.5rem",
-                              fontWeight: "black",
-                              padding: "1px 4px",
-                            }}
-                          >
-                            {getRoleBadgeText(msg.senderRole)}
-                          </span>
-                          <span style={{ fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase" }}>
-                            {msg.senderName}
-                          </span>
-                        </div>
-                        <p
-                          style={{
-                            fontSize: "0.65rem",
-                            marginTop: "2px",
-                            fontWeight: isBanned || isDeleted ? "bold" : "normal",
-                            color: isBanned || isDeleted ? "#BA1A1A" : "var(--primary)",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {isBanned
-                            ? "⚠️ [USUARIO BANEADO]"
-                            : isDeleted
-                              ? "🗑️ [Mensaje borrado]"
-                              : msg.messageText}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Chat Input */}
-            <div
-              style={{
-                padding: "12px",
-                borderTop: "3px solid var(--primary)",
-                backgroundColor: "var(--card-bg)",
-              }}
-            >
-              {!isAuthenticated ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {/* Mobile Back to Vinyl Button */}
                 <button
-                  onClick={signInWithGoogle}
-                  className="neo-button"
+                  onClick={() => setMobileTab("player")}
+                  className="mobile-only-flex neo-button"
                   style={{
-                    width: "100%",
-                    backgroundColor: "var(--primary-container)",
-                    padding: "8px",
-                    textAlign: "center",
-                    color: "var(--primary)",
-                    fontWeight: 900,
+                    padding: "4px 8px",
                     fontSize: "0.65rem",
+                    backgroundColor: "var(--card-bg)",
+                    color: "var(--primary)",
+                    border: "2px solid var(--primary)",
                     boxShadow: "2px 2px 0px var(--primary)",
                     cursor: "pointer",
                   }}
+                  title="Volver a ver el vinilo"
                 >
-                  🔑 GOOGLE SIGN-IN PARA CHATEAR
+                  💿 VOLVER
                 </button>
-              ) : isCurrentUserBanned ? (
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ width: "8px", height: "8px", backgroundColor: "#BA1A1A", borderRadius: "50%" }} className="pulse-dot"></div>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", color: "var(--primary)" }}>
+                    CHAT EN VIVO
+                  </span>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  backgroundColor: "var(--primary)",
+                  padding: "3px 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "0.6rem",
+                  color: "var(--on-primary)",
+                  fontWeight: 900,
+                  boxShadow: "1.5px 1.5px 0px var(--primary-container)",
+                }}
+              >
+                <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
+                <span>{listenersCount} OYENTES</span>
+              </div>
+            </div>
+
+            {/* Mobile Mini Now Playing Bar */}
+            <div
+              className="mobile-only-flex"
+              style={{
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "6px 12px",
+                backgroundColor: "var(--card-bg)",
+                borderBottom: "2px solid var(--primary)",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    width: "100%",
-                    backgroundColor: "#BA1A1A",
-                    padding: "6px",
-                    textAlign: "center",
-                    color: "white",
-                    fontWeight: 900,
-                    fontSize: "0.65rem",
-                    border: "2px solid var(--primary)",
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    border: "1.5px solid var(--primary)",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    animation: isPlaying ? "spin 5s linear infinite" : "none",
                   }}
                 >
-                  ESTÁS BANEADO
+                  <img
+                    src={currentTrack.imageUrl || "/RADIO.png"}
+                    alt=""
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
+                    }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
                 </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
-                  {/* Quick Reactions Bar */}
-                  <div style={{ display: "flex", gap: "4px", alignItems: "center", overflowX: "auto", paddingBottom: "2px" }}>
-                    <span style={{ fontSize: "0.55rem", fontWeight: 900, opacity: 0.7 }}>REACCIÓN:</span>
-                    {["🔥", "📻", "🎙️", "⚡", "🤘", "🎧", "🎸", "🖤"].map((e) => (
-                      <button
-                        key={e}
-                        type="button"
-                        onClick={() => setTypedMessage((prev) => (prev + e).slice(0, 100))}
-                        style={{
-                          background: "none",
-                          border: "1.5px solid var(--primary)",
-                          borderRadius: "3px",
-                          padding: "1px 4px",
-                          fontSize: "0.8rem",
-                          cursor: "pointer",
-                          backgroundColor: "var(--card-bg)",
-                          lineHeight: 1,
-                        }}
-                      >
-                        {e}
-                      </button>
-                    ))}
+                <div style={{ minWidth: 0, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      fontSize: "0.65rem",
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      color: "var(--primary)",
+                    }}
+                  >
+                    {currentTrack.title}
                   </div>
+                  <div
+                    style={{
+                      fontSize: "0.55rem",
+                      fontWeight: "bold",
+                      opacity: 0.7,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {currentTrack.artist}
+                  </div>
+                </div>
+              </div>
 
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <input
-                      type="text"
-                      className="chat-input-player"
-                      value={typedMessage}
-                      onChange={(e) => setTypedMessage(e.target.value.slice(0, 100))}
-                      onKeyDown={handleKeyPress}
-                      onFocus={() => setIsChatInputFocused(true)}
-                      onBlur={() => setIsChatInputFocused(false)}
-                      maxLength={100}
-                      placeholder="Escribe algo..."
-                      style={{
-                        flex: 1,
-                        height: "32px",
-                        padding: "4px 8px 4px 12px",
-                        border: isChatInputFocused
-                          ? "2.5px solid var(--primary)"
-                          : "2px solid var(--primary)",
-                        outline: "none",
-                        fontSize: "0.7rem",
-                        fontFamily: "inherit",
-                        backgroundColor: "#FFFFFF",
-                        color: "#111111",
-                        caretColor: "#111111",
-                        cursor: "text",
-                        boxShadow: isChatInputFocused
-                          ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                          : "none",
-                        transition: "box-shadow 0.15s ease, border 0.15s ease",
-                      }}
-                    />
-                    <EmojiPicker
-                      onSelectEmoji={(emoji) => setTypedMessage((prev) => (prev + emoji).slice(0, 100))}
-                      dropDirection="up"
-                      buttonSize={12}
-                    />
-                    <button
-                      onClick={handleSend}
-                      className="neo-button"
-                      style={{
-                        height: "32px",
-                        padding: "0 10px",
-                        backgroundColor: "var(--primary-container)",
-                        boxShadow: "2px 2px 0px var(--primary)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Send size={10} />
-                    </button>
-                  </div>
-                </div>
-              )}
+              {/* Play/Pause Button */}
+              <button
+                onClick={togglePlayPause}
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--primary-container)",
+                  border: "2px solid var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  boxShadow: "1.5px 1.5px 0px var(--primary)",
+                }}
+                title={isPlaying ? "Pausar" : "Reproducir"}
+              >
+                {isPlaying ? (
+                  <Pause size={12} style={{ fill: "var(--primary)", color: "var(--primary)" }} />
+                ) : (
+                  <Play size={12} style={{ fill: "var(--primary)", color: "var(--primary)", marginLeft: "1px" }} />
+                )}
+              </button>
             </div>
+
+            {/* Chat Feed */}
+            <ChatMessageList
+              messages={chatMessages}
+              bannedUsers={bannedUsers}
+              deletedMessageIds={deletedMessageIds}
+            />
+
+            {/* Chat Input */}
+            <ChatInputBar
+              onSendMessage={sendChatMessage}
+              isAuthenticated={isAuthenticated}
+              onSignInWithGoogle={signInWithGoogle}
+              isCurrentUserBanned={isCurrentUserBanned}
+            />
           </div>
         </div>
       </div>

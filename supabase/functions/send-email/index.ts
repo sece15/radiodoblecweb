@@ -39,6 +39,22 @@ serve(async (req) => {
       );
     }
 
+    const escapeHtml = (str: unknown) => {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    const safeName = escapeHtml(name).slice(0, 100);
+    const safeEmail = escapeHtml(email).slice(0, 100);
+    const safeBio = escapeHtml(bio).slice(0, 2000);
+    const rawDemoUrl = typeof demoUrl === "string" ? demoUrl.trim() : "";
+    const isSafeUrl = /^https?:\/\/[^\s<>"']+$/i.test(rawDemoUrl);
+    const safeDemoUrl = isSafeUrl ? escapeHtml(rawDemoUrl) : null;
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -49,22 +65,22 @@ serve(async (req) => {
         from: "Radio Doble C <onboarding@resend.dev>",
         to: ["radiodoblec@gmail.com"],
         reply_to: email,
-        subject: `📻 Nueva Postulación / Audios de ${name}`,
+        subject: `📻 Nueva Postulación / Audios de ${safeName}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 3px solid #111; border-radius: 4px; background-color: #ffffff;">
             <h2 style="color: #BA1A1A; text-transform: uppercase; margin-top: 0;">📻 Nueva Postulación / Audios para Radio Doble C</h2>
             <p>Se ha recibido una nueva postulación desde la plataforma web oficial:</p>
             <hr style="border: 1px solid #eee; margin: 15px 0;">
-            <p><strong>👤 Nombre / AKA:</strong> ${name}</p>
-            <p><strong>✉️ Correo de contacto:</strong> <a href="mailto:${email}">${email}</a></p>
+            <p><strong>👤 Nombre / AKA:</strong> ${safeName}</p>
+            <p><strong>✉️ Correo de contacto:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
             <p><strong>🎵 Enlace al Demo / Audios:</strong> ${
-              demoUrl
-                ? `<a href="${demoUrl}" target="_blank" style="color: #0066cc; font-weight: bold;">${demoUrl}</a>`
+              safeDemoUrl
+                ? `<a href="${safeDemoUrl}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; font-weight: bold;">${safeDemoUrl}</a>`
                 : "No especificado"
             }</p>
             <p><strong>📝 Propuesta / Mensaje:</strong></p>
             <div style="background-color: #f4f4f4; padding: 12px; border-left: 4px solid #BA1A1A; font-style: italic; white-space: pre-wrap;">
-              ${bio || "Sin mensaje adicional."}
+              ${safeBio || "Sin mensaje adicional."}
             </div>
             <hr style="border: 1px solid #eee; margin: 20px 0 10px 0;">
             <p style="font-size: 11px; color: #888; text-align: center;">Radio Doble C • Transmisión Online</p>

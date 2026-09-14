@@ -63,6 +63,7 @@ export default function Home() {
   // Layout states
   const [isChatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [isPlayerExpanded, setPlayerExpanded] = useState(false);
+  const [playerInitialTab, setPlayerInitialTab] = useState<"player" | "chat">("player");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   const isAnyModalOpen = isProductModalOpen || isSponsorModalOpen;
@@ -73,26 +74,31 @@ export default function Home() {
 
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("idle");
 
+  const openPlayer = (tab: "player" | "chat" = "player") => {
+    setPlayerInitialTab(tab);
+    setPlayerExpanded(true);
+  };
+
   // Helper to render current active panel/tab
   const renderActiveView = () => {
     switch (activeTab) {
       case "explore":
         return (
           <ExploreView
-            onNavigateToPlayer={() => setPlayerExpanded(true)}
+            onNavigateToPlayer={openPlayer}
             filteredStyle={filteredStyle}
           />
         );
       case "profile":
-        return <ProfileView onNavigateToPlayer={() => setPlayerExpanded(true)} />;
+        return <ProfileView onNavigateToPlayer={() => openPlayer("player")} />;
       case "store":
         return <StoreView addToCart={addToCart} onModalToggle={setIsProductModalOpen} />;
       case "vip":
-        return <VipView onNavigateToPlayer={() => setPlayerExpanded(true)} />;
+        return <VipView onNavigateToPlayer={() => openPlayer("player")} />;
       default:
         return (
           <ExploreView
-            onNavigateToPlayer={() => setPlayerExpanded(true)}
+            onNavigateToPlayer={openPlayer}
             filteredStyle={filteredStyle}
           />
         );
@@ -294,7 +300,10 @@ export default function Home() {
 
       {/* 5. FULL SCREEN VINYL DECK OVERLAY */}
       {isPlayerExpanded && (
-        <PlayerView onClose={() => setPlayerExpanded(false)} />
+        <PlayerView
+          onClose={() => setPlayerExpanded(false)}
+          initialTab={playerInitialTab}
+        />
       )}
 
       {/* 6. SHOPPING CART DRAWER */}

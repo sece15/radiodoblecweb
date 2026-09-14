@@ -20,10 +20,26 @@ export interface DriveAlbum {
   webViewLink?: string;
 }
 
+import { supabase } from "@/lib/supabase";
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://skkwodwxaeajdaukjsqg.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const FUNCTION_URL = `${SUPABASE_URL}/functions/v1/google-drive-api`;
+
+async function getAuthHeader(): Promise<string> {
+  if (supabase) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return `Bearer ${session.access_token}`;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return `Bearer ${SUPABASE_ANON_KEY}`;
+}
 
 // ID raíz conocido de la carpeta Programas en Google Drive
 export const PROGRAMAS_ROOT_FOLDER_ID = "1_uebi4lDZ8kPcVCk9rNjW7bIXfT5Qf1Y";
@@ -136,10 +152,11 @@ export async function createDriveAlbum(albumName: string, parentFolderId?: strin
     ? `${FUNCTION_URL}?action=create_folder&name=${encodeURIComponent(albumName)}&parentFolderId=${encodeURIComponent(parentFolderId)}`
     : `${FUNCTION_URL}?action=create_folder&name=${encodeURIComponent(albumName)}`;
 
+  const authHeader = await getAuthHeader();
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: authHeader,
     },
   });
 
@@ -183,10 +200,11 @@ export function getDriveStreamUrl(fileId: string): string {
 
 // 9. Eliminar archivo o carpeta
 export async function deleteDriveFile(fileId: string): Promise<boolean> {
+  const authHeader = await getAuthHeader();
   const res = await fetch(`${FUNCTION_URL}?action=delete&fileId=${encodeURIComponent(fileId)}`, {
     method: "DELETE",
     headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: authHeader,
     },
   });
 

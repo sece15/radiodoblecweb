@@ -3,6 +3,7 @@ import { useAudio } from "@/hooks/useAudio";
 import { Send, User, Ban, X, Mic, Square, Coffee, Pizza } from "lucide-react";
 import { EmojiPicker } from "./EmojiPicker";
 import { fetchSponsorBusinesses, INITIAL_SPONSORS, SponsorBusiness } from "@/services/sponsorService";
+import { getRoleBadgeColor, getRoleBadgeText } from "@/lib/chatUtils";
 
 interface ChatSidebarProps {
   onClose: () => void;
@@ -313,26 +314,6 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     userProfile.role.includes("STREAMER") ||
     userProfile.role.includes("MOD") ||
     userProfile.role.includes("ADMIN");
-
-  const getRoleBadgeColor = (role: string) => {
-    const r = role.toUpperCase();
-    if (r.includes("ADMIN")) return "#FFB000";
-    if (r.includes("STREAMER") || r.includes("BROADCASTER")) return "#BA1A1A";
-    if (r.includes("MOD") || r.includes("MODERADOR")) return "#E87A00";
-    if (r.includes("VIP")) return "#008B8B";
-    if (r.includes("BOT")) return "#1A1D10";
-    return "#444933";
-  };
-
-  const getRoleBadgeText = (role: string) => {
-    const r = role.toUpperCase();
-    if (r.includes("ADMIN")) return "👑 ADMIN";
-    if (r.includes("STREAMER") || r.includes("BROADCASTER")) return "🎙️ STREAMER";
-    if (r.includes("MOD") || r.includes("MODERADOR")) return "🛡️ MOD";
-    if (r.includes("VIP")) return "⭐ VIP";
-    if (r.includes("BOT")) return "🤖 BOT";
-    return "OYENTE";
-  };
 
   return (
     <div className="chat-sidebar-container">
@@ -1109,47 +1090,47 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 {sponsorsList
                   .filter((s) => s.category === "comida" || s.category === "bebidas")
                   .map((sponsor) => {
-                  const isBeverage = sponsor.category === "bebidas";
-                  const bg = isBeverage ? "#CCFF00" : "#FF5500";
-                  const textColor = isBeverage ? "#111111" : "#FFFFFF";
+                    const isBeverage = sponsor.category === "bebidas";
+                    const bg = isBeverage ? "#CCFF00" : "#FF5500";
+                    const textColor = isBeverage ? "#111111" : "#FFFFFF";
 
-                  return (
-                    <button
-                      key={sponsor.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveSponsorSlug(sponsor.slug);
-                        setIsSponsorModalOpen(true);
-                      }}
-                      className="neo-button"
-                      style={{
-                        width: "100%",
-                        fontSize: "0.60rem",
-                        fontWeight: 900,
-                        backgroundColor: bg,
-                        color: textColor,
-                        border: "1.5px solid var(--primary)",
-                        padding: "3px 6px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "4px",
-                        cursor: "pointer",
-                        boxShadow: "1.5px 1.5px 0px var(--primary)",
-                        transform: "none",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <span style={{ display: "flex", alignItems: "center", gap: "4px", color: textColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {isBeverage ? <Coffee size={11} style={{ color: "#BA1A1A", flexShrink: 0 }} /> : <Pizza size={11} style={{ flexShrink: 0 }} />}
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sponsor.name.toUpperCase()}</span>
-                      </span>
-                      <span style={{ backgroundColor: "#111111", color: bg, padding: "1px 4px", fontSize: "0.52rem", borderRadius: "2px", fontWeight: 900, flexShrink: 0 }}>
-                        PRÓX.
-                      </span>
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={sponsor.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveSponsorSlug(sponsor.slug);
+                          setIsSponsorModalOpen(true);
+                        }}
+                        className="neo-button"
+                        style={{
+                          width: "100%",
+                          fontSize: "0.60rem",
+                          fontWeight: 900,
+                          backgroundColor: bg,
+                          color: textColor,
+                          border: "1.5px solid var(--primary)",
+                          padding: "3px 6px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "4px",
+                          cursor: "pointer",
+                          boxShadow: "1.5px 1.5px 0px var(--primary)",
+                          transform: "none",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px", color: textColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {isBeverage ? <Coffee size={11} style={{ color: "#BA1A1A", flexShrink: 0 }} /> : <Pizza size={11} style={{ flexShrink: 0 }} />}
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sponsor.name.toUpperCase()}</span>
+                        </span>
+                        <span style={{ backgroundColor: "#111111", color: bg, padding: "1px 4px", fontSize: "0.52rem", borderRadius: "2px", fontWeight: 900, flexShrink: 0 }}>
+                          PRÓX.
+                        </span>
+                      </button>
+                    );
+                  })}
               </div>
             )}
 

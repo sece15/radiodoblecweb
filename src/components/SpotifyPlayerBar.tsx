@@ -2,6 +2,8 @@ import { useRef, MouseEvent, TouchEvent, useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward, Sliders } from "lucide-react";
 import { StudioToolsModal } from "@/components/tools/StudioToolsModal";
+import { formatProgressTime, formatTotalTime } from "@/lib/audioFormatters";
+import { RadioImage } from "@/components/common/RadioImage";
 
 interface SpotifyPlayerBarProps {
   isChatOpen: boolean;
@@ -34,30 +36,8 @@ export const SpotifyPlayerBar = ({
   const [isStudioModalOpen, setIsStudioModalOpen] = useState(false);
   const progressTrackRef = useRef<HTMLDivElement>(null);
 
-  // Format time MM:SS or negative timeshift offset
-  const formatTime = (secs: number) => {
-    if (secs < 0) return secs.toString(); // e.g. -15:00
-    const mins = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${mins.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const formatProgressTime = () => {
-    if (currentTrack.isLive) {
-      if (progress >= 0.95) {
-        return "LIVE";
-      } else {
-        const offsetSecs = Math.round((progress - 1) * totalTime);
-        return formatTime(offsetSecs);
-      }
-    }
-    return formatTime(currentTime);
-  };
-
-  const formatTotalTime = () => {
-    if (currentTrack.isLive) return "LIVE";
-    return formatTime(totalTime);
-  };
+  const progressTime = formatProgressTime(currentTrack.isLive, progress, currentTime, totalTime);
+  const totalTimeStr = formatTotalTime(currentTrack.isLive, totalTime);
 
   // Click & Drag Progress seek
   const handleProgressAction = (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
@@ -142,12 +122,10 @@ export const SpotifyPlayerBar = ({
               zIndex: 1,
             }}
           >
-            <img
-              src={currentTrack.imageUrl || "/RADIO.png"}
+            <RadioImage
+              src={currentTrack.imageUrl}
+              fallbackSrc="/RADIO.png"
               alt="Track"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = "/RADIO.png";
-              }}
               style={{
                 width: "100%",
                 height: "100%",
@@ -263,6 +241,7 @@ export const SpotifyPlayerBar = ({
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <button
             onClick={skipPrevious}
+            aria-label="Canción anterior"
             style={{
               background: "none",
               border: "none",
@@ -275,6 +254,7 @@ export const SpotifyPlayerBar = ({
 
           <button
             onClick={togglePlayPause}
+            aria-label={isPlaying ? "Pausar reproducción" : "Iniciar reproducción"}
             className="neo-button"
             style={{
               width: "40px",
@@ -340,7 +320,7 @@ export const SpotifyPlayerBar = ({
           }}
         >
           <span style={{ fontSize: "0.65rem", fontWeight: "bold", width: "35px", textAlign: "right" }}>
-            {formatProgressTime()}
+            {progressTime}
           </span>
 
           <div
@@ -353,7 +333,7 @@ export const SpotifyPlayerBar = ({
           </div>
 
           <span style={{ fontSize: "0.65rem", fontWeight: "bold", width: "35px", textAlign: "left" }}>
-            {formatTotalTime()}
+            {totalTimeStr}
           </span>
         </div>
       </div>

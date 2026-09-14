@@ -25,7 +25,24 @@ export async function POST(req: NextRequest) {
     const client = new MercadoPagoConfig({ accessToken });
     const preference = new Preference(client);
 
-    const origin = redirectOrigin || "https://radiodoblec.com";
+    const defaultOrigin = process.env.NEXT_PUBLIC_SITE_URL || "https://radiodoblec.com";
+    let origin = defaultOrigin;
+    if (redirectOrigin && typeof redirectOrigin === "string") {
+      try {
+        const parsed = new URL(redirectOrigin);
+        if (
+          parsed.hostname === "radiodoblec.com" ||
+          parsed.hostname.endsWith(".radiodoblec.com") ||
+          parsed.hostname === "localhost" ||
+          parsed.hostname === "127.0.0.1" ||
+          parsed.hostname.endsWith(".vercel.app")
+        ) {
+          origin = `${parsed.protocol}//${parsed.host}`;
+        }
+      } catch {
+        origin = defaultOrigin;
+      }
+    }
 
     const response = await preference.create({
       body: {

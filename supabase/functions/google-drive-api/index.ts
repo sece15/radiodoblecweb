@@ -6,12 +6,53 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { create, getNumericDate } from "https://deno.land/x/djwt@v2.8/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
 };
+
+/**
+ * Verifies that the incoming request has a valid Supabase JWT belonging to an ADMIN or STREAMER.
+ */
+async function verifyAdminAuth(req: Request): Promise<{ authorized: boolean; error?: string }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { authorized: false, error: "Credenciales de Supabase no configuradas en el servidor" };
+  }
+
+  const authHeader = req.headers.get("Authorization") || req.headers.get("authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) {
+    return { authorized: false, error: "Token de autorización requerido para operaciones de escritura/borrado." };
+  }
+
+  try {
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return { authorized: false, error: "Sesión inválida o expirada." };
+    }
+
+    const { data: profile } = await supabaseClient
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+
+    const role = (profile?.role || "").toUpperCase();
+    if (role !== "ADMIN" && role !== "STREAMER") {
+      return { authorized: false, error: "Acceso denegado: Se requiere rol de Administrador o Streamer." };
+    }
+
+    return { authorized: true };
+  } catch (err) {
+    return { authorized: false, error: `Error de autenticación: ${String(err)}` };
+  }
+}
 
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
   const pemHeader = "-----BEGIN PRIVATE KEY-----";
@@ -186,6 +227,14 @@ serve(async (req) => {
 
     // 3. CREATE FOLDER
     if (req.method === "POST" && action === "create_folder") {
+      const authCheck = await verifyAdminAuth(req);
+      if (!authCheck.authorized) {
+        return new Response(JSON.stringify({ error: authCheck.error || "No autorizado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const folderName = url.searchParams.get("name") || "Nuevo Disco";
       const parentId = url.searchParams.get("parentFolderId") || rootFolderId;
 
@@ -213,6 +262,14 @@ serve(async (req) => {
 
     // 4. UPLOAD TRACK OR FILE (Multipart upload)
     if (req.method === "POST" && action === "upload") {
+      const authCheck = await verifyAdminAuth(req);
+      if (!authCheck.authorized) {
+        return new Response(JSON.stringify({ error: authCheck.error || "No autorizado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
       const folderId = url.searchParams.get("folderId") || targetFolderId;
@@ -316,6 +373,14 @@ serve(async (req) => {
 
     // 7. DELETE FILE OR FOLDER
     if (req.method === "DELETE" && action === "delete") {
+      const authCheck = await verifyAdminAuth(req);
+      if (!authCheck.authorized) {
+        return new Response(JSON.stringify({ error: authCheck.error || "No autorizado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const fileId = url.searchParams.get("fileId");
       if (!fileId) {
         return new Response(JSON.stringify({ error: "fileId is required" }), {

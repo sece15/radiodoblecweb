@@ -17,7 +17,7 @@ import { getDriveStreamUrl, DriveFile } from "@/services/driveService";
 import { formatFileSize, cleanFileName } from "@/lib/formatters";
 
 interface ExploreViewProps {
-  onNavigateToPlayer: () => void;
+  onNavigateToPlayer: (tab?: "player" | "chat") => void;
   filteredStyle?: string | null;
 }
 

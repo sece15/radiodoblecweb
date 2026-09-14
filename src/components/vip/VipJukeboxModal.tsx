@@ -125,8 +125,8 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
     const effectiveCost = parsedCustom >= 1000 ? parsedCustom : selectedBid;
     const isInterrupt = effectiveCost >= 2000;
 
-    // Coins Verification (Admin has free pass, other users pay effectiveCost)
-    if (!userIsAdmin && !isStaff) {
+    // Coins Verification (Only Admin has free pass, other users including streamers pay effectiveCost)
+    if (!userIsAdmin) {
       if ((puntosC || 0) < effectiveCost) {
         setIsRechargeOpen(true);
         return;
