@@ -86,7 +86,6 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/RADIO-2026.png",
   },
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -177,13 +176,47 @@ export default function RootLayout({
 
   return (
     <html lang="es" data-theme="PUNK_NEON" suppressHydrationWarning>
-      <head>
+      <body suppressHydrationWarning>
         <script
+          id="anti-extension-error-suppression"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                window.addEventListener('unhandledrejection', function(event) {
+                  var reason = event && event.reason;
+                  var str = (reason && (reason.stack || reason.message)) || String(reason || '');
+                  if (str.indexOf('chrome-extension://') !== -1 || str.indexOf('moz-extension://') !== -1) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                  }
+                }, true);
+
+                if (typeof MutationObserver !== 'undefined') {
+                  var obs = new MutationObserver(function(muts) {
+                    for (var i = 0; i < muts.length; i++) {
+                      var m = muts[i];
+                      if (m.type === 'attributes' && m.attributeName === 'bis_skin_checked') {
+                        m.target.removeAttribute('bis_skin_checked');
+                      }
+                    }
+                  });
+                  obs.observe(document.documentElement, {
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['bis_skin_checked']
+                  });
+                }
+              }
+            `,
+          }}
+        />
+        <script
+          id="schema-org-json-ld"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-      </head>
-      <body suppressHydrationWarning>
         <QueryProvider>
           <AudioProvider>
             {children}

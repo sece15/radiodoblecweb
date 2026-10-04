@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { Smile, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { X } from "lucide-react";
+import { EMOJI_CATEGORIES } from "@/lib/mascotEmojis";
 
 interface EmojiPickerProps {
   onSelectEmoji: (emoji: string) => void;
@@ -9,212 +11,236 @@ interface EmojiPickerProps {
   dropDirection?: "up" | "down";
 }
 
-const EMOJI_CATEGORIES = [
-  {
-    name: "RADIO & MÚSICA",
-    emojis: ["📻", "🎙️", "🎧", "🎸", "🎵", "🎶", "💿", "🔊", "🎹", "🎺", "🥁", "🎛️", "🎷", "🎼"],
-  },
-  {
-    name: "FIRE & REACCIÓN",
-    emojis: ["🔥", "⚡", "🤘", "😎", "🤩", "💀", "😈", "💯", "🚀", "💣", "💥", "✨", "💥", "🌟"],
-  },
-  {
-    name: "GESTOS & GUSTOS",
-    emojis: ["👍", "🙌", "👏", "❤️", "🖤", "😂", "🤣", "🥳", "🤡", "🤖", "👽", "👾", "👀", "👀"],
-  },
-  {
-    name: "FIESTA & VIBE",
-    emojis: ["🍻", "🥂", "🍕", "💃", "🕺", "👑", "🎯", "🏆", "🌈", "🔥", "⚡", "🔊"],
-  },
-];
-
-export const EmojiPicker: React.FC<EmojiPickerProps> = ({
-  onSelectEmoji,
-  buttonSize = 16,
-  dropDirection = "up",
-}) => {
+export const EmojiPicker = ({ onSelectEmoji, buttonSize = 24, dropDirection = "up" }: EmojiPickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeCategory, setActiveCategory] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Cerrar al hacer clic fuera del componente
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    if (!isOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setIsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setIsOpen(false);
+        triggerRef.current?.focus();
       }
     };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
     };
   }, [isOpen]);
 
-  const handleEmojiClick = (emoji: string) => {
-    onSelectEmoji(emoji);
-  };
+  const triggerDimensions = buttonSize <= 20 ? 32 : 36;
+  const iconSize = Math.max(19, Math.min(buttonSize, 24));
 
   return (
-    <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
-      {/* BOTÓN EMOJI */}
+    <div ref={containerRef} style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
         className="neo-button"
-        title="Insertar Emojis"
+        title="Emojis de Doble C"
+        aria-label="Emojis de Doble C"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
         style={{
-          height: "32px",
-          width: "32px",
-          minWidth: "32px",
+          width: triggerDimensions,
+          height: triggerDimensions,
+          minWidth: triggerDimensions,
           padding: 0,
-          backgroundColor: isOpen ? "var(--primary-container)" : "var(--card-bg)",
-          boxShadow: isOpen ? "1px 1px 0px var(--primary)" : "2px 2px 0px var(--primary)",
+          border: "2px solid var(--primary)",
+          boxShadow: "2px 2px 0px var(--primary)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          backgroundColor: isOpen ? "var(--primary-container)" : "white",
           cursor: "pointer",
         }}
       >
-        <Smile size={buttonSize} style={{ color: "var(--primary)" }} />
+        <Image
+          src="/emojis/msn/c-feliz-48.png"
+          alt="Mascota Doble C"
+          width={iconSize}
+          height={iconSize}
+          unoptimized
+          style={{ imageRendering: "auto" }}
+        />
       </button>
 
-      {/* PANEL POPUP DE EMOJIS */}
       {isOpen && (
         <div
           className="neo-card"
+          role="region"
+          aria-label="Emojis de Doble C"
           style={{
             position: "absolute",
-            [dropDirection === "up" ? "bottom" : "top"]: "40px",
+            [dropDirection === "up" ? "bottom" : "top"]: triggerDimensions + 8,
             right: 0,
             zIndex: 999,
-            width: "280px",
+            width: "min(300px, calc(100vw - 40px))",
+            maxHeight: "calc(100dvh - 160px)",
+            overflowY: "auto",
             backgroundColor: "var(--background)",
             border: "3px solid var(--primary)",
-            boxShadow: "6px 6px 0px var(--primary)",
-            padding: "10px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
+            boxShadow: "4px 4px 0 var(--primary)",
+            padding: 10,
           }}
         >
-          {/* Header Popup */}
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
               borderBottom: "2px solid var(--primary)",
-              paddingBottom: "6px",
+              paddingBottom: 6,
+              marginBottom: 8,
             }}
           >
-            <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>
-              EMOJIS DOBLE C
-            </span>
+            <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase" }}>EMOJIS DOBLE C</span>
             <button
-              onClick={() => setIsOpen(false)}
+              type="button"
+              aria-label="Cerrar emojis"
+              onClick={() => {
+                setIsOpen(false);
+                triggerRef.current?.focus();
+              }}
               style={{
+                width: 28,
+                height: 28,
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                padding: 0,
+                color: "var(--primary)",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           </div>
 
-          {/* Categorías (Pestañas) */}
-          <div style={{ display: "flex", gap: "4px", overflowX: "auto", paddingBottom: "4px" }}>
-            {EMOJI_CATEGORIES.map((cat, idx) => (
-              <button
-                key={cat.name}
-                type="button"
-                onClick={() => setActiveTab(idx)}
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 900,
-                  padding: "3px 6px",
-                  border: "1.5px solid var(--primary)",
-                  backgroundColor: activeTab === idx ? "var(--primary-container)" : "var(--card-bg)",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {cat.name.split(" ")[0]}
-              </button>
-            ))}
-          </div>
-
-          {/* Grid de Emojis */}
           <div
+            aria-label="Categorías de emojis"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              gap: "6px",
-              maxHeight: "160px",
-              overflowY: "auto",
-              padding: "4px",
+              display: "flex",
+              flexWrap: "nowrap",
+              gap: 3,
+              marginBottom: 8,
+              width: "100%",
             }}
           >
-            {EMOJI_CATEGORIES[activeTab].emojis.map((emoji, index) => (
+            {EMOJI_CATEGORIES.map((category, index) => (
               <button
-                key={`${emoji}-${index}`}
+                key={category.name}
                 type="button"
-                onClick={() => handleEmojiClick(emoji)}
+                aria-pressed={index === activeCategory}
+                onClick={() => setActiveCategory(index)}
                 style={{
-                  fontSize: "1.1rem",
-                  background: "none",
-                  border: "1px solid transparent",
-                  borderRadius: "4px",
+                  flex: "1 1 0",
+                  minWidth: 0,
+                  height: 26,
+                  padding: "0 2px",
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  border: "1.5px solid var(--primary)",
                   cursor: "pointer",
-                  padding: "4px 2px",
-                  transition: "transform 0.1s, background-color 0.1s",
+                  color: "var(--primary)",
+                  backgroundColor: index === activeCategory ? "var(--primary-container)" : "white",
+                  boxShadow: index === activeCategory ? "1.5px 1.5px 0 var(--primary)" : "none",
+                  transition: "background-color 0.15s ease",
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--primary-container)";
-                  e.currentTarget.style.transform = "scale(1.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
               >
-                {emoji}
+                {category.name}
               </button>
             ))}
           </div>
 
-          {/* Barra de Reacción Rápida inferior */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
-              paddingTop: "6px",
-              borderTop: "1.5px dashed var(--primary)",
+              display: "grid",
+              gridTemplateColumns: "repeat(6, 1fr)",
+              justifyItems: "center",
+              gap: "6px 2px",
+              maxHeight: "min(240px, 40dvh)",
+              overflowY: "auto",
+              padding: "4px 2px",
             }}
           >
-            {["🔥", "📻", "🎙️", "⚡", "🤘", "🎧"].map((quickEmoji) => (
+            {EMOJI_CATEGORIES[activeCategory].emojis.map((emoji) => (
               <button
-                key={quickEmoji}
+                key={emoji.id}
                 type="button"
-                onClick={() => handleEmojiClick(quickEmoji)}
+                title={`${emoji.label} (${emoji.char || emoji.token})`}
+                aria-label={emoji.label}
+                onClick={() => {
+                  onSelectEmoji(emoji.char || emoji.token);
+                  setIsOpen(false);
+                  triggerRef.current?.focus();
+                }}
                 style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "1rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 32,
+                  height: 32,
+                  padding: 0,
+                  backgroundColor: "transparent",
+                  color: "var(--primary)",
+                  border: "1.5px solid transparent",
                   cursor: "pointer",
-                  padding: "2px",
+                  borderRadius: 4,
+                  boxShadow: "none",
+                  transition: "background-color 0.12s ease, transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--primary-container)";
+                  e.currentTarget.style.borderColor = "var(--primary)";
+                  e.currentTarget.style.boxShadow = "1.5px 1.5px 0 var(--primary)";
+                  e.currentTarget.style.transform = "scale(1.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.borderColor = "transparent";
+                  e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.transform = "scale(1)";
                 }}
               >
-                {quickEmoji}
+                {emoji.isNative || !emoji.src ? (
+                  <span
+                    style={{
+                      fontSize: "1.28rem",
+                      lineHeight: 1,
+                      userSelect: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {emoji.char || emoji.unicode || emoji.token}
+                  </span>
+                ) : (
+                  <Image
+                    src={emoji.src}
+                    alt={emoji.label}
+                    width={26}
+                    height={26}
+                    unoptimized
+                    style={{ imageRendering: "auto" }}
+                  />
+                )}
               </button>
             ))}
           </div>

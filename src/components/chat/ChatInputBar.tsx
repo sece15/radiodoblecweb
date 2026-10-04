@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { EmojiPicker } from "../EmojiPicker";
-import { CHAT_QUICK_REACTIONS } from "@/lib/chatUtils";
+import Image from "next/image";
+import { MASCOT_REACTIONS } from "@/lib/mascotEmojis";
+import { RichChatInput, RichChatInputRef } from "./RichChatInput";
 
 interface ChatInputBarProps {
   onSendMessage: (text: string) => void;
@@ -20,29 +22,25 @@ export const ChatInputBar = ({
   isAuthenticated,
   onSignInWithGoogle,
   isCurrentUserBanned = false,
-  placeholder = "Escribe algo...",
+  placeholder = "Escribe en el chat...",
   maxLength = 100,
   extraActions,
 }: ChatInputBarProps) => {
   const [typedMessage, setTypedMessage] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const richInputRef = useRef<RichChatInputRef>(null);
 
   const handleSend = () => {
-    if (typedMessage.trim()) {
-      onSendMessage(typedMessage);
+    const text = richInputRef.current?.getText() || typedMessage;
+    const trimmed = text.trim();
+    if (trimmed) {
+      onSendMessage(trimmed);
+      richInputRef.current?.clear();
       setTypedMessage("");
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   const addReaction = (emoji: string) => {
-    setTypedMessage((prev) => (prev + emoji).slice(0, maxLength));
+    richInputRef.current?.insertEmoji(emoji);
   };
 
   return (
@@ -91,26 +89,28 @@ export const ChatInputBar = ({
           {/* Quick Reactions Bar */}
           <div style={{ display: "flex", gap: "4px", alignItems: "center", overflowX: "auto", paddingBottom: "2px" }}>
             <span style={{ fontSize: "0.55rem", fontWeight: 900, opacity: 0.7, flexShrink: 0 }}>REACCIÓN:</span>
-            {CHAT_QUICK_REACTIONS.map((emoji) => (
+            {MASCOT_REACTIONS.map((emoji) => (
               <button
-                key={emoji}
+                key={emoji.id}
                 type="button"
-                onClick={() => addReaction(emoji)}
+                onClick={() => addReaction(emoji.token)}
                 style={{
-                  background: "none",
                   border: "1.5px solid var(--primary)",
                   borderRadius: "3px",
-                  padding: "1px 4px",
-                  fontSize: "0.8rem",
+                  width: 28,
+                  height: 28,
+                  padding: 0,
                   cursor: "pointer",
-                  backgroundColor: "var(--card-bg)",
-                  lineHeight: 1,
+                  backgroundColor: "transparent",
                   flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-                title={`Reaccionar con ${emoji}`}
-                aria-label={`Reaccionar con ${emoji}`}
+                title={emoji.label}
+                aria-label={emoji.label}
               >
-                {emoji}
+                <Image src={emoji.src} alt="" width={20} height={20} unoptimized style={{ imageRendering: "auto" }} />
               </button>
             ))}
           </div>
@@ -118,41 +118,21 @@ export const ChatInputBar = ({
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             {extraActions}
 
-            <input
-              type="text"
-              className="chat-input-player"
-              value={typedMessage}
-              onChange={(e) => setTypedMessage(e.target.value.slice(0, maxLength))}
-              onKeyDown={handleKeyPress}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              maxLength={maxLength}
+            <RichChatInput
+              ref={richInputRef}
               placeholder={placeholder}
-              aria-label="Mensaje de chat"
-              style={{
-                flex: 1,
-                height: "32px",
-                padding: "4px 8px 4px 12px",
-                border: isFocused
-                  ? "2.5px solid var(--primary)"
-                  : "2px solid var(--primary)",
-                outline: "none",
-                fontSize: "0.72rem",
-                fontFamily: "inherit",
-                backgroundColor: "#FFFFFF",
-                color: "#111111",
-                caretColor: "#111111",
-                cursor: "text",
-                boxShadow: isFocused
-                  ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                  : "none",
-                transition: "box-shadow 0.15s ease, border 0.15s ease",
-              }}
+              maxLength={maxLength}
+              onSend={onSendMessage}
+              onTextChange={setTypedMessage}
+              showCounter={false}
+              minHeight={32}
+              maxHeight={60}
             />
+
             <EmojiPicker
               onSelectEmoji={(emoji) => addReaction(emoji)}
               dropDirection="up"
-              buttonSize={12}
+              buttonSize={20}
             />
             <button
               onClick={handleSend}
@@ -163,6 +143,7 @@ export const ChatInputBar = ({
                 height: "32px",
                 padding: "0 10px",
                 backgroundColor: "var(--primary-container)",
+                border: "2px solid var(--primary)",
                 boxShadow: "2px 2px 0px var(--primary)",
                 display: "flex",
                 alignItems: "center",

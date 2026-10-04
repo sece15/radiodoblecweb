@@ -732,7 +732,7 @@ button {
 
 @media (max-width: 868px) {
   .player-view-container {
-    padding: 10px 14px !important;
+    padding: calc(58px + env(safe-area-inset-top, 0px)) 14px 10px !important;
     overflow: hidden !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
@@ -741,8 +741,10 @@ button {
   }
 
   .player-close-button {
-    top: 10px !important;
+    top: calc(10px + env(safe-area-inset-top, 0px)) !important;
     right: 12px !important;
+    z-index: 20 !important;
+    min-height: 44px;
     padding: 5px 12px !important;
     font-size: 0.72rem !important;
   }
@@ -782,7 +784,7 @@ button {
     gap: 10px !important;
     max-width: 370px !important;
     width: 100% !important;
-    height: calc(100dvh - 80px) !important;
+    height: calc(100dvh - 128px - env(safe-area-inset-top, 0px)) !important;
     box-shadow: 6px 6px 0px var(--primary) !important;
     border-width: 3.5px !important;
     transform: none !important;
@@ -920,7 +922,7 @@ button {
     display: flex !important;
     width: 100% !important;
     max-width: 370px !important;
-    height: calc(100dvh - 80px) !important;
+    height: calc(100dvh - 128px - env(safe-area-inset-top, 0px)) !important;
     min-height: unset !important;
     transform: none !important;
   }
@@ -1144,5 +1146,4 @@ button {
     display: none !important;
   }
 }
-
 

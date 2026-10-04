@@ -62,31 +62,6 @@ export const LiveNowBanner = ({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPlayLive();
-                  onNavigateToPlayer("chat");
-                }}
-                className="neo-button"
-                style={{
-                  padding: "3px 8px",
-                  fontSize: "0.62rem",
-                  backgroundColor: "var(--card-bg)",
-                  color: "var(--primary)",
-                  border: "2px solid var(--primary)",
-                  boxShadow: "2px 2px 0px var(--primary)",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  fontWeight: 900,
-                }}
-                title="Abrir directamente el chat en vivo"
-              >
-                <span>💬 CHAT</span>
-              </button>
-
               <span style={{ fontSize: "0.7rem", fontWeight: "bold", color: "var(--primary)" }}>
                 {liveStatusText}
               </span>

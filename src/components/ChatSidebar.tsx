@@ -1,7 +1,11 @@
-import { useState, useEffect, useRef, KeyboardEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { Send, User, Ban, X, Mic, Square, Coffee, Pizza } from "lucide-react";
+import Image from "next/image";
 import { EmojiPicker } from "./EmojiPicker";
+import { ChatMessageContent } from "./chat/ChatMessageContent";
+import { RichChatInput, RichChatInputRef } from "./chat/RichChatInput";
+import { MASCOT_REACTIONS } from "@/lib/mascotEmojis";
 import { fetchSponsorBusinesses, INITIAL_SPONSORS, SponsorBusiness } from "@/services/sponsorService";
 import { getRoleBadgeColor, getRoleBadgeText } from "@/lib/chatUtils";
 
@@ -74,8 +78,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
 
   const [typedMessage, setTypedMessage] = useState("");
   const [newBannedWord, setNewBannedWord] = useState("");
-  const [isChatInputFocused, setIsChatInputFocused] = useState(false);
   const messageFeedRef = useRef<HTMLDivElement>(null);
+  const richInputRef = useRef<RichChatInputRef>(null);
 
   // In-Chat Voice Greeting State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -107,7 +111,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
   }, []);
 
   const handleSend = () => {
-    const trimmed = typedMessage.trim();
+    const raw = richInputRef.current?.getText() || typedMessage;
+    const trimmed = raw.trim();
     if (!trimmed) return;
 
     const lower = trimmed.toLowerCase();
@@ -124,11 +129,13 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
         setActiveSponsorSlug("ponches");
       }
       setIsSponsorModalOpen(true);
+      richInputRef.current?.clear();
       setTypedMessage("");
       return;
     }
 
     sendChatMessage(trimmed);
+    richInputRef.current?.clear();
     setTypedMessage("");
   };
 
@@ -301,13 +308,6 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     setTimeout(() => {
       setVoiceGreetingSent(false);
     }, 4500);
-  };
-
-  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
   };
 
   const hasModPrivileges =
@@ -790,7 +790,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                           ? "⚠️ [USUARIO BANEADO DEL CHAT]"
                           : isDeleted
                             ? "🗑️ [Mensaje borrado por moderación]"
-                            : msg.messageText}
+                            : <ChatMessageContent text={msg.messageText} />}
                       </p>
 
                       {/* Playable Voice Greeting Audio Bubble */}
@@ -998,26 +998,38 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
             )}
 
             {/* Points & Quick Reactions Bar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", paddingBottom: "2px" }}>
-              <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                <span style={{ fontSize: "0.58rem", fontWeight: 900, opacity: 0.8 }}>REACCIÓN:</span>
-                {["🔥", "📻", "⚡"].map((e) => (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", paddingBottom: "2px", width: "100%" }}>
+              <div style={{ display: "flex", gap: "4px", alignItems: "center", overflowX: "auto", maxWidth: "calc(100% - 140px)", scrollbarWidth: "none" }}>
+                <span style={{ fontSize: "0.58rem", fontWeight: 900, opacity: 0.8, flexShrink: 0 }}>REACCIÓN:</span>
+                {MASCOT_REACTIONS.map((emoji) => (
                   <button
-                    key={e}
+                    key={emoji.id}
                     type="button"
-                    onClick={() => setTypedMessage((prev) => (prev + e).slice(0, 150))}
+                    title={emoji.label}
+                    aria-label={emoji.label}
+                    onClick={() => richInputRef.current?.insertEmoji(emoji)}
                     style={{
-                      background: "none",
                       border: "1.5px solid var(--primary)",
                       borderRadius: "3px",
-                      padding: "1px 5px",
-                      fontSize: "0.85rem",
+                      width: 28,
+                      height: 28,
+                      padding: 0,
                       cursor: "pointer",
-                      backgroundColor: "var(--card-bg)",
-                      lineHeight: 1,
+                      backgroundColor: "transparent",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    {e}
+                    <Image
+                      src={emoji.src}
+                      alt={emoji.label}
+                      width={20}
+                      height={20}
+                      unoptimized
+                      style={{ imageRendering: "pixelated" }}
+                    />
                   </button>
                 ))}
               </div>
@@ -1133,59 +1145,14 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                   })}
               </div>
             )}
-
             <div style={{ display: "flex", gap: "6px", alignItems: "flex-end" }}>
-              <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
-                <textarea
-                  rows={1}
-                  value={typedMessage}
-                  onChange={(e) => setTypedMessage(e.target.value.slice(0, 150))}
-                  onKeyDown={handleKeyPress}
-                  onFocus={() => setIsChatInputFocused(true)}
-                  onBlur={() => setIsChatInputFocused(false)}
-                  maxLength={150}
-                  placeholder="Escribe en el chat o usa /pedir ponche..."
-                  style={{
-                    width: "100%",
-                    height: "36px",
-                    minHeight: "36px",
-                    maxHeight: "80px",
-                    padding: "6px 8px 6px 8px",
-                    paddingRight: "45px",
-                    border: isChatInputFocused
-                      ? "2.5px solid var(--primary)"
-                      : "2px solid var(--primary)",
-                    outline: "none",
-                    fontSize: "0.7rem",
-                    resize: "none",
-                    fontFamily: "inherit",
-                    backgroundColor: "#FFFFFF",
-                    color: "#111111",
-                    caretColor: "#111111",
-                    cursor: "text",
-                    boxShadow: isChatInputFocused
-                      ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
-                      : "none",
-                    transition: "box-shadow 0.15s ease, border 0.15s ease",
-                  }}
-                />
-                <span
-                  style={{
-                    position: "absolute",
-                    bottom: "4px",
-                    right: "6px",
-                    fontSize: "0.55rem",
-                    fontWeight: 900,
-                    color: typedMessage.length >= 135 ? "#BA1A1A" : "gray",
-                    pointerEvents: "none",
-                    opacity: typedMessage.length > 0 ? 0.7 : 0,
-                    transition: "opacity 0.2s, color 0.2s",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {typedMessage.length}/150
-                </span>
-              </div>
+              <RichChatInput
+                ref={richInputRef}
+                placeholder="Escribe en el chat..."
+                maxLength={150}
+                onSend={handleSend}
+                onTextChange={setTypedMessage}
+              />
 
               {/* Mic Audio Greeting Button */}
               <button
@@ -1209,9 +1176,9 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               </button>
 
               <EmojiPicker
-                onSelectEmoji={(emoji) => setTypedMessage((prev) => (prev + emoji).slice(0, 150))}
+                onSelectEmoji={(emoji) => richInputRef.current?.insertEmoji(emoji)}
                 dropDirection="up"
-                buttonSize={14}
+                buttonSize={20}
               />
 
               <button
@@ -1221,10 +1188,12 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                   height: "32px",
                   padding: "0 10px",
                   backgroundColor: "var(--primary-container)",
+                  border: "2px solid var(--primary)",
                   boxShadow: "2px 2px 0px var(--primary)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  cursor: "pointer",
                 }}
               >
                 <Send size={12} />

@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import { ChatMessage } from "@/types";
 import { getRoleBadgeColor, getRoleBadgeText } from "@/lib/chatUtils";
 import { Trash2, Ban } from "lucide-react";
+import { ChatMessageContent } from "./ChatMessageContent";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -128,7 +129,7 @@ export const ChatMessageList = ({
                     ? "⚠️ [USUARIO BANEADO]"
                     : isDeleted
                       ? "🗑️ [Mensaje borrado]"
-                      : msg.messageText}
+                      : <ChatMessageContent text={msg.messageText} />}
                 </p>
               </div>
             </div>

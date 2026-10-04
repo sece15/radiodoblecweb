@@ -5,11 +5,13 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Radio Doble C | Fucking Good Shit",
     short_name: "Radio Doble C",
     description:
-      "Estación de radio online independiente y cultural con música alternativa, punk, rock, lo-fi, transmisiones en vivo y programas temáticos.",
+      "Radio Doble C - Radio online, música en vivo y comunidad punk zine.",
     start_url: "/",
     display: "standalone",
     background_color: "#12141C",
     theme_color: "#CCFF00",
+    orientation: "portrait",
+    categories: ["music", "entertainment"],
     icons: [
       {
         src: "/favicon.ico",
@@ -17,13 +19,20 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/x-icon",
       },
       {
-        src: "/RADIO-2026.png",
+        src: "/RADIO.png",
         sizes: "192x192",
         type: "image/png",
+        purpose: "maskable",
       },
       {
         src: "/RADIO.png",
         sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/RADIO-2026.png",
+        sizes: "192x192",
         type: "image/png",
       },
     ],
