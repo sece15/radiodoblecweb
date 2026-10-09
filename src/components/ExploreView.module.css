@@ -1,0 +1,115 @@
+.frame {
+  width: 100%;
+  container-name: explore-frame;
+  container-type: inline-size;
+}
+
+.explore {
+  position: relative;
+}
+
+.heroLayout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+}
+
+.radioColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  width: 100%;
+}
+
+.eventBanner {
+  position: fixed;
+  top: var(--banner-top);
+  right: var(--banner-right, 0px);
+  width: var(--banner-width, 200px);
+  height: var(--banner-height);
+  max-width: 100%;
+  justify-self: center;
+}
+
+.eventBanner a {
+  display: block;
+  height: 100%;
+  background: #000;
+}
+
+.leftBanner {
+  right: auto;
+  left: var(--banner-left, 0px);
+}
+
+.eventBanner a:focus-visible {
+  outline: 3px solid var(--primary-container);
+  outline-offset: 5px;
+}
+
+.eventImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+@container explore-frame (max-width: 1231px) {
+  .heroLayout {
+    gap: 16px;
+  }
+
+  .eventBanner {
+    position: static;
+    width: 90%;
+    height: auto;
+  }
+
+  .eventImage {
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: contain;
+  }
+
+  .leftBanner {
+    display: none;
+  }
+
+  .eventBanner a {
+    border: 3px solid var(--primary);
+    box-shadow: 6px 6px 0 var(--primary);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+
+  .eventBanner a:active {
+    transform: translate(3px, 3px);
+    box-shadow: 3px 3px 0 var(--primary);
+  }
+}
+
+/* Keep the two compact rails beside the live card when the chat takes space. */
+@container explore-frame (min-width: 800px) and (max-width: 1231px) {
+  .chatOpen .eventBanner {
+    display: block;
+    position: fixed;
+    width: var(--banner-width);
+    height: var(--banner-height);
+  }
+
+  .chatOpen .eventImage {
+    height: 100%;
+    aspect-ratio: auto;
+    object-fit: fill;
+  }
+
+  .chatOpen .eventBanner a,
+  .chatOpen .eventBanner a:active {
+    border: 0;
+    box-shadow: none;
+    transform: none;
+    transition: none;
+  }
+}

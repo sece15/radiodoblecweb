@@ -85,6 +85,7 @@ export default function Home() {
       case "explore":
         return (
           <ExploreView
+            isChatOpen={isChatSidebarOpen}
             onNavigateToPlayer={openPlayer}
             filteredStyle={filteredStyle}
           />
@@ -98,6 +99,7 @@ export default function Home() {
       default:
         return (
           <ExploreView
+            isChatOpen={isChatSidebarOpen}
             onNavigateToPlayer={openPlayer}
             filteredStyle={filteredStyle}
           />
@@ -139,6 +141,7 @@ export default function Home() {
       <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden", position: "relative" }}>
         {/* Main page scroll view */}
         <div
+          data-radio-content
           style={{
             flex: 1,
             overflowY: "auto",
