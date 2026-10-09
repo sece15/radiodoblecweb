@@ -86,6 +86,28 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // Estados de Autenticación Supabase
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const authenticatedUserIdRef = useRef<string | null>(null);
+
+  const refreshProfile = useCallback(async (): Promise<number | null> => {
+    if (!supabase) return null;
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const userId = session?.user.id;
+      if (sessionError || !userId || authenticatedUserIdRef.current !== userId) return null;
+      const { data, error } = await supabase.from("profiles")
+        .select("role,username,full_name,avatar_url,puntos_c").eq("id", userId).single();
+      if (error || !data || authenticatedUserIdRef.current !== userId ||
+          typeof data.puntos_c !== "number" || !Number.isFinite(data.puntos_c)) return null;
+      setPuntosC(data.puntos_c);
+      setUserProfile(prev => prev.id === userId ? {
+        ...prev,
+        name: (data.full_name || data.username || prev.name).toUpperCase(),
+        role: data.role || prev.role,
+        avatarUrl: data.avatar_url || prev.avatarUrl,
+      } : prev);
+      return data.puntos_c;
+    } catch { return null; }
+  }, [setPuntosC, setUserProfile]);
 
   // Estados Globales de Auspiciadores & Pedidos Modal
   const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
@@ -95,17 +117,40 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   const [activeTheme, setActiveTheme] = useLocalStorage<string>("selected_theme", "PUNK_NEON");
 
   // Recompensa diaria protegida: Reclamo único por día validado en el servidor
+  const hasClaimedDailyRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!supabase || !isAuthenticated) {
+      hasClaimedDailyRef.current = null;
+      return;
+    }
+
+    const client = supabase;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (hasClaimedDailyRef.current === todayStr) {
+      return;
+    }
+
+    // Comprobar si ya se validó el reclamo en esta sesión hoy
+    const sessionKey = "doblec_last_daily_claim_check";
+    if (typeof window !== "undefined" && sessionStorage.getItem(sessionKey) === todayStr) {
+      hasClaimedDailyRef.current = todayStr;
+      return;
+    }
+
+    hasClaimedDailyRef.current = todayStr;
+
     const claimDailyReward = async () => {
-      if (supabase && isAuthenticated) {
-        try {
-          const { data: claimRes } = await supabase.rpc("claim_daily_coin");
-          if (claimRes?.coins !== undefined) {
-            setPuntosC(claimRes.coins);
-          }
-        } catch (err) {
-          console.warn("[ANTI-CHEAT] Error al validar recompensa diaria:", err);
+      try {
+        const { data: claimRes } = await client.rpc("claim_daily_coin");
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(sessionKey, todayStr);
         }
+        if (claimRes?.coins !== undefined) {
+          setPuntosC(claimRes.coins);
+        }
+      } catch (err) {
+        console.warn("[ANTI-CHEAT] Error al validar recompensa diaria:", err);
       }
     };
 
@@ -121,7 +166,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     listenersCount,
   } = useAzuraCastMetadata({ currentTrack, setCurrentTrack });
 
-  const chatSocket = useChatSocket({ userProfile });
+  const chatSocket = useChatSocket({ userProfile, isAuthenticated, refreshProfile });
 
   // 1. Inicializar elemento de Audio al montar el componente
   useEffect(() => {
@@ -204,6 +249,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     window.addEventListener("message", handleAuthMessage);
 
     const syncUserSession = async (session: Session | null) => {
+      authenticatedUserIdRef.current = session?.user.id ?? null;
       if (session && session.user) {
         setIsAuthenticated(true);
         const meta = session.user.user_metadata || {};
@@ -867,6 +913,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       isLiveChatModeActive: chatSocket.isLiveChatModeActive,
       setLiveChatModeActive: chatSocket.setLiveChatModeActive,
       sendChatMessage: chatSocket.sendChatMessage,
+      lunaGreetings: chatSocket.lunaGreetings,
       bannedWords: chatSocket.bannedWords,
       bannedUsers: chatSocket.bannedUsers,
       deletedMessageIds: chatSocket.deletedMessageIds,
@@ -950,6 +997,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     chatSocket.isLiveChatModeActive,
     chatSocket.setLiveChatModeActive,
     chatSocket.sendChatMessage,
+    chatSocket.lunaGreetings,
     chatSocket.bannedWords,
     chatSocket.bannedUsers,
     chatSocket.deletedMessageIds,

@@ -9,6 +9,7 @@ import { MASCOT_REACTIONS } from "@/lib/mascotEmojis";
 import { fetchSponsorBusinesses, INITIAL_SPONSORS, SponsorBusiness } from "@/services/sponsorService";
 import { getRoleBadgeColor, getRoleBadgeText } from "@/lib/chatUtils";
 import { getGreetingCommand } from "@/lib/chatCommands";
+import { LunaGreetingPanel } from "./chat/LunaGreetingPanel";
 
 interface ChatSidebarProps {
   onClose: () => void;
@@ -45,6 +46,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
   const {
     chatMessages,
     sendChatMessage,
+    lunaGreetings,
     bannedWords,
     bannedUsers,
     deletedMessageIds,
@@ -78,9 +80,16 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
   } = useAudio();
 
   const [typedMessage, setTypedMessage] = useState("");
+  const greetingActive = !!getGreetingCommand(typedMessage);
+  const richInputRef = useRef<RichChatInputRef>(null);
+  const completedGreeting = lunaGreetings?.completed;
+  useEffect(() => {
+    if (completedGreeting && richInputRef.current?.getText() === completedGreeting.messageText) {
+      richInputRef.current.clear();
+    }
+  }, [completedGreeting]);
   const [newBannedWord, setNewBannedWord] = useState("");
   const messageFeedRef = useRef<HTMLDivElement>(null);
-  const richInputRef = useRef<RichChatInputRef>(null);
 
   // In-Chat Voice Greeting State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -115,6 +124,11 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     const raw = richInputRef.current?.getText() || typedMessage;
     const trimmed = raw.trim();
     if (!trimmed) return;
+    if (getGreetingCommand(trimmed)) {
+      void lunaGreetings?.submit(trimmed);
+      // Keep the native editor contents until the server accepts the purchase.
+      return false;
+    }
 
     const lower = trimmed.toLowerCase();
     // Interceptar comandos de pedidos y auspiciadores
@@ -366,6 +380,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
             >
               🛡️ {isModPanelVisible ? "OCULTAR MOD" : "MOD"}
             </button>
+
           )}
           <button
             onClick={onClose}
@@ -563,6 +578,11 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
             >
               ⚠️ LIMPIAR CHAT (LOCAL)
             </button>
+
+            <p style={{ margin: "4px 0", fontSize: "0.65rem", lineHeight: "1rem" }}>
+              El backend devuelve las monedas de los saludos pendientes retirados por moderación.
+              Borrar un mensaje no retira un audio que ya entró a la cola.
+            </p>
 
             <div>
               <span style={{ fontWeight: 900, display: "block", marginBottom: "4px" }}>
@@ -1185,6 +1205,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               <button
                 onClick={handleSend}
                 className="neo-button"
+                aria-label="Enviar mensaje"
+                disabled={greetingActive}
                 style={{
                   height: "32px",
                   padding: "0 10px",
@@ -1200,11 +1222,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 <Send size={12} />
               </button>
             </div>
-            {getGreetingCommand(typedMessage) && (
-              <p style={{ margin: "6px 0 0", fontSize: "0.65rem", lineHeight: "1rem", color: "var(--primary)", opacity: 0.75 }}>
-                /saludos a [nombre] — Luna enviará un saludo de tu parte en una próxima intervención.
-              </p>
-            )}
+            <LunaGreetingPanel luna={lunaGreetings} messageText={typedMessage} senderName={userProfile.name}
+              active={greetingActive} authenticated={isAuthenticated} />
           </div>
         )}
       </div>

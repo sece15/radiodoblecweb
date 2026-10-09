@@ -122,6 +122,7 @@ export interface ChatMessage {
   createdAt: string;
   isDeleted: boolean;
   voiceAudioUrl?: string;
+  greetingId?: string;
 }
 
 export interface Product {
@@ -160,6 +161,7 @@ export interface SocketChatMessage {
   senderRole?: string;
   messageText: string;
   timestamp?: string;
+  greetingId?: string;
 }
 
 export interface SocketChatConfig {

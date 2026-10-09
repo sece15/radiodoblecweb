@@ -22,7 +22,7 @@ export interface RichChatInputRef {
 interface RichChatInputProps {
   placeholder?: string;
   maxLength?: number;
-  onSend: (text: string) => void;
+  onSend: (text: string) => void | boolean;
   onTextChange?: (text: string) => void;
   minHeight?: number;
   maxHeight?: number;
@@ -129,7 +129,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
       const text = extractTextWithTokens(editorRef.current).replace(/\u00A0/g, " ").trim();
       if (!text) return;
 
-      onSend(text);
+      if (onSend(text) === false) return;
       editorRef.current.innerHTML = "";
       syncState();
     }, [onSend, syncState]);

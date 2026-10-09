@@ -6,4 +6,4 @@ export function getGreetingCommand(text: string): string | null {
     : null;
 }
 
-export const CHAT_COMMAND_COLOR = "#7c3aed";
+export const CHAT_COMMAND_COLOR = "var(--primary-container)";

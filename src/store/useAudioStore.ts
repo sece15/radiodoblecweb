@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import type { LunaGreetingsController } from "@/hooks/useLunaGreetings";
 import {
   Station,
   RadioProgram,
@@ -80,6 +81,7 @@ export interface AudioStoreState {
   isLiveChatModeActive: boolean;
   setLiveChatModeActive: (active: boolean) => void;
   sendChatMessage: (text: string) => void;
+  lunaGreetings: LunaGreetingsController | null;
   bannedWords: string[];
   bannedUsers: Set<string>;
   deletedMessageIds: Set<number>;
@@ -215,6 +217,7 @@ export const initialStoreState: AudioStoreState = {
   isLiveChatModeActive: false,
   setLiveChatModeActive: noop,
   sendChatMessage: noop,
+  lunaGreetings: null,
   bannedWords: DEFAULT_BANNED_WORDS,
   bannedUsers: new Set(),
   deletedMessageIds: new Set(),

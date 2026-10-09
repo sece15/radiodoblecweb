@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useEffect, useCallback, Dispatch, SetStateAction } from "react";
 
 /**
  * Hook personalizado para gestionar y persistir estado simple en localStorage.
@@ -28,14 +28,14 @@ export function useLocalStorage<T>(key: string, defaultValue: T): [T, Dispatch<S
     }
   }, [key]);
 
-  const setPersistedState: Dispatch<SetStateAction<T>> = (value) => {
+  const setPersistedState: Dispatch<SetStateAction<T>> = useCallback((value) => {
     setState((prev) => {
       const newValue = value instanceof Function ? value(prev) : value;
       // Si es una cadena, guardar como texto plano para coincidir con formatos existentes
       localStorage.setItem(key, typeof newValue === "string" ? newValue : JSON.stringify(newValue));
       return newValue;
     });
-  };
+  }, [key]);
 
   return [state, setPersistedState];
 }
@@ -71,7 +71,7 @@ export function useLocalStorageToggle<T extends { id: string }>(
     }
   }, [key, toggleKey]);
 
-  const toggle = (id: string) => {
+  const toggle = useCallback((id: string) => {
     setList((prev) => {
       const next = prev.map((item) =>
         item.id === id
@@ -84,7 +84,7 @@ export function useLocalStorageToggle<T extends { id: string }>(
       localStorage.setItem(key, JSON.stringify(savedIds));
       return next;
     });
-  };
+  }, [key, toggleKey]);
 
   return [list, toggle];
 }

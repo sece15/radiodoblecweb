@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { ChatMessage, SocketChatMessage, SocketChatConfig, UserProfile, VoiceGreeting } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { DEFAULT_BANNED_WORDS } from "@/constants";
+import { useLunaGreetings } from "@/hooks/useLunaGreetings";
+import { getGreetingCommand } from "@/lib/chatCommands";
+import type { LunaGreetingResult } from "@/lib/lunaGreetings";
 
 interface UseChatSocketProps {
   userProfile: UserProfile;
+  isAuthenticated: boolean;
+  refreshProfile: () => Promise<number | null>;
 }
 
-export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
+export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: UseChatSocketProps) => {
   const [isLiveChatModeActive, setLiveChatModeActive] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [bannedWords, setBannedWords] = useLocalStorage<string[]>("banned_words", DEFAULT_BANNED_WORDS);
@@ -25,6 +30,21 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
 
   const socketRef = useRef<Socket | null>(null);
   const userProfileRef = useRef<UserProfile>(userProfile);
+  const sendGreeting = useCallback((messageText: string, requestId: string) => {
+    const socket = socketRef.current;
+    if (!socket?.connected) return false;
+    // The chat backend authenticates, moderates and charges in one operation.
+    socket.emit("send_message", { messageText, requestId });
+    return true;
+  }, []);
+  const lunaGreetings = useLunaGreetings({
+    userId: isAuthenticated ? userProfile.id : undefined,
+    senderName: userProfile.name,
+    refreshProfile,
+    send: sendGreeting,
+  });
+  const lunaRef = useRef(lunaGreetings);
+  useEffect(() => { lunaRef.current = lunaGreetings; }, [lunaGreetings]);
 
   useEffect(() => {
     userProfileRef.current = userProfile;
@@ -32,8 +52,10 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
 
   const disconnectChatSocket = () => {
     if (socketRef.current) {
+      socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
       socketRef.current = null;
+      lunaRef.current.connectionChanged(false);
     }
   };
 
@@ -50,6 +72,14 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
       });
       socketRef.current = socket;
 
+      socket.on("connect", () => {
+        lunaRef.current.connectionChanged(true);
+        void lunaRef.current.refreshRequests();
+      });
+      socket.on("disconnect", () => lunaRef.current.connectionChanged(false));
+      socket.on("luna_greeting_config", (config: unknown) => lunaRef.current.receiveConfig(config));
+      socket.on("luna_greeting_result", (result: LunaGreetingResult) => lunaRef.current.receiveResult(result));
+
       socket.on("chat_history", (history: SocketChatMessage[]) => {
         const formatted = history.map((h, index) => ({
           id: h.id || index,
@@ -59,13 +89,15 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
           createdAt: h.timestamp || "",
           stationId: "general",
           isDeleted: h.messageText.includes("borrado por moderación"),
+          greetingId: h.greetingId,
         }));
         setChatMessages(formatted);
       });
 
       socket.on("broadcast_message", (msg: SocketChatMessage) => {
         setChatMessages((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev;
+          if (prev.some((m) => (msg.id !== undefined && m.id === msg.id) ||
+            (msg.greetingId && m.greetingId === msg.greetingId))) return prev;
           return [
             ...prev,
             {
@@ -76,6 +108,7 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
               createdAt: msg.timestamp || new Date().toISOString(),
               stationId: "general",
               isDeleted: false,
+              greetingId: msg.greetingId,
             },
           ];
         });
@@ -106,6 +139,12 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
       console.error("Socket chat failed to boot", e);
     }
   };
+
+  useEffect(() => () => {
+    socketRef.current?.removeAllListeners();
+    socketRef.current?.disconnect();
+    socketRef.current = null;
+  }, []);
 
   const toggleSlowMode = () => {
     const val = !isSlowMode;
@@ -164,6 +203,10 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
 
   const sendChatMessage = (text: string) => {
     if (!text.trim()) return;
+    if (getGreetingCommand(text)) {
+      void lunaRef.current.submit(text);
+      return;
+    }
 
     const currentProfile = userProfileRef.current || userProfile;
     const currentName = currentProfile.name || "Oyente";
@@ -281,5 +324,6 @@ export const useChatSocket = ({ userProfile }: UseChatSocketProps) => {
     deleteMessage,
     clearChat,
     sendChatMessage,
+    lunaGreetings,
   };
 };
