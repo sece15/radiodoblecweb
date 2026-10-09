@@ -15,6 +15,7 @@ export const LiveNowBanner = ({
   onPlayLive,
   onNavigateToPlayer,
 }: LiveNowBannerProps) => {
+  const isLunaOnAir = /^Luna\s*[-–—]\s*continuidad\s+AutoDJ\b/i.test(liveTrackTitle.trim());
   return (
     <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
       <div
@@ -91,7 +92,7 @@ export const LiveNowBanner = ({
               margin: 0,
             }}
           >
-            Sintonizado: {liveTrackTitle}
+            {isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizado: ${liveTrackTitle}`}
           </p>
         </div>
       </div>

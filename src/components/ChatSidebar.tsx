@@ -8,6 +8,7 @@ import { RichChatInput, RichChatInputRef } from "./chat/RichChatInput";
 import { MASCOT_REACTIONS } from "@/lib/mascotEmojis";
 import { fetchSponsorBusinesses, INITIAL_SPONSORS, SponsorBusiness } from "@/services/sponsorService";
 import { getRoleBadgeColor, getRoleBadgeText } from "@/lib/chatUtils";
+import { getGreetingCommand } from "@/lib/chatCommands";
 
 interface ChatSidebarProps {
   onClose: () => void;
@@ -1199,6 +1200,11 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 <Send size={12} />
               </button>
             </div>
+            {getGreetingCommand(typedMessage) && (
+              <p style={{ margin: "6px 0 0", fontSize: "0.65rem", lineHeight: "1rem", color: "var(--primary)", opacity: 0.75 }}>
+                /saludos a [nombre] — Luna enviará un saludo de tu parte en una próxima intervención.
+              </p>
+            )}
           </div>
         )}
       </div>

@@ -6,8 +6,11 @@ import React, {
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useId,
+  useLayoutEffect,
 } from "react";
 import { getEmojiByTokenOrId } from "@/lib/mascotEmojis";
+import { CHAT_COMMAND_COLOR, getGreetingCommand } from "@/lib/chatCommands";
 
 export interface RichChatInputRef {
   insertEmoji: (emoji: string | { token: string; src?: string; label?: string; id?: string }) => void;
@@ -80,11 +83,43 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
     const editorRef = useRef<HTMLDivElement>(null);
     const [charCount, setCharCount] = useState(0);
     const [isFocused, setIsFocused] = useState(false);
+    const [text, setText] = useState("");
+    const highlightName = `chat-command-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+
+    // Paint a range without rewriting the editable DOM or moving the caret.
+    useLayoutEffect(() => {
+      const editor = editorRef.current;
+      if (!editor || !CSS.highlights || typeof Highlight === "undefined") return;
+      const command = getGreetingCommand(text);
+      if (command) {
+        const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+        const range = document.createRange();
+        let remaining = command.length;
+        let started = false;
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          const length = node.textContent?.length ?? 0;
+          if (!length) continue;
+          if (!started) {
+            range.setStart(node, 0);
+            started = true;
+          }
+          if (remaining <= length) {
+            range.setEnd(node, remaining);
+            CSS.highlights.set(highlightName, new Highlight(range));
+            break;
+          }
+          remaining -= length;
+        }
+      }
+      return () => { CSS.highlights.delete(highlightName); };
+    }, [text, highlightName]);
 
     const syncState = useCallback(() => {
       if (!editorRef.current) return "";
       const text = extractTextWithTokens(editorRef.current).replace(/\u00A0/g, " ");
       setCharCount(text.length);
+      setText(text);
       onTextChange?.(text);
       return text;
     }, [onTextChange]);
@@ -406,6 +441,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
 
     return (
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+        <style>{`::highlight(${highlightName}) { color: ${CHAT_COMMAND_COLOR}; }`}</style>
         <div
           ref={editorRef}
           contentEditable
