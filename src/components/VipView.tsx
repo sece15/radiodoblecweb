@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { VipJukeboxModal } from "./vip/VipJukeboxModal";
 import { CoinRechargeModal } from "./vip/CoinRechargeModal";
+import { RechargeStatus } from "./vip/RechargeStatus";
 import { supabase } from "@/lib/supabase";
 import {
   Crown,
@@ -94,6 +95,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
       }}
     >
       {/* 1. HERO BANNER: ARENA DE LA ROCOLA VIP */}
+      <RechargeStatus />
       <section
         className="neo-card scanlines"
         style={{

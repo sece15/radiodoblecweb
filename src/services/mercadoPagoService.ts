@@ -62,9 +62,7 @@ export const COIN_PACKS_LIST: CoinPackInfo[] = [
 
 export interface CreatePreferenceParams {
   packId: string;
-  userId?: string;
-  userName?: string;
-  userEmail?: string;
+  requestId: string;
 }
 
 export interface CreatePreferenceResult {
@@ -83,20 +81,29 @@ export async function createMercadoPagoPreference(params: CreatePreferenceParams
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://radiodoblec.com";
 
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session || session.user.is_anonymous) {
+    throw new Error("Inicia sesión para comprar C-Coins.");
+  }
+
   const { data, error } = await supabase.functions.invoke("mercadopago-checkout", {
     body: {
       packId: params.packId,
-      userId: params.userId,
-      userName: params.userName,
-      userEmail: params.userEmail,
+      requestId: params.requestId,
       redirectOrigin: origin,
     },
   });
 
   if (error) {
-    console.error("[MERCADO PAGO EDGE FUNCTION ERROR]:", error);
-    throw new Error(error.message || "Error al conectar con la pasarela de Mercado Pago.");
+    const response = error.context;
+    const details = response instanceof Response ? await response.json().catch(() => null) : null;
+    throw new Error(details?.error || "No se pudo iniciar el pago. Puedes reintentar.");
   }
 
+  if (typeof data?.init_point !== "string") throw new Error("No se pudo generar el enlace de pago.");
+  const checkoutUrl = new URL(data.init_point);
+  if (checkoutUrl.protocol !== "https:" || !["www.mercadopago.com.pe", "www.mercadopago.com", "sandbox.mercadopago.com.pe", "sandbox.mercadopago.com"].includes(checkoutUrl.hostname)) {
+    throw new Error("El enlace de pago recibido no es válido.");
+  }
   return data as CreatePreferenceResult;
 }

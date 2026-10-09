@@ -1,0 +1,3 @@
+[functions.mercadopago-checkout]
+# Checkout verifies the user with Auth; webhooks verify Mercado Pago HMAC.
+verify_jwt = false

@@ -123,6 +123,7 @@ export interface AudioStoreState {
 
   // Autenticación y Transmisión en Vivo
   isAuthenticated: boolean;
+  refreshProfile: () => Promise<number | null>;
   signOut: () => void;
   signInWithGoogle: () => void;
   isStreamerLive: boolean;
@@ -238,6 +239,7 @@ export const initialStoreState: AudioStoreState = {
   clearChat: noop,
 
   isAuthenticated: false,
+  refreshProfile: async () => null,
   signOut: noop,
   signInWithGoogle: noop,
   isStreamerLive: false,

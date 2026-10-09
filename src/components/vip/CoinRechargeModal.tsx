@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { NeoModal } from "../common/NeoModal";
 import { useAudio } from "@/hooks/useAudio";
 import { COIN_PACKS_LIST, createMercadoPagoPreference } from "@/services/mercadoPagoService";
@@ -23,7 +23,8 @@ export const CoinRechargeModal = ({
   onClose,
   suggestedPackId = "pack_trono",
 }: CoinRechargeModalProps) => {
-  const { userProfile, puntosC } = useAudio();
+  const { userProfile, puntosC, isAuthenticated } = useAudio();
+  const request = useRef<{ packId: string; userId: string; requestId: string } | null>(null);
   const [selectedPackId, setSelectedPackId] = useState<string>(suggestedPackId);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -33,22 +34,34 @@ export const CoinRechargeModal = ({
   const selectedPack = COIN_PACKS_LIST.find((p) => p.id === selectedPackId) || COIN_PACKS_LIST[2];
 
   const handlePayMercadoPago = async () => {
+    if (isLoading || !isAuthenticated) return;
+    const userId = userProfile.id;
+    if (!userId) {
+      setErrorMessage("Espera a que se cargue tu sesión e inténtalo otra vez.");
+      return;
+    }
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
+      if (!request.current || request.current.packId !== selectedPack.id || request.current.userId !== userId) {
+        const key = `mp-checkout:${userId}:${selectedPack.id}`;
+        let requestId: string = crypto.randomUUID();
+        try {
+          const saved = sessionStorage.getItem(key);
+          if (saved && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved)) requestId = saved;
+          sessionStorage.setItem(key, requestId);
+        } catch { /* Retry within this mounted form still retains the UUID. */ }
+        request.current = { packId: selectedPack.id, userId, requestId };
+      }
       const res = await createMercadoPagoPreference({
         packId: selectedPack.id,
-        userId: userProfile?.id,
-        userName: userProfile?.name,
-        userEmail: "oyente@radiodoblec.com",
+        requestId: request.current.requestId,
       });
 
       if (res.init_point) {
-        // Abrir en pestaña nueva para que la radio siga sonando sin interrupciones
-        window.open(res.init_point, "_blank", "noopener,noreferrer");
-        setIsLoading(false);
-        onClose();
+        // Same-tab navigation works with mobile browsers and popup blockers.
+        window.location.assign(res.init_point);
       } else {
         throw new Error(res.error || "No se pudo generar el enlace de pago.");
       }
@@ -178,7 +191,7 @@ export const CoinRechargeModal = ({
                       S/ {pack.pricePen.toFixed(2)}
                     </span>
                     <span style={{ fontSize: "0.62rem", opacity: 0.75, fontWeight: 700 }}>
-                      ${pack.priceUsd} USD
+                      PEN · soles
                     </span>
                   </div>
                 </div>
@@ -188,6 +201,7 @@ export const CoinRechargeModal = ({
         </div>
 
         {/* Error message */}
+        {!isAuthenticated && <p role="status" style={{ fontSize: "0.8rem", margin: 0 }}>Inicia sesión para comprar C-Coins.</p>}
         {errorMessage && (
           <div
             style={{
@@ -211,7 +225,7 @@ export const CoinRechargeModal = ({
         <button
           type="button"
           onClick={handlePayMercadoPago}
-          disabled={isLoading}
+          disabled={isLoading || !isAuthenticated}
           className="neo-button fun-hover-wobble"
           style={{
             backgroundColor: isLoading ? "#E0E0E0" : "#009EE3",

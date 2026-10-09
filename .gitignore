@@ -42,6 +42,8 @@ yarn-error.log*
 next-env.d.ts
 
 # supabase
-/supabase/functions
+/supabase/functions/*
+/supabase/functions/mercadopago-checkout/
+/supabase/.temp/
 
 .vercel
