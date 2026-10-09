@@ -57,6 +57,10 @@
   object-fit: contain;
 }
 
+.chatOpen .eventImage {
+  object-position: center top;
+}
+
 @container explore-frame (max-width: 1231px) {
   .heroLayout {
     gap: 16px;
@@ -110,5 +114,19 @@
     box-shadow: none;
     transform: none;
     transition: none;
+  }
+}
+
+/* Anchor chat-open banners to the top content, so they cannot cover programs. */
+@container explore-frame (min-width: 800px) {
+  .chatOpen .eventBanner {
+    position: absolute;
+    top: var(--banner-static-top);
+    right: var(--banner-static-right);
+  }
+
+  .chatOpen .leftBanner {
+    left: var(--banner-static-left);
+    right: auto;
   }
 }

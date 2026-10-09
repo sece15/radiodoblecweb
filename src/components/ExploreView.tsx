@@ -39,12 +39,16 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle, isChatOpen = fa
     if (!banner || !leftBanner || !content || !viewport) return;
     const update = () => {
       const bounds = viewport.getBoundingClientRect();
+      const contentBounds = content.getBoundingClientRect();
       let bottom = Math.min(bounds.bottom, player?.getBoundingClientRect().top ?? window.innerHeight);
       const sponsorTitle = content.querySelector<HTMLElement>(".sponsors-title");
-      if (isChatOpen && sponsorTitle) bottom = Math.min(bottom, sponsorTitle.getBoundingClientRect().bottom + 24);
+      if (isChatOpen && sponsorTitle) bottom = Math.min(bottom, sponsorTitle.getBoundingClientRect().bottom + viewport.scrollTop + 24);
       const centerWidth = isChatOpen ? 520 : content.getBoundingClientRect().width;
       for (const element of [banner, leftBanner]) {
         element.style.setProperty("--banner-top", `${bounds.top}px`);
+        element.style.setProperty("--banner-static-top", `${bounds.top - contentBounds.top - viewport.scrollTop}px`);
+        element.style.setProperty("--banner-static-left", `${bounds.left - contentBounds.left}px`);
+        element.style.setProperty("--banner-static-right", `${contentBounds.right - bounds.right}px`);
         element.style.setProperty("--banner-right", `${window.innerWidth - bounds.right}px`);
         element.style.setProperty("--banner-left", `${bounds.left}px`);
         element.style.setProperty("--banner-width", `${Math.max(0, (bounds.width - centerWidth) / 2)}px`);
