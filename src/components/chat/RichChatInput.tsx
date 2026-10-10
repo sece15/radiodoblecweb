@@ -10,7 +10,7 @@ import React, {
   useLayoutEffect,
 } from "react";
 import { getEmojiByTokenOrId } from "@/lib/mascotEmojis";
-import { CHAT_COMMAND_COLOR, getGreetingCommand } from "@/lib/chatCommands";
+import { CHAT_COMMAND_BACKGROUND, CHAT_COMMAND_COLOR, getGreetingCommand } from "@/lib/chatCommands";
 
 export interface RichChatInputRef {
   insertEmoji: (emoji: string | { token: string; src?: string; label?: string; id?: string }) => void;
@@ -441,7 +441,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
 
     return (
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
-        <style>{`::highlight(${highlightName}) { color: ${CHAT_COMMAND_COLOR}; }`}</style>
+        <style>{`::highlight(${highlightName}) { color: ${CHAT_COMMAND_COLOR}; background-color: ${CHAT_COMMAND_BACKGROUND}; text-decoration: underline; }`}</style>
         <div
           ref={editorRef}
           contentEditable

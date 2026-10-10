@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { LunaGreetingsController } from "@/hooks/useLunaGreetings";
 import { greetingRecipient, LUNA_GREETING_STATUSES } from "@/lib/lunaGreetings";
+import { CHAT_COMMAND_BACKGROUND, CHAT_COMMAND_COLOR } from "@/lib/chatCommands";
 
 interface Props {
   luna: LunaGreetingsController | null;
@@ -14,9 +15,29 @@ interface Props {
 
 export function LunaGreetingPanel({ luna, messageText, senderName, active, authenticated }: Props) {
   const open = luna?.open;
-  useEffect(() => { if (active && open) void open(); }, [active, open]);
+  const connected = luna?.connected;
+  const pendingPhase = luna?.pending?.phase;
+  useEffect(() => {
+    if (!active || !authenticated || !open || pendingPhase === "sending" || pendingPhase === "unknown") return;
+    let refreshing = false;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible" || refreshing) return;
+      refreshing = true;
+      try { await open(); } finally { refreshing = false; }
+    };
+    void refresh();
+    const onVisibilityChange = () => { void refresh(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    // Availability and credits can change while the greeting editor stays open.
+    const interval = setInterval(() => { void refresh(); }, 30000);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [active, authenticated, connected, open, pendingPhase]);
   if (!luna) return null;
   const { options, pending } = luna;
+  const receptionClosed = options?.accepting === false;
   const recipient = greetingRecipient(messageText, senderName);
   const missing = options && luna.balance !== null ? Math.max(0, options.price - luna.balance) : null;
   const waiting = pending?.phase === "sending";
@@ -27,36 +48,49 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
   return (
     <div style={{ fontSize: "0.7rem", lineHeight: "1.1rem", marginTop: "8px" }}>
       {active && (
-        <div className="neo-card" style={{ padding: "8px", backgroundColor: "var(--background)" }}>
-          <p style={{ margin: "0 0 6px" }}>
-            Luna saludará a {recipient.name || "[destinatario]"} de parte de {senderName}.
-            {" "}Si caduca antes de entrar al AutoDJ, se devolverán las monedas.
+        <div className="neo-card" style={{ padding: "8px", backgroundColor: "var(--background)", borderColor: CHAT_COMMAND_COLOR }}>
+          <p style={{ margin: "0 0 6px", fontWeight: 900 }}>
+            <span style={{ color: CHAT_COMMAND_COLOR, backgroundColor: CHAT_COMMAND_BACKGROUND, borderRadius: "3px", padding: "2px 5px" }}>/saludos</span>
+            {" "}{receptionClosed ? "Horario de saludos con Luna" : "Tu saludo al aire con Luna ✨"}
           </p>
-          {recipient.error && <p role="alert">{recipient.error}</p>}
-          {options && (
+          {receptionClosed ? (
+            <p role="status" aria-live="polite" style={{ margin: 0 }}>
+              Los saludos por este comando están programados para el horario de Luna: <strong>{options.hours}</strong>.
+            </p>
+          ) : (
             <>
-              <p style={{ margin: "4px 0" }}>{options.hours} · {options.timezone}. Luna termina a las 12.</p>
-              <p style={{ margin: "4px 0" }}>
-                {options.accepting ? "Recibiendo saludos" : "Recepción cerrada"}
-                {luna.balance !== null && ` · Saldo: ${luna.balance} ${options.currency}`}
+              <p style={{ margin: "0 0 6px" }}>
+                ¡Luna enviará un saludo a {recipient.name || "quien tú quieras"} de parte de {senderName}! 💖
               </p>
+              {recipient.error && <p role="alert">{recipient.error}</p>}
+              {options && (
+                <>
+                  <p style={{ margin: "4px 0" }}>Costo: {options.price} {options.currency} por saludo.</p>
+                  <p style={{ margin: "4px 0" }}>{options.hours} · {options.timezone}. Luna termina a las 12.</p>
+                  <p style={{ margin: "4px 0" }}>
+                    {options.accepting ? "Recibiendo saludos" : "Recepción cerrada"}
+                    {luna.balance !== null && ` · Saldo: ${luna.balance} ${options.currency}`}
+                  </p>
+                </>
+              )}
+              {luna.optionsError && <p role="alert">{luna.optionsError}</p>}
+              {options && missing !== null && missing > 0 && <p>Te faltan {missing} {options.currency}.</p>}
+              {!authenticated && <p>Inicia sesión para enviar un saludo.</p>}
+              {!luna.connected && <p>El chat está desconectado.</p>}
+              {options && luna.balance === null && !luna.checking && <p>No se pudo comprobar tu saldo.</p>}
+              <button type="button" className="neo-button" disabled={disabled}
+                onClick={() => void luna.submit(messageText)}
+                style={{ padding: "7px 10px", backgroundColor: CHAT_COMMAND_COLOR, color: "#111111", opacity: disabled ? 0.55 : 1 }}>
+                {waiting ? "Esperando confirmación…" : luna.checking ? "Consultando…" :
+                  options && !options.accepting ? "Fuera de horario" :
+                  options ? `Enviar saludo · ${options.price} ${options.currency}` : "Precio no disponible"}
+              </button>
+              {!luna.checking && !waiting && !uncertain && authenticated && (
+                <button type="button" className="neo-button" onClick={() => void luna.open()} style={{ marginLeft: "6px", padding: "7px" }}>
+                  Actualizar saldo y disponibilidad
+                </button>
+              )}
             </>
-          )}
-          {luna.optionsError && <p role="alert">{luna.optionsError}</p>}
-          {options && missing !== null && missing > 0 && <p>Te faltan {missing} {options.currency}.</p>}
-          {!authenticated && <p>Inicia sesión para enviar un saludo.</p>}
-          {!luna.connected && <p>El chat está desconectado.</p>}
-          {options && luna.balance === null && !luna.checking && <p>No se pudo comprobar tu saldo.</p>}
-          <button type="button" className="neo-button" disabled={disabled}
-            onClick={() => void luna.submit(messageText)}
-            style={{ padding: "7px 10px", backgroundColor: "var(--primary-container)", color: "#111111", opacity: disabled ? 0.55 : 1 }}>
-            {waiting ? "Esperando confirmación…" : luna.checking ? "Consultando…" :
-              options ? `Enviar saludo · ${options.price} ${options.currency}` : "Precio no disponible"}
-          </button>
-          {(!options || luna.balance === null) && !luna.checking && (
-            <button type="button" className="neo-button" onClick={() => void luna.open()} style={{ marginLeft: "6px", padding: "7px" }}>
-              Volver a consultar
-            </button>
           )}
         </div>
       )}
