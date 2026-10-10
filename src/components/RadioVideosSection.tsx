@@ -21,16 +21,16 @@ export interface RadioVideoItem {
 
 const UPCOMING_VIDEOS: RadioVideoItem[] = [
   {
-    id: "video_conversa_1",
-    title: "Conversa Time en Cabina: Detrás de micrófonos con la escena local",
-    host: "Nicoll",
-    category: "ENTREVISTA",
+    id: "video_inpopular_1",
+    title: "INPOPULAR Ep. 001: Independencia creativa",
+    host: "Bony",
+    category: "PODCAST",
     durationText: "24:15",
-    imageUrl: "/conversatime.jpeg",
-    description: "Entrevista exclusiva en cabina con bandas y artistas emergentes del underground limeño. Hablamos sobre producción autogestionada, lanzamientos y anécdotas de la movida nocturna.",
-    tags: ["Entrevistas", "Escena Local", "Bohemia"],
+    imageUrl: "/inpopular.png",
+    description: "Bony conversa sobre independencia creativa: darle voz a tus ideas, encontrar tu propio estilo y construir proyectos con identidad propia.",
+    tags: ["Independencia creativa", "Música", "Arte"],
     status: "PRÓXIMAMENTE",
-    releaseEstimate: "Próximo Viernes",
+    releaseEstimate: "Próximo Sábado",
   },
   {
     id: "video_l_mental_1",

@@ -87,14 +87,6 @@ export const useSchedule = () => {
       if (timeSlotId === "block_primetime") {
         return [
           {
-            id: "conversa_time",
-            title: "Conversa Time",
-            host: "Nicoll",
-            timeText: "20:00 - 21:00",
-            genre: "Magazine Musical",
-            isLiveRightNow: currentDayIndex === 5 && currentHour >= 20 && currentHour < 21,
-          },
-          {
             id: "l_mental",
             title: "L-Mental",
             host: "Gerardo “La Seka” B. Gallardo",
@@ -107,6 +99,18 @@ export const useSchedule = () => {
     }
 
     if (dayId === "sab") {
+      if (timeSlotId === "block_primetime") {
+        return [
+          {
+            id: "inpopular",
+            title: "INPOPULAR",
+            host: "Bony",
+            timeText: "20:00 - 21:00",
+            genre: "Independencia creativa",
+            isLiveRightNow: currentDayIndex === 6 && currentHour >= 20 && currentHour < 21,
+          },
+        ];
+      }
       if (timeSlotId === "block_afternoon") {
         return [
           {
@@ -296,17 +300,30 @@ export const useSchedule = () => {
           });
         }
 
-        if (dayId === "vie" || dayId === "all") {
+        if (dayId === "sab" || dayId === "all") {
           items.push({
             timeText: "20:00 - 21:00",
-            title: "Conversa Time",
-            daysText: "Todos los Viernes",
-            genres: "Magazine Musical & Entrevistas en Cabina",
-            description: "Entrevistas en cabina a bandas locales y movida bohemia con Nicoll.",
-            host: "Nicoll",
+            title: "INPOPULAR",
+            daysText: "Todos los Sábados",
+            genres: "Independencia creativa / Música / Arte",
+            description: "Ep. 001: Independencia creativa. Ideas, estilo propio y proyectos con identidad junto a Bony.",
+            host: "Bony",
             isSpecialShow: true,
-            badgeText: "🎙️ EN VIVO VIE",
+            badgeText: "🎙️ EN VIVO SÁB",
           });
+        }
+
+        if (dayId === "vie" || dayId === "all") {
+          if (dayId === "vie") {
+            items.push({
+              timeText: "20:00 - 21:00",
+              title: "Reggaetón, Trap & Tendencias Urbanas",
+              daysText: "Viernes",
+              genres: "Reggaetón, Trap, Hip-Hop, Dance Remixes (120-130 BPM)",
+              description: "Sesión caliente de ritmos urbanos y remixes exclusivos de DJ.",
+              badgeText: "🎉 FIESTA",
+            });
+          }
           items.push({
             timeText: "21:00 - 22:00",
             title: "L-Mental: La Mente Detrás de la Historia",
@@ -319,9 +336,9 @@ export const useSchedule = () => {
           });
         } else {
           items.push({
-            timeText: "20:00 - 22:00",
+            timeText: dayId === "sab" ? "21:00 - 22:00" : "20:00 - 22:00",
             title: "Reggaetón, Trap & Tendencias Urbanas",
-            daysText: "Lunes a Jueves / Sábados / Domingos",
+            daysText: dayId === "sab" ? "Todos los Sábados" : "Lunes a Jueves / Domingos",
             genres: "Reggaetón, Trap, Hip-Hop, Dance Remixes (120-130 BPM)",
             description: "Sesión caliente de ritmos urbanos y remixes exclusivos de DJ.",
             badgeText: "🎉 FIESTA",
