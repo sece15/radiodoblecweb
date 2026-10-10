@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Dispatch, SetStateAction } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { DEFAULT_STREAM } from "@/constants";
 
 const CUSTOM_ARTWORK_MAP: Record<string, string> = {};
@@ -28,38 +28,7 @@ export const useAzuraCastMetadata = ({
   const [liveShowName, setLiveShowName] = useState("RADIO DOBLE C ONLINE");
   const [liveTrackTitle, setLiveTrackTitle] = useState("RADIO DOBLE C - SEÑAL EN VIVO");
   const [liveStatusText, setLiveStatusText] = useState("ON AIR");
-  const [listenersCount, setListenersCount] = useState(14);
-  const rawListenersRef = useRef<number>(0);
-
-  // Fluctuación dinámica orgánica en segundo plano (sube +1, +2, +4, +8 o baja -1, -2, -3)
-  useEffect(() => {
-    const fluctuateInterval = setInterval(() => {
-      setListenersCount((prev) => {
-        const raw = rawListenersRef.current;
-        const targetCenter = raw > 0 ? raw * 4 + 2 : 16;
-        const minAllowed = Math.max(8, raw > 0 ? raw * 3 : 10);
-        const maxAllowed = raw > 0 ? raw * 6 + 10 : 35;
-
-        let delta = 0;
-        if (prev < targetCenter - 4) {
-          const choices = [+2, +3, +4, +8, +5, +1];
-          delta = choices[Math.floor(Math.random() * choices.length)];
-        } else if (prev > targetCenter + 6) {
-          const choices = [-2, -3, -4, -1];
-          delta = choices[Math.floor(Math.random() * choices.length)];
-        } else {
-          // Variaciones dinámicas reales: +1, +2, +4, +8, -2, -1, -3
-          const choices = [+1, +2, +4, +8, -2, -1, -3, +2, -2, +1, -1];
-          delta = choices[Math.floor(Math.random() * choices.length)];
-        }
-
-        const nextCount = prev + delta;
-        return Math.min(maxAllowed, Math.max(minAllowed, nextCount));
-      });
-    }, 7000);
-
-    return () => clearInterval(fluctuateInterval);
-  }, []);
+  const [listenersCount, setListenersCount] = useState(0);
 
   useEffect(() => {
     const pollMetadata = async () => {
@@ -69,17 +38,18 @@ export const useAzuraCastMetadata = ({
       }
 
       try {
-        const azuraUrl = process.env.NEXT_PUBLIC_AZURACAST_URL;
-        if (!azuraUrl) return;
-        const res = await fetch(`${azuraUrl}/api/nowplaying`);
+        const res = await fetch("/api/radio/nowplaying", { cache: "no-store" });
+        if (!res.ok) throw new Error("Radio no disponible");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
             const np = data[0];
             const isLiveStream = Boolean(np.live?.is_live);
             setIsStreamerLive(isLiveStream);
-            const rawListeners = np.listeners?.current ?? 0;
-            rawListenersRef.current = rawListeners;
+            const count = np.listeners?.current;
+            if (typeof count === "number" && Number.isFinite(count) && count >= 0) {
+              setListenersCount(count);
+            }
             if (np.live?.streamer_name) setLiveShowName(np.live.streamer_name);
 
             const title = np.now_playing?.song?.title || "";
@@ -91,10 +61,6 @@ export const useAzuraCastMetadata = ({
 
             // Determine cover art URL
             let artUrl = np.now_playing?.song?.art;
-
-            if (artUrl && artUrl.startsWith("/")) {
-              artUrl = `${azuraUrl}${artUrl}`;
-            }
 
             if (
               artUrl &&
@@ -182,7 +148,7 @@ export const useAzuraCastMetadata = ({
     };
 
     pollMetadata();
-    const metadataInterval = setInterval(pollMetadata, 15000);
+    const metadataInterval = setInterval(pollMetadata, 7000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
