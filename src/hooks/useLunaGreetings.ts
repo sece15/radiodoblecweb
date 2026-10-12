@@ -3,18 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
-  greetingRecipient, isActiveGreeting, parseLunaGreetingOptions,
+  isActiveGreeting, parseLunaGreetingOptions,
   type LunaGreetingOptions, type LunaGreetingRequest, type LunaGreetingResult, type PendingLunaGreeting,
 } from "@/lib/lunaGreetings";
 
 interface Props {
   userId?: string;
-  senderName: string;
   refreshProfile: () => Promise<number | null>;
   send: (messageText: string, requestId: string) => boolean;
 }
 
-export function useLunaGreetings({ userId, senderName, refreshProfile, send }: Props) {
+export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
   const [options, setOptions] = useState<LunaGreetingOptions | null>(null);
   const [optionsError, setOptionsError] = useState("");
   const [checking, setChecking] = useState(false);
@@ -152,8 +151,6 @@ export function useLunaGreetings({ userId, senderName, refreshProfile, send }: P
       return;
     }
     const text = retry && current ? current.messageText : messageText;
-    const recipient = greetingRecipient(text, senderName);
-    if (recipient.error) { setNotice(recipient.error); return; }
     busyRef.current = userId;
     setChecking(true);
     const owner = userId;
@@ -191,7 +188,7 @@ export function useLunaGreetings({ userId, senderName, refreshProfile, send }: P
       if (busyRef.current === owner) busyRef.current = null;
       if (userRef.current === owner) setChecking(false);
     }
-  }, [userId, senderName, refreshOptions, refreshBalance, options, savePending, send, markUnknown]);
+  }, [userId, refreshOptions, refreshBalance, options, savePending, send, markUnknown]);
 
   const connectionChanged = useCallback((value: boolean) => {
     setConnected(value);

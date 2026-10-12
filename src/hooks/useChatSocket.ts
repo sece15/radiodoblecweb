@@ -39,7 +39,6 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
   }, []);
   const lunaGreetings = useLunaGreetings({
     userId: isAuthenticated ? userProfile.id : undefined,
-    senderName: userProfile.name,
     refreshProfile,
     send: sendGreeting,
   });

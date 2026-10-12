@@ -55,15 +55,12 @@ export function parseLunaGreetingOptions(value: unknown): LunaGreetingOptions | 
   return option as unknown as LunaGreetingOptions;
 }
 
-export function greetingRecipient(text: string, senderName: string): { name: string; error: string | null } {
+export function greetingRecipient(text: string, senderName: string): string {
   const command = getGreetingCommand(text);
-  if (!command) return { name: "", error: "Escribe /saludos al comienzo del mensaje." };
+  if (!command) return "";
   const argument = text.slice(command.length).trim();
-  if (!argument) return { name: senderName, error: null };
-  const name = argument.replace(/^(?:a|para)(?: +|$)/i, "").trim();
-  const valid = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u.test(name) &&
-    Array.from(name.normalize("NFC")).length <= 40 && name.split(/ +/).length <= 5;
-  return { name, error: valid ? null : "Usa un nombre de hasta 40 letras y cinco palabras, sin números ni símbolos." };
+  if (!argument) return senderName;
+  return argument.replace(/^(?:a|para)(?: +|$)/i, "").trim();
 }
 
 export function isActiveGreeting(status: string): boolean {

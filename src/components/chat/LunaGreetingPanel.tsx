@@ -43,7 +43,7 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
   const waiting = pending?.phase === "sending";
   const uncertain = pending?.phase === "unknown";
   const disabled = !authenticated || !luna.connected || luna.checking || waiting || uncertain ||
-    !options?.accepting || missing === null || missing > 0 || !!recipient.error;
+    !options?.accepting || missing === null || missing > 0;
 
   return (
     <div style={{ fontSize: "0.7rem", lineHeight: "1.1rem", marginTop: "8px" }}>
@@ -60,9 +60,8 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
           ) : (
             <>
               <p style={{ margin: "0 0 6px" }}>
-                ¡Luna enviará un saludo a {recipient.name || "quien tú quieras"} de parte de {senderName}! 💖
+                ¡Luna enviará un saludo a {recipient || "quien tú quieras"} de parte de {senderName}! 💖
               </p>
-              {recipient.error && <p role="alert">{recipient.error}</p>}
               {options && (
                 <>
                   <p style={{ margin: "4px 0" }}>Costo: {options.price} {options.currency} por saludo.</p>
