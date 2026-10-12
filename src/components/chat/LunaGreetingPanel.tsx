@@ -39,6 +39,9 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
   const { options, pending } = luna;
   const receptionClosed = options?.accepting === false;
   const recipient = greetingRecipient(messageText, senderName);
+  const enteredRecipient = greetingRecipient(messageText, "");
+  const nameTooLong = Array.from(enteredRecipient.normalize("NFC")).length > 40 ||
+    enteredRecipient.split(/\s+/u).length > 5;
   const missing = options && luna.balance !== null ? Math.max(0, options.price - luna.balance) : null;
   const waiting = pending?.phase === "sending";
   const uncertain = pending?.phase === "unknown";
@@ -62,6 +65,7 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
               <p style={{ margin: "0 0 6px" }}>
                 ¡Luna enviará un saludo a {recipient || "quien tú quieras"} de parte de {senderName}! 💖
               </p>
+              {nameTooLong && <p role="status">El nombre es muy largo.</p>}
               {options && (
                 <>
                   <p style={{ margin: "4px 0" }}>Costo: {options.price} {options.currency} por saludo.</p>
