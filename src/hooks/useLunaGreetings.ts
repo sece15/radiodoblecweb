@@ -156,11 +156,11 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
     if (busyRef.current === userId || pendingRef.current?.phase === "sending") return;
     if (!userId) { setNotice("Inicia sesión para enviar un saludo."); return; }
     const current = pendingRef.current;
+    const text = retry && current ? current.messageText : messageText;
     if (current?.phase === "unknown" && !retry && current.messageText === text) {
       setNotice("Primero comprueba la solicitud anterior con el botón Reintentar o bórrala.");
       return;
     }
-    const text = retry && current ? current.messageText : messageText;
     busyRef.current = userId;
     setChecking(true);
     const owner = userId;
