@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useEffect, useRef, Dispatch, SetStateAction } from "react";
 import { DEFAULT_STREAM } from "@/constants";
 
 const CUSTOM_ARTWORK_MAP: Record<string, string> = {};
@@ -29,6 +29,26 @@ export const useAzuraCastMetadata = ({
   const [liveTrackTitle, setLiveTrackTitle] = useState("RADIO DOBLE C - SEÑAL EN VIVO");
   const [liveStatusText, setLiveStatusText] = useState("ON AIR");
   const [listenersCount, setListenersCount] = useState(0);
+  const targetListenersRef = useRef(0);
+
+  // Easing gradual: avanza de 1 en 1 de forma fluida y orgánica
+  useEffect(() => {
+    if (listenersCount === 0 && targetListenersRef.current > 0) {
+      setListenersCount(targetListenersRef.current);
+      return;
+    }
+    if (listenersCount === targetListenersRef.current || targetListenersRef.current === 0) return;
+
+    const timer = setTimeout(() => {
+      setListenersCount((prev) => {
+        const target = targetListenersRef.current;
+        if (prev === target) return prev;
+        return prev < target ? prev + 1 : prev - 1;
+      });
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [listenersCount]);
 
   useEffect(() => {
     const pollMetadata = async () => {
@@ -48,7 +68,8 @@ export const useAzuraCastMetadata = ({
             setIsStreamerLive(isLiveStream);
             const count = np.listeners?.current;
             if (typeof count === "number" && Number.isFinite(count) && count >= 0) {
-              setListenersCount(count);
+              targetListenersRef.current = count;
+              setListenersCount((prev) => (prev === 0 ? count : prev));
             }
             if (np.live?.streamer_name) setLiveShowName(np.live.streamer_name);
 
