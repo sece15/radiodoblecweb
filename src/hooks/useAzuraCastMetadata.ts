@@ -31,23 +31,68 @@ export const useAzuraCastMetadata = ({
   const [listenersCount, setListenersCount] = useState(0);
   const targetListenersRef = useRef(0);
 
-  // Easing gradual: avanza de forma fluida y orgánica adaptándose al tamaño del salto
+  // Motor orgánico de rotación continua en vivo ("entra 1, salen 2, entra 1...")
   useEffect(() => {
+    // Inicialización inmediata al recibir el primer conteo
     if (listenersCount === 0 && targetListenersRef.current > 0) {
       setListenersCount(targetListenersRef.current);
       return;
     }
-    if (listenersCount === targetListenersRef.current || targetListenersRef.current === 0) return;
+    if (targetListenersRef.current === 0) return;
 
-    const diff = Math.abs(listenersCount - targetListenersRef.current);
-    const delay = diff > 8 ? 850 : 1100;
-    const step = diff > 10 ? 2 : 1;
+    // Pausar si la pestaña está oculta para no consumir recursos innecesarios
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+
+    const diff = targetListenersRef.current - listenersCount;
+    const absDiff = Math.abs(diff);
+
+    // Retraso natural entre eventos humanos:
+    // Saltos grandes (oleada o bajón en curso): eventos más seguidos (900ms a 2100ms)
+    // Cerca de la meseta (rotación habitual): pausas humanas de 3.2s a 6.8s
+    let delay: number;
+    if (absDiff >= 8) {
+      delay = Math.floor(900 + Math.random() * 1200);
+    } else if (absDiff >= 4) {
+      delay = Math.floor(1800 + Math.random() * 1600);
+    } else {
+      delay = Math.floor(3200 + Math.random() * 3600);
+    }
 
     const timer = setTimeout(() => {
       setListenersCount((prev) => {
         const target = targetListenersRef.current;
-        if (prev === target) return prev;
-        return prev < target ? Math.min(target, prev + step) : Math.max(target, prev - step);
+        if (target === 0) return prev;
+        const currentDiff = target - prev;
+        const currentAbsDiff = Math.abs(currentDiff);
+
+        let delta = 0;
+        if (currentAbsDiff >= 8) {
+          // Desplazamiento ágil hacia la nueva ola o bajón grupal
+          const sign = Math.sign(currentDiff);
+          delta = sign * (Math.random() < 0.75 ? 2 : 1);
+        } else if (currentAbsDiff >= 4) {
+          // Acercándose con pequeña resistencia orgánica
+          if (Math.random() < 0.75) {
+            delta = Math.sign(currentDiff) * (Math.random() < 0.35 ? 2 : 1);
+          } else {
+            delta = -Math.sign(currentDiff) * 1;
+          }
+        } else {
+          // Micro-rotación en vivo continua ("sale uno, entra uno, salen dos, entra uno...")
+          let upProb = 0.48;
+          if (currentDiff > 0) upProb = 0.60;
+          else if (currentDiff < 0) upProb = 0.36;
+
+          if (Math.random() < upProb) {
+            delta = Math.random() < 0.28 ? 2 : 1; // "entra 1 o entran 2"
+          } else {
+            delta = -(Math.random() < 0.28 ? 2 : 1); // "sale 1 o salen 2"
+          }
+        }
+
+        return Math.max(2, prev + delta);
       });
     }, delay);
 
