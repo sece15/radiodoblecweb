@@ -112,6 +112,13 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
     }
   }, [savePending]);
 
+  const discardPending = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = null;
+    savePending(null);
+    setNotice("");
+  }, [savePending]);
+
   const receiveResult = useCallback((result: LunaGreetingResult) => {
     if (!result || typeof result.message !== "string") return;
     if (result.informational) {
@@ -119,7 +126,8 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
       return;
     }
     const current = pendingRef.current;
-    if (!current || result.requestId !== current.requestId) return;
+    if (!current) return;
+    if (result.requestId && result.requestId !== current.requestId) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
     setNotice(result.message);
@@ -130,11 +138,13 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
       savePending(null);
       void refreshBalance();
       void refreshRequests();
+      void refreshOptions();
     } else {
       savePending({ ...current, phase: "failed" });
-      // Never mutate the balance from an error or informational result.
+      void refreshBalance();
+      void refreshOptions();
     }
-  }, [savePending, refreshBalance, refreshRequests]);
+  }, [savePending, refreshBalance, refreshRequests, refreshOptions]);
 
   const open = useCallback(async () => {
     setChecking(true);
@@ -162,8 +172,9 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
       const resolving = retry && current?.phase === "unknown";
       if (!resolving) {
         if (!fresh.accepting) { setNotice(`La recepción está cerrada. ${fresh.hours} (${fresh.timezone}).`); return; }
-        if (!options || fresh.price !== options.price || fresh.currency !== options.currency) {
-          setNotice("Se actualizó el precio. Revisa el costo y vuelve a confirmar el envío."); return;
+        if (options && (fresh.price !== options.price || fresh.currency !== options.currency)) {
+          setNotice(`El costo del saludo se actualizó a ${fresh.price} ${fresh.currency}. Revisa y confirma el envío.`);
+          return;
         }
         const coins = await refreshBalance();
         if (owner !== userRef.current) return;
@@ -255,7 +266,7 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
     completed: sameOwner ? completed : null,
     requests: sameOwner ? requests : [],
     historyError: sameOwner ? historyError : "",
-    open, submit, refreshRequests, receiveConfig, receiveResult, connectionChanged };
+    open, submit, refreshRequests, receiveConfig, receiveResult, connectionChanged, discardPending };
 }
 
 export type LunaGreetingsController = ReturnType<typeof useLunaGreetings>;

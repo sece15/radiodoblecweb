@@ -13,10 +13,27 @@ interface Props {
   authenticated: boolean;
 }
 
+function formatCooldown(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? "0" : ""}${s} min`;
+}
+
 export function LunaGreetingPanel({ luna, messageText, senderName, active, authenticated }: Props) {
   const open = luna?.open;
   const connected = luna?.connected;
   const pendingPhase = luna?.pending?.phase;
+  const options = luna?.options;
+  const pending = luna?.pending;
+
+  const [cooldown, setCooldown] = useState<number>(0);
+  const [prevCooldown, setPrevCooldown] = useState<number | undefined>(undefined);
+
+  if (options?.cooldownSeconds !== prevCooldown) {
+    setPrevCooldown(options?.cooldownSeconds);
+    setCooldown(options?.cooldownSeconds && options.cooldownSeconds > 0 ? options.cooldownSeconds : 0);
+  }
+
   useEffect(() => {
     if (!active || !authenticated || !open || pendingPhase === "sending" || pendingPhase === "unknown") return;
     let refreshing = false;
@@ -35,8 +52,24 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [active, authenticated, connected, open, pendingPhase]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setCooldown((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          void open?.();
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown, open]);
+
   if (!luna) return null;
-  const { options, pending } = luna;
+
   const receptionClosed = options?.accepting === false;
   const recipient = greetingRecipient(messageText, senderName);
   const enteredRecipient = greetingRecipient(messageText, "");
@@ -65,10 +98,31 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
               <p style={{ margin: "0 0 6px" }}>
                 ¡Luna enviará un saludo a {recipient || "quien tú quieras"} de parte de {senderName}! 💖
               </p>
-              {nameTooLong && <p role="status">El nombre es muy largo.</p>}
+              {nameTooLong && <p role="status" style={{ color: "#ef4444" }}>El nombre es muy largo (máximo 40 letras y 5 palabras).</p>}
               {options && (
                 <>
-                  <p style={{ margin: "4px 0" }}>Costo: {options.price} {options.currency} por saludo.</p>
+                  {options.recentCount && options.recentCount > 0 ? (
+                    <div style={{ margin: "6px 0", padding: "6px 8px", backgroundColor: "rgba(255, 79, 203, 0.12)", borderRadius: "4px", border: `1px solid ${CHAT_COMMAND_COLOR}` }}>
+                      <p style={{ margin: 0, fontWeight: 800, color: CHAT_COMMAND_COLOR }}>
+                        ⚡ Tarifa por envío consecutivo: {options.price} {options.currency} (x{Math.pow(2, options.recentCount)})
+                      </p>
+                      <p style={{ margin: "2px 0 0", fontSize: "0.66rem", opacity: 0.9 }}>
+                        Cada saludo consecutivo antes de 20 min duplica su costo.
+                      </p>
+                      {cooldown > 0 && (
+                        <p style={{ margin: "3px 0 0", fontSize: "0.66rem", color: "#facc15" }}>
+                          ⏱️ Vuelve a precio base ({options.basePrice || 10} {options.currency}) en <strong>{formatCooldown(cooldown)}</strong>.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ margin: "4px 0" }}>
+                      <p style={{ margin: "2px 0", fontWeight: 700 }}>Costo: {options.price} {options.currency} por saludo.</p>
+                      <p style={{ margin: "2px 0 4px", fontSize: "0.65rem", opacity: 0.75 }}>
+                        💡 Si envías otro saludo antes de 20 min, el siguiente costará el doble ({options.price * 2} {options.currency}).
+                      </p>
+                    </div>
+                  )}
                   <p style={{ margin: "4px 0" }}>{options.hours} · {options.timezone}. Luna termina a las 12.</p>
                   <p style={{ margin: "4px 0" }}>
                     {options.accepting ? "Recibiendo saludos" : "Recepción cerrada"}
@@ -77,7 +131,7 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
                 </>
               )}
               {luna.optionsError && <p role="alert">{luna.optionsError}</p>}
-              {options && missing !== null && missing > 0 && <p>Te faltan {missing} {options.currency}.</p>}
+              {options && missing !== null && missing > 0 && <p style={{ color: "#ef4444", fontWeight: 700 }}>Te faltan {missing} {options.currency}.</p>}
               {!authenticated && <p>Inicia sesión para enviar un saludo.</p>}
               {!luna.connected && <p>El chat está desconectado.</p>}
               {options && luna.balance === null && !luna.checking && <p>No se pudo comprobar tu saldo.</p>}
@@ -98,13 +152,29 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
         </div>
       )}
       {pending && pending.phase !== "sending" && (
-        <div style={{ marginTop: "6px" }}>
-          <p style={{ margin: "4px 0", overflowWrap: "anywhere" }}>Solicitud guardada: {pending.messageText}</p>
-          {uncertain && <p>El resultado es incierto; el cobro puede haberse realizado.</p>}
-          <button type="button" className="neo-button" disabled={luna.checking || !luna.connected || !authenticated}
-            onClick={() => void luna.submit(pending.messageText, true)} style={{ padding: "6px" }}>
-            Reintentar la misma solicitud
-          </button>
+        <div className="neo-card" style={{ marginTop: "8px", padding: "8px", backgroundColor: "var(--background)", borderColor: uncertain ? "#f59e0b" : "#ef4444" }}>
+          <p style={{ margin: "0 0 6px", fontWeight: 700, color: uncertain ? "#f59e0b" : "#ef4444" }}>
+            {uncertain ? "⚠️ Envío pendiente de confirmación" : "❌ No se pudo enviar el saludo"}
+          </p>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
+            <button
+              type="button"
+              className="neo-button"
+              disabled={luna.checking || !luna.connected || !authenticated}
+              onClick={() => void luna.submit(pending.messageText, true)}
+              style={{ padding: "6px 10px", backgroundColor: CHAT_COMMAND_COLOR, color: "#111111" }}
+            >
+              🔄 Reintentar
+            </button>
+            <button
+              type="button"
+              className="neo-button"
+              onClick={() => luna.discardPending()}
+              style={{ padding: "6px 10px", backgroundColor: "#222222", color: "#ffffff" }}
+            >
+              🗑️ Borrar mensaje
+            </button>
+          </div>
         </div>
       )}
       {luna.notice && <p role="status" aria-live="polite" style={{ margin: "6px 0 0", overflowWrap: "anywhere" }}>{luna.notice}</p>}

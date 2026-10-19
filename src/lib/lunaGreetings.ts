@@ -2,6 +2,9 @@ import { getGreetingCommand } from "./chatCommands";
 
 export interface LunaGreetingOptions {
   price: number;
+  basePrice?: number;
+  recentCount?: number;
+  cooldownSeconds?: number;
   currency: string;
   accepting: boolean;
   hours: string;
