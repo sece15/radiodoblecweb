@@ -31,7 +31,7 @@ export const useAzuraCastMetadata = ({
   const [listenersCount, setListenersCount] = useState(0);
   const targetListenersRef = useRef(0);
 
-  // Easing gradual: avanza de 1 en 1 de forma fluida y orgánica
+  // Easing gradual: avanza de forma fluida y orgánica adaptándose al tamaño del salto
   useEffect(() => {
     if (listenersCount === 0 && targetListenersRef.current > 0) {
       setListenersCount(targetListenersRef.current);
@@ -39,13 +39,17 @@ export const useAzuraCastMetadata = ({
     }
     if (listenersCount === targetListenersRef.current || targetListenersRef.current === 0) return;
 
+    const diff = Math.abs(listenersCount - targetListenersRef.current);
+    const delay = diff > 8 ? 850 : 1100;
+    const step = diff > 10 ? 2 : 1;
+
     const timer = setTimeout(() => {
       setListenersCount((prev) => {
         const target = targetListenersRef.current;
         if (prev === target) return prev;
-        return prev < target ? prev + 1 : prev - 1;
+        return prev < target ? Math.min(target, prev + step) : Math.max(target, prev - step);
       });
-    }, 1200);
+    }, delay);
 
     return () => clearTimeout(timer);
   }, [listenersCount]);
