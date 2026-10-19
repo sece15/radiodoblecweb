@@ -77,7 +77,7 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
   const messageTooLong = textLength > 140;
   const missing = options && luna.balance !== null ? Math.max(0, options.price - luna.balance) : null;
   const waiting = pending?.phase === "sending";
-  const uncertain = pending?.phase === "unknown";
+  const uncertain = pending?.phase === "unknown" && pending.messageText === messageText;
   const disabled = !authenticated || !luna.connected || luna.checking || waiting || uncertain ||
     !options?.accepting || missing === null || missing > 0 || messageTooLong;
 

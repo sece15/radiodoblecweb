@@ -1206,7 +1206,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 onClick={handleSend}
                 className="neo-button"
                 aria-label="Enviar mensaje"
-                disabled={greetingActive}
+                disabled={greetingActive ? (!isAuthenticated || !lunaGreetings?.connected || lunaGreetings?.checking) : false}
                 style={{
                   height: "32px",
                   padding: "0 10px",
