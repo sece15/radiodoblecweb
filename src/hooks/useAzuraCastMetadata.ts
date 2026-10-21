@@ -48,16 +48,17 @@ export const useAzuraCastMetadata = ({
     const diff = targetListenersRef.current - listenersCount;
     const absDiff = Math.abs(diff);
 
-    // Retraso natural entre eventos humanos:
-    // Saltos grandes (oleada o bajón en curso): eventos más seguidos (900ms a 2100ms)
-    // Cerca de la meseta (rotación habitual): pausas humanas de 3.2s a 6.8s
+    // Retraso natural y dinámico entre micro-eventos humanos:
+    // Saltos grandes (oleada o bajón en curso): eventos más seguidos (800ms a 1600ms)
+    // Desplazamiento medio: 1500ms a 2600ms
+    // Cerca de la meseta (rotación habitual activa): pausas orgánicas de 2200ms a 4400ms
     let delay: number;
-    if (absDiff >= 8) {
-      delay = Math.floor(900 + Math.random() * 1200);
-    } else if (absDiff >= 4) {
-      delay = Math.floor(1800 + Math.random() * 1600);
+    if (absDiff >= 6) {
+      delay = Math.floor(800 + Math.random() * 800);
+    } else if (absDiff >= 3) {
+      delay = Math.floor(1500 + Math.random() * 1100);
     } else {
-      delay = Math.floor(3200 + Math.random() * 3600);
+      delay = Math.floor(2200 + Math.random() * 2200);
     }
 
     const timer = setTimeout(() => {
@@ -68,31 +69,31 @@ export const useAzuraCastMetadata = ({
         const currentAbsDiff = Math.abs(currentDiff);
 
         let delta = 0;
-        if (currentAbsDiff >= 8) {
+        if (currentAbsDiff >= 6) {
           // Desplazamiento ágil hacia la nueva ola o bajón grupal
           const sign = Math.sign(currentDiff);
-          delta = sign * (Math.random() < 0.75 ? 2 : 1);
-        } else if (currentAbsDiff >= 4) {
+          delta = sign * (Math.random() < 0.8 ? 2 : 1);
+        } else if (currentAbsDiff >= 3) {
           // Acercándose con pequeña resistencia orgánica
-          if (Math.random() < 0.75) {
-            delta = Math.sign(currentDiff) * (Math.random() < 0.35 ? 2 : 1);
+          if (Math.random() < 0.78) {
+            delta = Math.sign(currentDiff) * (Math.random() < 0.3 ? 2 : 1);
           } else {
             delta = -Math.sign(currentDiff) * 1;
           }
         } else {
-          // Micro-rotación en vivo continua ("sale uno, entra uno, salen dos, entra uno...")
-          let upProb = 0.48;
-          if (currentDiff > 0) upProb = 0.60;
-          else if (currentDiff < 0) upProb = 0.36;
+          // Micro-rotación en vivo continua y viva ("sale uno, entra uno, entran dos...")
+          let upProb = 0.50;
+          if (currentDiff > 0) upProb = 0.68;
+          else if (currentDiff < 0) upProb = 0.32;
 
           if (Math.random() < upProb) {
-            delta = Math.random() < 0.28 ? 2 : 1; // "entra 1 o entran 2"
+            delta = Math.random() < 0.22 ? 2 : 1; // "entra 1 o entran 2"
           } else {
-            delta = -(Math.random() < 0.28 ? 2 : 1); // "sale 1 o salen 2"
+            delta = -(Math.random() < 0.22 ? 2 : 1); // "sale 1 o salen 2"
           }
         }
 
-        return Math.max(2, prev + delta);
+        return Math.max(3, prev + delta);
       });
     }, delay);
 

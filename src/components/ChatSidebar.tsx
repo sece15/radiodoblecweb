@@ -349,19 +349,32 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
             CHAT EN VIVO
           </span>
           <div
+            title={`${listenersCount} oyentes conectados`}
             style={{
               backgroundColor: "var(--primary)",
-              padding: "1px 6px",
+              padding: "2px 7px",
               display: "flex",
               alignItems: "center",
-              gap: "2px",
-              fontSize: "0.6rem",
+              gap: "4px",
+              fontSize: "0.62rem",
               color: "var(--on-primary)",
               fontWeight: 900,
+              borderRadius: "2px",
+              transition: "transform 0.2s ease",
             }}
           >
+            <span
+              style={{
+                width: "5px",
+                height: "5px",
+                borderRadius: "50%",
+                backgroundColor: "#22c55e",
+                display: "inline-block",
+                boxShadow: "0 0 4px #22c55e",
+              }}
+            />
             <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-            {listenersCount}
+            <span>{listenersCount}</span>
           </div>
         </div>
 

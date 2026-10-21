@@ -580,18 +580,30 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
               </div>
 
               <div
+                title={`${listenersCount} oyentes en vivo`}
                 style={{
                   backgroundColor: "var(--primary)",
                   padding: "3px 8px",
                   display: "flex",
                   alignItems: "center",
-                  gap: "4px",
+                  gap: "5px",
                   fontSize: "0.6rem",
                   color: "var(--on-primary)",
                   fontWeight: 900,
                   boxShadow: "1.5px 1.5px 0px var(--primary-container)",
+                  transition: "transform 0.2s ease",
                 }}
               >
+                <span
+                  style={{
+                    width: "5px",
+                    height: "5px",
+                    borderRadius: "50%",
+                    backgroundColor: "#22c55e",
+                    display: "inline-block",
+                    boxShadow: "0 0 4px #22c55e",
+                  }}
+                />
                 <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
                 <span>{listenersCount} OYENTES</span>
               </div>
