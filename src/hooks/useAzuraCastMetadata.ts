@@ -186,7 +186,7 @@ export const useAzuraCastMetadata = ({
               artUrl.includes("googleusercontent.com");
             const finalArtUrl = !isMissingOrGenericArt && artUrl ? artUrl : defaultStationLogo;
 
-            if (currentTrack.streamUrl.includes("/live.m3u8") || currentTrack.streamUrl === DEFAULT_STREAM) {
+            if (currentTrack.streamUrl.includes(".m3u8") || currentTrack.streamUrl === DEFAULT_STREAM) {
               setCurrentTrack((prev) => {
                 const targetTitle = title || prev.title;
                 const targetAlbum = np.now_playing?.song?.album || prev.album;

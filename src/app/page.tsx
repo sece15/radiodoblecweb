@@ -28,6 +28,7 @@ import { VinylSpinModal } from "@/components/tools/VinylSpinModal";
 import { SponsorOrderModal } from "@/components/sponsors/SponsorOrderModal";
 import { LiveDropNotification } from "@/components/common/LiveDropNotification";
 import { useGamification } from "@/hooks/useGamification";
+import { SpookySpider } from "@/components/halloween/SpookySpider";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
@@ -157,7 +158,7 @@ export default function Home() {
             <div
               className="zine-header-title-container"
               style={{
-                padding: "10px 16px 4px 16px",
+                padding: "16px 16px 8px 16px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -182,6 +183,9 @@ export default function Home() {
         {isChatSidebarOpen && (
           <ChatSidebar onClose={() => setChatSidebarOpen(false)} />
         )}
+
+        {/* Araña interactiva de Halloween */}
+        <SpookySpider idleTimeoutMs={5000} />
       </div>
 
       {/* 3. PERSISTENT SPOTIFY-STYLE FOOTER PLAYER BAR OR FLOATING PLAYER */}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, ReactNode, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Subscription, Session } from "@supabase/supabase-js";
-import type Hls from "hls.js";
+import Hls from "hls.js";
 import {
   Station,
   RadioProgram,
@@ -22,6 +22,8 @@ import {
   INITIAL_SONGS,
   DEFAULT_AVATAR,
   DEFAULT_STREAM,
+  DEFAULT_FALLBACK_STREAM,
+  HLS_URL,
 } from "@/constants";
 import { useLocalStorage, useLocalStorageToggle } from "@/hooks/useLocalStorage";
 import { useMediaSession } from "@/hooks/useMediaSession";
@@ -342,6 +344,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [currentTrack.isLive]);
 
   // Implementación de reproducción de audio
+  // Implementación de reproducción de audio optimizada con HLS.js + Fallback nativo
   const playUrl = useCallback((url: string) => {
     if (!audioRef.current) return;
 
@@ -349,39 +352,82 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     setProgress(0);
     audioRef.current.muted = isMuted;
 
+    // Destruir instancia previa de HLS si existía para liberar memoria y workers
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
-    if (url.includes(".m3u8")) {
-      import("hls.js").then((HlsPackage) => {
-        const Hls = HlsPackage.default;
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            liveSyncDurationCount: 1, // Mantener sincronización en tiempo real exacto
-            liveMaxLatencyDurationCount: 3,
-          });
-          hlsRef.current = hls;
-          hls.loadSource(url);
-          hls.attachMedia(audioRef.current!);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            audioRef.current!.muted = isMuted;
-            audioRef.current!.play().catch((err) => console.warn("Playback error:", err));
+    const isHlsStream = url.includes(".m3u8") || url === DEFAULT_STREAM;
+
+    if (isHlsStream) {
+      const hlsSource = url.includes(".m3u8") ? url : HLS_URL;
+
+      if (Hls.isSupported()) {
+        // Para Chrome, Android, Firefox, Edge: HLS ligero (~49KB cada 4s) con caché en Cloudflare
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 60,
+        });
+
+        hlsRef.current = hls;
+        hls.loadSource(hlsSource);
+        hls.attachMedia(audioRef.current);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (audioRef.current) {
+            audioRef.current.muted = isMuted;
+            audioRef.current.play().catch((err) => console.warn("Playback error on MANIFEST_PARSED:", err));
             setIsPlaying(true);
-          });
-        } else if (audioRef.current!.canPlayType("application/vnd.apple.mpegurl")) {
-          audioRef.current!.src = url;
-          audioRef.current!.muted = isMuted;
-          audioRef.current!.play().catch((err) => console.warn("Playback error:", err));
-          setIsPlaying(true);
-        }
-      });
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            console.warn("[HLS] Error fatal detectado:", data.type);
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.warn("[HLS] Reintentando carga de fragmento por error de red...");
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.warn("[HLS] Recuperando error de decodificación...");
+                hls.recoverMediaError();
+                break;
+              default:
+                console.warn("[HLS] Error irrecuperable en HLS, activando fallback tradicional...");
+                hls.destroy();
+                hlsRef.current = null;
+                if (audioRef.current) {
+                  audioRef.current.src = DEFAULT_FALLBACK_STREAM;
+                  audioRef.current.muted = isMuted;
+                  audioRef.current.play().catch((e) => console.warn("Fallback play error:", e));
+                  setIsPlaying(true);
+                }
+                break;
+            }
+          }
+        });
+      } else if (audioRef.current.canPlayType("application/vnd.apple.mpegurl")) {
+        // Para Safari en iPhone / Mac / iPad (soporte nativo HLS de Apple)
+        audioRef.current.src = hlsSource;
+        audioRef.current.muted = isMuted;
+        audioRef.current.play().catch((err) => console.warn("Safari native HLS playback error:", err));
+        setIsPlaying(true);
+      } else {
+        // Fallback tradicional en navegadores antiguos sin soporte HLS
+        audioRef.current.src = DEFAULT_FALLBACK_STREAM;
+        audioRef.current.muted = isMuted;
+        audioRef.current.play().catch((err) => console.warn("Legacy fallback playback error:", err));
+        setIsPlaying(true);
+      }
     } else {
+      // Audio estándar para canciones VIP a la carta / grabaciones
       audioRef.current.src = url;
       audioRef.current.load();
       audioRef.current.muted = isMuted;
-      audioRef.current.play().catch((err) => console.warn("Playback error:", err));
+      audioRef.current.play().catch((err) => console.warn("Standard audio playback error:", err));
       setIsPlaying(true);
     }
   }, [isMuted]);
