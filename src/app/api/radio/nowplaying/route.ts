@@ -58,7 +58,7 @@ function displayListeners(raw: number, now: number, isLive: boolean = false): nu
 }
 
 export async function GET() {
-  const baseUrl = process.env.AZURACAST_URL || process.env.NEXT_PUBLIC_AZURACAST_URL;
+  const baseUrl = process.env.AZURACAST_URL || process.env.NEXT_PUBLIC_AZURACAST_URL || "https://radio.andrealvarado.dev";
   if (!baseUrl) return NextResponse.json({ error: "Radio no disponible." }, { status: 503 });
 
   try {

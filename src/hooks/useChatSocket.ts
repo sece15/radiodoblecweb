@@ -62,7 +62,10 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
     disconnectChatSocket();
 
     try {
-      const chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "http://localhost:8081";
+      let chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "https://chat.andrealvarado.dev";
+      if (!chatUrl || chatUrl.includes("radio.") || chatUrl.includes(".m3u8") || chatUrl.includes("localhost:8081")) {
+        chatUrl = "https://chat.andrealvarado.dev";
+      }
       const socket = io(chatUrl, {
         reconnection: true,
         reconnectionDelay: 2000,

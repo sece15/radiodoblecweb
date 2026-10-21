@@ -12,10 +12,13 @@ const ContentSecurityPolicy = `
     https://*.supabase.co
     wss://*.supabase.co
     https://itunes.apple.com
-    ${process.env.NEXT_PUBLIC_CHAT_URL || ""}
-    ${process.env.NEXT_PUBLIC_CHAT_URL ? process.env.NEXT_PUBLIC_CHAT_URL.replace("https://", "wss://").replace("http://", "ws://") : ""}
-    ${process.env.NEXT_PUBLIC_AZURACAST_URL || ""}
-    ${process.env.NEXT_PUBLIC_AZURACAST_URL ? process.env.NEXT_PUBLIC_AZURACAST_URL.replace("https://", "wss://").replace("http://", "ws://") : ""};
+    https://*.andrealvarado.dev
+    wss://*.andrealvarado.dev
+    https://radio.andrealvarado.dev
+    wss://radio.andrealvarado.dev
+    https://chat.andrealvarado.dev
+    wss://chat.andrealvarado.dev
+    https://stream.andrealvarado.dev;
   frame-ancestors 'none';
 `
   .replace(/\n/g, " ")

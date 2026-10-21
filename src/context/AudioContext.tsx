@@ -383,13 +383,27 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           }
         });
 
+        let networkRetries = 0;
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             console.warn("[HLS] Error fatal detectado:", data.type);
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.warn("[HLS] Reintentando carga de fragmento por error de red...");
-                hls.startLoad();
+                networkRetries++;
+                if (networkRetries <= 2) {
+                  console.warn(`[HLS] Reintento de red (${networkRetries}/2)...`);
+                  hls.startLoad();
+                } else {
+                  console.warn("[HLS] Múltiples fallos de red en HLS, conmutando de inmediato a Fallback AAC...");
+                  hls.destroy();
+                  hlsRef.current = null;
+                  if (audioRef.current) {
+                    audioRef.current.src = DEFAULT_FALLBACK_STREAM;
+                    audioRef.current.muted = isMuted;
+                    audioRef.current.play().catch((e) => console.warn("Fallback play error:", e));
+                    setIsPlaying(true);
+                  }
+                }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.warn("[HLS] Recuperando error de decodificación...");
