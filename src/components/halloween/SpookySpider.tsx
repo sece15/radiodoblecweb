@@ -17,21 +17,13 @@ export const SpookySpider: React.FC<SpookySpiderProps> = ({
   const [spiderState, setSpiderState] = useState<"hidden" | "dropping" | "hanging" | "scared">("hanging");
   const [isHovered, setIsHovered] = useState(false);
   const [clickCount, setClickCount] = useState(0);
-  const [speechBubble, setSpeechBubble] = useState<string | null>("¡RADIO DOBLE C! 💀⚡");
+  const [speechBubble, setSpeechBubble] = useState<string | null>(null);
 
   // Posición horizontal aleatoria y profundidad de descenso
   const [spawnPercent, setSpawnPercent] = useState<number>(82);
   const [dropDepth, setDropDepth] = useState<number>(180);
 
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Presentación inicial breve
-  useEffect(() => {
-    const bubbleTimer = setTimeout(() => {
-      setSpeechBubble(null);
-    }, 3800);
-    return () => clearTimeout(bubbleTimer);
-  }, []);
 
   // Función para elegir un nuevo punto de aparición aleatorio cada vez que se oculta
   const pickNewSpawnLocation = () => {
@@ -261,29 +253,6 @@ export const SpookySpider: React.FC<SpookySpiderProps> = ({
                 zIndex: 2,
               }}
             />
-          </div>
-
-          {/* ETIQUETA / BADGE NEOBRUTALISTA */}
-          <div
-            style={{
-              marginTop: "2px",
-              backgroundColor: "rgba(18, 18, 18, 0.92)",
-              border: "1.5px solid var(--primary)",
-              color: "#CCFF00",
-              fontSize: "0.58rem",
-              fontWeight: 900,
-              padding: "2px 8px",
-              borderRadius: "3px",
-              boxShadow: "2px 2px 0px var(--primary)",
-              userSelect: "none",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {spiderState === "scared"
-              ? "¡Trepando...!"
-              : spiderState === "dropping"
-                ? "¡Descendiendo...!"
-                : "💀 Doble C"}
           </div>
         </div>
       </div>
