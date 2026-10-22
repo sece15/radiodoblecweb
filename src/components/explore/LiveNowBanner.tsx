@@ -90,7 +90,11 @@ export const LiveNowBanner = ({
               opacity: 0.8,
               color: "var(--primary)",
               margin: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
+            title={isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizado: ${liveTrackTitle}`}
           >
             {isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizado: ${liveTrackTitle}`}
           </p>
