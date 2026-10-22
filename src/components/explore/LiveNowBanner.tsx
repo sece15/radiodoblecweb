@@ -94,9 +94,9 @@ export const LiveNowBanner = ({
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-            title={isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizado: ${liveTrackTitle}`}
+            title={isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizando: ${liveTrackTitle}`}
           >
-            {isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizado: ${liveTrackTitle}`}
+            {isLunaOnAir ? "Luna, tu compañía al aire" : `Sintonizando: ${liveTrackTitle}`}
           </p>
         </div>
       </div>
