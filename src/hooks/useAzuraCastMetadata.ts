@@ -28,77 +28,86 @@ export const useAzuraCastMetadata = ({
   const [liveShowName, setLiveShowName] = useState("RADIO DOBLE C ONLINE");
   const [liveTrackTitle, setLiveTrackTitle] = useState("RADIO DOBLE C - SEÑAL EN VIVO");
   const [liveStatusText, setLiveStatusText] = useState("ON AIR");
-  const [listenersCount, setListenersCount] = useState(0);
-  const targetListenersRef = useRef(0);
+  const [listenersCount, setListenersCount] = useState(14);
+  const targetListenersRef = useRef(14);
 
   // Motor orgánico de rotación continua en vivo ("entra 1, salen 2, entra 1...")
+  // Bucle autónomo resiliente que no se congela al cambiar de pestaña, página o chat
   useEffect(() => {
-    // Inicialización inmediata al recibir el primer conteo
-    if (listenersCount === 0 && targetListenersRef.current > 0) {
-      setListenersCount(targetListenersRef.current);
-      return;
-    }
-    if (targetListenersRef.current === 0) return;
+    let timeoutId: NodeJS.Timeout;
 
-    // Pausar si la pestaña está oculta para no consumir recursos innecesarios
-    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-      return;
-    }
+    const scheduleNextTick = (immediate = false) => {
+      // Retraso natural y dinámico entre micro-eventos humanos (2.0s a 4.2s), o inmediato (300ms a 600ms) al retomar foco
+      const delay = immediate
+        ? Math.floor(300 + Math.random() * 300)
+        : Math.floor(2000 + Math.random() * 2200);
 
-    const diff = targetListenersRef.current - listenersCount;
-    const absDiff = Math.abs(diff);
+      timeoutId = setTimeout(() => {
+        setListenersCount((prev) => {
+          const currentTarget = targetListenersRef.current || 14;
+          const diff = currentTarget - prev;
+          const absDiff = Math.abs(diff);
 
-    // Retraso natural y dinámico entre micro-eventos humanos:
-    // Saltos grandes (oleada o bajón en curso): eventos más seguidos (800ms a 1600ms)
-    // Desplazamiento medio: 1500ms a 2600ms
-    // Cerca de la meseta (rotación habitual activa): pausas orgánicas de 2200ms a 4400ms
-    let delay: number;
-    if (absDiff >= 6) {
-      delay = Math.floor(800 + Math.random() * 800);
-    } else if (absDiff >= 3) {
-      delay = Math.floor(1500 + Math.random() * 1100);
-    } else {
-      delay = Math.floor(2200 + Math.random() * 2200);
-    }
-
-    const timer = setTimeout(() => {
-      setListenersCount((prev) => {
-        const target = targetListenersRef.current;
-        if (target === 0) return prev;
-        const currentDiff = target - prev;
-        const currentAbsDiff = Math.abs(currentDiff);
-
-        let delta = 0;
-        if (currentAbsDiff >= 6) {
-          // Desplazamiento ágil hacia la nueva ola o bajón grupal
-          const sign = Math.sign(currentDiff);
-          delta = sign * (Math.random() < 0.8 ? 2 : 1);
-        } else if (currentAbsDiff >= 3) {
-          // Acercándose con pequeña resistencia orgánica
-          if (Math.random() < 0.78) {
-            delta = Math.sign(currentDiff) * (Math.random() < 0.3 ? 2 : 1);
+          let delta = 0;
+          if (absDiff >= 6) {
+            // Desplazamiento ágil hacia la nueva ola o bajón grupal
+            delta = Math.sign(diff) * (Math.random() < 0.8 ? 2 : 1);
+          } else if (absDiff >= 3) {
+            // Acercándose con pequeña resistencia orgánica
+            if (Math.random() < 0.75) {
+              delta = Math.sign(diff) * (Math.random() < 0.3 ? 2 : 1);
+            } else {
+              delta = -Math.sign(diff) * 1;
+            }
           } else {
-            delta = -Math.sign(currentDiff) * 1;
+            // Micro-rotación en vivo continua ("sale uno, entra uno, entran dos...")
+            let upProb = 0.50;
+            if (diff > 0) upProb = 0.65;
+            else if (diff < 0) upProb = 0.35;
+
+            if (Math.random() < upProb) {
+              delta = Math.random() < 0.25 ? 2 : 1;
+            } else {
+              delta = -(Math.random() < 0.25 ? 2 : 1);
+            }
           }
-        } else {
-          // Micro-rotación en vivo continua y viva ("sale uno, entra uno, entran dos...")
-          let upProb = 0.50;
-          if (currentDiff > 0) upProb = 0.68;
-          else if (currentDiff < 0) upProb = 0.32;
 
-          if (Math.random() < upProb) {
-            delta = Math.random() < 0.22 ? 2 : 1; // "entra 1 o entran 2"
-          } else {
-            delta = -(Math.random() < 0.22 ? 2 : 1); // "sale 1 o salen 2"
+          // Garantizar que delta nunca sea 0 para que la cifra siempre esté viva
+          if (delta === 0) {
+            delta = Math.random() < 0.5 ? 1 : -1;
           }
-        }
 
-        return Math.max(3, prev + delta);
-      });
-    }, delay);
+          return Math.max(3, prev + delta);
+        });
 
-    return () => clearTimeout(timer);
-  }, [listenersCount]);
+        // Continuar el ciclo infinitamente
+        scheduleNextTick();
+      }, delay);
+    };
+
+    scheduleNextTick();
+
+    // Al volver a la pestaña o enfocar ventana, reactivar de inmediato
+    const handleReactivation = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        clearTimeout(timeoutId);
+        scheduleNextTick(true);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      document.addEventListener("visibilitychange", handleReactivation);
+      window.addEventListener("focus", handleReactivation);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (typeof window !== "undefined") {
+        document.removeEventListener("visibilitychange", handleReactivation);
+        window.removeEventListener("focus", handleReactivation);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const pollMetadata = async () => {
