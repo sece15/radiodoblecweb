@@ -2,9 +2,9 @@
 
 import { create } from "zustand";
 import type { LunaGreetingsController } from "@/hooks/useLunaGreetings";
-import type { Station, RadioProgram, PastBroadcast, Song, Album } from "@/types/radio";
+import type { Station, RadioProgram, PastBroadcast, Song, Album, VipSongRequest } from "@/types/radio";
 import type { UserProfile } from "@/types/user";
-import type { ChatMessage } from "@/types/chat";
+import type { ChatMessage, VoiceGreeting } from "@/types/chat";
 import {
   INITIAL_STATIONS,
   INITIAL_PROGRAMS,
@@ -104,15 +104,15 @@ export interface AudioStoreState {
   consumePunkPoints: (pts: number) => boolean;
 
   // Saludos de Voz en Cabina
-  pendingVoiceGreetings: import("@/types").VoiceGreeting[];
-  submitVoiceGreeting: (audioUrl: string, durationSeconds: number, transcript?: string) => import("@/types").VoiceGreeting | void;
+  pendingVoiceGreetings: VoiceGreeting[];
+  submitVoiceGreeting: (audioUrl: string, durationSeconds: number, transcript?: string) => VoiceGreeting | void;
   approveVoiceGreeting: (greetingId: string) => void;
   rejectVoiceGreeting: (greetingId: string) => void;
 
   // Rockola VIP / Jukebox Doble C
-  vipQueue: import("@/types").VipSongRequest[];
-  activeVipSong: import("@/types").VipSongRequest | null;
-  requestVipSong: (req: Omit<import("@/types").VipSongRequest, "id" | "status" | "createdAt">, playImmediately?: boolean) => boolean;
+  vipQueue: VipSongRequest[];
+  activeVipSong: VipSongRequest | null;
+  requestVipSong: (req: Omit<VipSongRequest, "id" | "status" | "createdAt">, playImmediately?: boolean) => boolean;
   skipToNextVipSong: () => void;
 
   // Autenticación y Transmisión en Vivo
