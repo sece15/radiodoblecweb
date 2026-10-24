@@ -113,7 +113,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // Estados Globales de Auspiciadores & Pedidos Modal
   const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
-  const [activeSponsorSlug, setActiveSponsorSlug] = useState<string>("ponches");
+  const [activeSponsorSlug, setActiveSponsorSlug] = useState<string>("pizzas");
 
   // Configuración de Tema Visual
   const [activeTheme, setActiveTheme] = useLocalStorage<string>("selected_theme", "PUNK_NEON");

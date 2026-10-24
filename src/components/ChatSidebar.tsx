@@ -175,15 +175,14 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     // Interceptar comandos de pedidos y auspiciadores
     if (
       lower.startsWith("/pedir") ||
-      lower.startsWith("/ponche") ||
       lower.startsWith("/auspicio") ||
-      lower.startsWith("/pizza")
+      lower.startsWith("/pizza") ||
+      lower.startsWith("/pollo") ||
+      lower.startsWith("/mostrito") ||
+      lower.startsWith("/salchipapa") ||
+      lower.startsWith("/broaster")
     ) {
-      if (lower.includes("pizza")) {
-        setActiveSponsorSlug("pizzas");
-      } else {
-        setActiveSponsorSlug("ponches");
-      }
+      setActiveSponsorSlug("pizzas");
       setIsSponsorModalOpen(true);
       richInputRef.current?.clear();
       setTypedMessage("");
@@ -1143,9 +1142,9 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                   boxShadow: isSponsorAccordionOpen ? "2px 2px 0px var(--primary)" : "1.5px 1.5px 0px var(--primary)",
                   whiteSpace: "nowrap",
                 }}
-                title="Abrir pedidos a auspiciadores oficiales (Ponches, Pizzas)"
+                title="Abrir pedidos a auspiciadores oficiales (Pizzas)"
               >
-                <span style={{ color: isSponsorAccordionOpen ? "var(--primary)" : "var(--foreground)" }}>🍵 PEDIDOS</span>
+                <span style={{ color: isSponsorAccordionOpen ? "var(--primary)" : "var(--foreground)" }}>🍕 PEDIDOS</span>
                 <span style={{ fontSize: "0.55rem", color: isSponsorAccordionOpen ? "var(--primary)" : "var(--foreground)" }}>
                   {isSponsorAccordionOpen ? "▲" : "▼"}
                 </span>

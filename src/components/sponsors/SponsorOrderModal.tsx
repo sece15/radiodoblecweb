@@ -43,7 +43,7 @@ interface SponsorOrderModalProps {
 export const SponsorOrderModal: React.FC<SponsorOrderModalProps> = ({
   isOpen,
   onClose,
-  initialSponsorSlug = "ponches",
+  initialSponsorSlug = "pizzas",
   userName = "",
 }) => {
   const userProfile = useAudio((s) => s.userProfile);

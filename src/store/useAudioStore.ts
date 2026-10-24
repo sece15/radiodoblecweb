@@ -142,7 +142,7 @@ const noop = () => {};
 export const initialStoreState: AudioStoreState = {
   isSponsorModalOpen: false,
   setIsSponsorModalOpen: noop,
-  activeSponsorSlug: "ponches",
+  activeSponsorSlug: "pizzas",
   setActiveSponsorSlug: noop,
   isPlaying: false,
   puntosC: 2,

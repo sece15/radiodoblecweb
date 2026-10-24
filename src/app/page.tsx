@@ -367,7 +367,7 @@ export default function Home() {
       <SponsorOrderModal
         isOpen={isSponsorModalOpen}
         onClose={() => setIsSponsorModalOpen(false)}
-        initialSponsorSlug={activeSponsorSlug || "ponches"}
+        initialSponsorSlug={activeSponsorSlug || "pizzas"}
         userName={userProfile?.name}
       />
 
