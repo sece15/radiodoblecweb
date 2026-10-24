@@ -630,16 +630,6 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                   transition: "transform 0.2s ease",
                 }}
               >
-                <span
-                  style={{
-                    width: "5px",
-                    height: "5px",
-                    borderRadius: "50%",
-                    backgroundColor: isChatConnected || activeAudienceCount > 0 ? "#22c55e" : "#888888",
-                    display: "inline-block",
-                    boxShadow: isChatConnected || activeAudienceCount > 0 ? "0 0 4px #22c55e" : "none",
-                  }}
-                />
                 <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
                 <span>{activeAudienceCount} OYENTES</span>
               </div>
