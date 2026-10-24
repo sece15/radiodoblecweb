@@ -24,7 +24,14 @@ export const AzuraCastSync = () => {
 
       timeoutId = setTimeout(() => {
         const current = audioStore.getState().listenersCount || 0;
-        const target = targetListenersRef.current;
+        const isPlaying = audioStore.getState().isPlaying;
+        let target = targetListenersRef.current;
+
+        // Si el usuario está escuchando la radio en vivo, él mismo es un oyente real activo
+        // (1 oyente real x 4 = objetivo mínimo de 4 oyentes)
+        if (isPlaying && target < 4) {
+          target = Math.max(target, 4);
+        }
 
         let nextCount = current;
 

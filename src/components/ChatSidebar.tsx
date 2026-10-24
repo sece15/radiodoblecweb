@@ -68,6 +68,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     clearChat,
     userProfile,
     listenersCount,
+    isChatConnected,
+    onlineChatUsers,
     isAuthenticated,
     signInWithGoogle,
     puntosC,
@@ -103,6 +105,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
       clearChat: s.clearChat,
       userProfile: s.userProfile,
       listenersCount: s.listenersCount,
+      isChatConnected: s.isChatConnected,
+      onlineChatUsers: s.onlineChatUsers,
       isAuthenticated: s.isAuthenticated,
       signInWithGoogle: s.signInWithGoogle,
       puntosC: s.puntosC,
@@ -367,6 +371,10 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     userProfile.role.includes("MOD") ||
     userProfile.role.includes("ADMIN");
 
+  const activeChatUsers = isChatConnected
+    ? Math.max(1, onlineChatUsers, listenersCount)
+    : listenersCount;
+
   return (
     <div className="chat-sidebar-container">
       {/* A. HEADER */}
@@ -386,7 +394,11 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
             CHAT EN VIVO
           </span>
           <div
-            title={`${listenersCount} oyentes conectados`}
+            title={
+              isChatConnected
+                ? `${activeChatUsers} usuario${activeChatUsers === 1 ? "" : "s"} en línea`
+                : "Chat desconectado"
+            }
             style={{
               backgroundColor: "var(--primary)",
               padding: "2px 7px",
@@ -405,13 +417,13 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 width: "5px",
                 height: "5px",
                 borderRadius: "50%",
-                backgroundColor: "#22c55e",
+                backgroundColor: isChatConnected ? "#22c55e" : "#888888",
                 display: "inline-block",
-                boxShadow: "0 0 4px #22c55e",
+                boxShadow: isChatConnected ? "0 0 4px #22c55e" : "none",
               }}
             />
             <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-            <span>{listenersCount}</span>
+            <span>{activeChatUsers}</span>
           </div>
         </div>
 

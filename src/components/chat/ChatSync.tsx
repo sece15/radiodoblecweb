@@ -61,6 +61,8 @@ export const ChatSync = () => {
     audioStore.setState({
       chatMessages: chatSocket.chatMessages,
       isLiveChatModeActive: chatSocket.isLiveChatModeActive,
+      isChatConnected: chatSocket.isChatConnected,
+      onlineChatUsers: chatSocket.onlineChatUsers,
       setLiveChatModeActive: chatSocket.setLiveChatModeActive,
       sendChatMessage: chatSocket.sendChatMessage,
       lunaGreetings: chatSocket.lunaGreetings,
@@ -90,6 +92,8 @@ export const ChatSync = () => {
   }, [
     chatSocket.chatMessages,
     chatSocket.isLiveChatModeActive,
+    chatSocket.isChatConnected,
+    chatSocket.onlineChatUsers,
     chatSocket.setLiveChatModeActive,
     chatSocket.sendChatMessage,
     chatSocket.lunaGreetings,

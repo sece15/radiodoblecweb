@@ -74,6 +74,8 @@ export interface AudioStoreState {
   // Moderación y Chat
   isLiveChatModeActive: boolean;
   setLiveChatModeActive: (active: boolean) => void;
+  isChatConnected: boolean;
+  onlineChatUsers: number;
   sendChatMessage: (text: string) => void;
   lunaGreetings: LunaGreetingsController | null;
   bannedWords: string[];
@@ -211,6 +213,8 @@ export const initialStoreState: AudioStoreState = {
 
   isLiveChatModeActive: false,
   setLiveChatModeActive: noop,
+  isChatConnected: false,
+  onlineChatUsers: 0,
   sendChatMessage: noop,
   lunaGreetings: null,
   bannedWords: DEFAULT_BANNED_WORDS,

@@ -28,6 +28,8 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
     chatMessages,
     sendChatMessage,
     listenersCount,
+    isChatConnected,
+    onlineChatUsers,
     isAuthenticated,
     signInWithGoogle,
     isCurrentUserBanned,
@@ -49,6 +51,8 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
       chatMessages: s.chatMessages,
       sendChatMessage: s.sendChatMessage,
       listenersCount: s.listenersCount,
+      isChatConnected: s.isChatConnected,
+      onlineChatUsers: s.onlineChatUsers,
       isAuthenticated: s.isAuthenticated,
       signInWithGoogle: s.signInWithGoogle,
       isCurrentUserBanned: s.isCurrentUserBanned,
@@ -62,6 +66,11 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
 
   const progressTime = formatProgressTime(currentTrack.isLive, progress, currentTime, totalTime);
   const totalTimeStr = formatTotalTime(currentTrack.isLive, totalTime);
+
+  // Si está conectado al chat en vivo, como mínimo el usuario actual es 1 en la audiencia
+  const activeAudienceCount = isChatConnected
+    ? Math.max(1, onlineChatUsers, listenersCount)
+    : listenersCount;
 
   // Click & Drag Progress Calculator
   const handleProgressAction = (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
@@ -497,7 +506,7 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                   SALA EN DIRECTO
                 </div>
                 <div style={{ fontSize: "0.6rem", fontWeight: 900, color: "var(--primary)" }}>
-                  👥 {listenersCount} OYENTES
+                  👥 {activeAudienceCount} OYENTES
                 </div>
               </div>
 
@@ -603,7 +612,11 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
               </div>
 
               <div
-                title={`${listenersCount} oyentes en vivo`}
+                title={
+                  isChatConnected
+                    ? `${activeAudienceCount} en vivo en la sala`
+                    : `${activeAudienceCount} oyentes en vivo`
+                }
                 style={{
                   backgroundColor: "var(--primary)",
                   padding: "3px 8px",
@@ -622,13 +635,13 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                     width: "5px",
                     height: "5px",
                     borderRadius: "50%",
-                    backgroundColor: "#22c55e",
+                    backgroundColor: isChatConnected || activeAudienceCount > 0 ? "#22c55e" : "#888888",
                     display: "inline-block",
-                    boxShadow: "0 0 4px #22c55e",
+                    boxShadow: isChatConnected || activeAudienceCount > 0 ? "0 0 4px #22c55e" : "none",
                   }}
                 />
                 <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-                <span>{listenersCount} OYENTES</span>
+                <span>{activeAudienceCount} OYENTES</span>
               </div>
             </div>
 

@@ -18,6 +18,8 @@ interface UseChatSocketProps {
 
 export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: UseChatSocketProps) => {
   const [isLiveChatModeActive, setLiveChatModeActive] = useState(false);
+  const [isChatConnected, setIsChatConnected] = useState(false);
+  const [onlineChatUsers, setOnlineChatUsers] = useState(0);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [bannedWords, setBannedWords] = useLocalStorage<string[]>("banned_words", DEFAULT_BANNED_WORDS);
   const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
@@ -54,6 +56,8 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
 
   const disconnectChatSocket = () => {
     currentAuthRef.current = null;
+    setIsChatConnected(false);
+    setOnlineChatUsers(0);
     if (socketRef.current) {
       socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
@@ -90,16 +94,41 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
 
       socket.on("connect", () => {
         console.log(`[Chat Socket] Conectado exitosamente (${socket.id}) como:`, username);
+        setIsChatConnected(true);
+        setOnlineChatUsers((prev) => Math.max(prev, 1));
         lunaRef.current.connectionChanged(true);
         void lunaRef.current.refreshRequests();
       });
       socket.on("disconnect", (reason) => {
         console.warn("[Chat Socket] Desconectado del servidor:", reason);
+        setIsChatConnected(false);
+        setOnlineChatUsers(0);
         lunaRef.current.connectionChanged(false);
       });
       socket.on("connect_error", (error) => {
         console.error("[Chat Socket] Error de conexión:", error.message);
+        setIsChatConnected(false);
       });
+
+      // Escuchar posibles eventos de conteo de usuarios del backend
+      const handleUserCount = (countData: unknown) => {
+        let count = 0;
+        if (typeof countData === "number" && Number.isFinite(countData)) {
+          count = countData;
+        } else if (Array.isArray(countData)) {
+          count = countData.length;
+        } else if (countData && typeof countData === "object" && "count" in countData) {
+          const c = (countData as { count: unknown }).count;
+          if (typeof c === "number") count = c;
+        }
+        setOnlineChatUsers(Math.max(1, count));
+      };
+
+      socket.on("users_count", handleUserCount);
+      socket.on("user_count", handleUserCount);
+      socket.on("online_count", handleUserCount);
+      socket.on("online_users", handleUserCount);
+      socket.on("presence", handleUserCount);
       socket.on("luna_greeting_config", (config: unknown) => lunaRef.current.receiveConfig(config));
       socket.on("luna_greeting_result", (result: LunaGreetingResult) => lunaRef.current.receiveResult(result));
 
@@ -321,6 +350,8 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
   return {
     isLiveChatModeActive,
     setLiveChatModeActive,
+    isChatConnected,
+    onlineChatUsers,
     chatMessages,
     bannedWords,
     bannedUsers,
