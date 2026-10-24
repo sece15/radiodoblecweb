@@ -1,21 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-
-interface TrackInfo {
-  title: string;
-  artist: string;
-  album: string;
-  imageUrl: string;
-  streamUrl: string;
-  isLive: boolean;
-}
-
-interface UseMediaSessionProps {
-  currentTrack: TrackInfo;
-  isPlaying: boolean;
-  togglePlayPause: () => void;
-}
+import type { UseMediaSessionProps } from "@/types/radio";
 
 export const useMediaSession = ({
   currentTrack,

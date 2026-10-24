@@ -1,6 +1,6 @@
 "use client";
 
-import { Station } from "@/types";
+import { Station } from "@/types/radio";
 
 interface SavedStationsSectionProps {
   savedStations: Station[];

@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 import { STORE_PRODUCTS } from "@/constants";
 
 export type { Product };

@@ -1,7 +1,7 @@
 "use client";
 
 import { Heart, Share2 } from "lucide-react";
-import { Station, RadioProgram } from "@/types";
+import { Station, RadioProgram } from "@/types/radio";
 
 interface ProgramsListSectionProps {
   stations: Station[];

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { CartItem, Product } from "@/types";
+import { CartItem, Product } from "@/types/shop";
 
 export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);

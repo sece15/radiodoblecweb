@@ -1,7 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
-import { Song } from "@/types";
+import { Song } from "@/types/radio";
 
 interface FavoriteSongsSectionProps {
   favoriteSongs: Song[];

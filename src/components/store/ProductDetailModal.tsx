@@ -2,7 +2,7 @@
 
 import { useState, useMemo, MouseEvent } from "react";
 import { ShoppingCart } from "lucide-react";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 import { formatPrice } from "@/lib/priceUtils";
 import { NeoModal } from "../common/NeoModal";
 

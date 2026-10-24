@@ -1,5 +1,6 @@
 import { useRef, MouseEvent, TouchEvent, useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { Play, Pause, Volume2, VolumeX, MessageSquare, SkipBack, SkipForward, Sliders } from "lucide-react";
 import { StudioToolsModal } from "@/components/tools/StudioToolsModal";
 import { formatProgressTime, formatTotalTime } from "@/lib/audioFormatters";
@@ -31,7 +32,24 @@ export const SpotifyPlayerBar = ({
     skipNext,
     skipPrevious,
     changeVolume,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      isPlaying: s.isPlaying,
+      currentTrack: s.currentTrack,
+      progress: s.progress,
+      currentTime: s.currentTime,
+      totalTime: s.totalTime,
+      volume: s.volume,
+      isMuted: s.isMuted,
+      togglePlayPause: s.togglePlayPause,
+      toggleMute: s.toggleMute,
+      seekToProgress: s.seekToProgress,
+      seekToLiveEdge: s.seekToLiveEdge,
+      skipNext: s.skipNext,
+      skipPrevious: s.skipPrevious,
+      changeVolume: s.changeVolume,
+    }))
+  );
 
   const [isStudioModalOpen, setIsStudioModalOpen] = useState(false);
   const progressTrackRef = useRef<HTMLDivElement>(null);

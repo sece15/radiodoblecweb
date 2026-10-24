@@ -5,6 +5,7 @@ import { Upload, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2,
 import { NeoModal } from "../common/NeoModal";
 import { CoinRechargeModal } from "./CoinRechargeModal";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { isAdmin } from "@/lib/permissions";
 import { injectVipSongToAzuraCast } from "@/services/vipJukeboxService";
 
@@ -23,7 +24,17 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
     consumePuntosC,
     skipToNextVipSong,
     sendChatMessage,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      userProfile: s.userProfile,
+      vipQueue: s.vipQueue,
+      requestVipSong: s.requestVipSong,
+      puntosC: s.puntosC,
+      consumePuntosC: s.consumePuntosC,
+      skipToNextVipSong: s.skipToNextVipSong,
+      sendChatMessage: s.sendChatMessage,
+    }))
+  );
 
   const userIsAdmin = isAdmin(userProfile?.role || "");
   const normRole = (userProfile?.role || "").toUpperCase();

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { MUSIC_SCHEDULE_BLOCKS, DAYS_OF_WEEK } from "@/constants";
-import { MusicScheduleBlock, HourlyMusicItem, SpecialProgramSchedule } from "@/types";
+import { MusicScheduleBlock, HourlyMusicItem, SpecialProgramSchedule } from "@/types/radio";
 
 export type ScheduleViewMode = "grid" | "list";
 

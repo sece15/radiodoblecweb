@@ -46,7 +46,7 @@ export const SponsorOrderModal: React.FC<SponsorOrderModalProps> = ({
   initialSponsorSlug = "ponches",
   userName = "",
 }) => {
-  const { userProfile } = useAudio();
+  const userProfile = useAudio((s) => s.userProfile);
   const userIsAdmin = isAdmin(userProfile?.role || "");
 
   const [sponsors, setSponsors] = useState<SponsorBusiness[]>(INITIAL_SPONSORS);

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
 import "./globals.css";
 import { AudioProvider } from "@/context/AudioContext";
+import { ChatSync } from "@/components/chat/ChatSync";
+import { AzuraCastSync } from "@/components/audio/AzuraCastSync";
 import { QueryProvider } from "@/providers/QueryProvider";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://radiodoblec.com";
@@ -219,6 +221,8 @@ export default function RootLayout({
         />
         <QueryProvider>
           <AudioProvider>
+            <AzuraCastSync />
+            <ChatSync />
             {children}
           </AudioProvider>
         </QueryProvider>

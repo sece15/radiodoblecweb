@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Star, Sparkles } from "lucide-react";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 import { useAudio } from "@/hooks/useAudio";
 import { isAdmin } from "@/lib/permissions";
 import { useProducts } from "@/hooks/useProductsQuery";
@@ -18,7 +18,7 @@ interface StoreViewProps {
 }
 
 export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
-  const { userProfile } = useAudio();
+  const userProfile = useAudio((s) => s.userProfile);
   const userIsAdmin = isAdmin(userProfile.role);
 
   // 1. Data Query

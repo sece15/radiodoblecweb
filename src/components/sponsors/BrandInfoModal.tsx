@@ -20,7 +20,7 @@ export const BrandInfoModal: React.FC<BrandInfoModalProps> = ({
   brand,
   onOpenOrderModal,
 }) => {
-  const { userProfile } = useAudio();
+  const userProfile = useAudio((s) => s.userProfile);
   const userIsAdmin = isAdmin(userProfile?.role || "");
 
   // Estado local para overrides de administración en tiempo real

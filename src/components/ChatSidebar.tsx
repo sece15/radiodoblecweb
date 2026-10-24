@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { Send, User, Ban, X, Mic, Square, Coffee, Pizza } from "lucide-react";
 import Image from "next/image";
 import { EmojiPicker } from "./EmojiPicker";
@@ -77,7 +78,43 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     rejectVoiceGreeting,
     setIsSponsorModalOpen,
     setActiveSponsorSlug,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      chatMessages: s.chatMessages,
+      sendChatMessage: s.sendChatMessage,
+      lunaGreetings: s.lunaGreetings,
+      bannedWords: s.bannedWords,
+      bannedUsers: s.bannedUsers,
+      deletedMessageIds: s.deletedMessageIds,
+      isSlowMode: s.isSlowMode,
+      isEmoteOnly: s.isEmoteOnly,
+      isLinksAllowed: s.isLinksAllowed,
+      isCurrentUserBanned: s.isCurrentUserBanned,
+      isModPanelVisible: s.isModPanelVisible,
+      setModPanelVisible: s.setModPanelVisible,
+      toggleSlowMode: s.toggleSlowMode,
+      toggleEmoteOnly: s.toggleEmoteOnly,
+      toggleLinksAllowed: s.toggleLinksAllowed,
+      addBannedWord: s.addBannedWord,
+      removeBannedWord: s.removeBannedWord,
+      banUser: s.banUser,
+      unbanUser: s.unbanUser,
+      deleteMessage: s.deleteMessage,
+      clearChat: s.clearChat,
+      userProfile: s.userProfile,
+      listenersCount: s.listenersCount,
+      isAuthenticated: s.isAuthenticated,
+      signInWithGoogle: s.signInWithGoogle,
+      puntosC: s.puntosC,
+      consumePuntosC: s.consumePuntosC,
+      pendingVoiceGreetings: s.pendingVoiceGreetings,
+      submitVoiceGreeting: s.submitVoiceGreeting,
+      approveVoiceGreeting: s.approveVoiceGreeting,
+      rejectVoiceGreeting: s.rejectVoiceGreeting,
+      setIsSponsorModalOpen: s.setIsSponsorModalOpen,
+      setActiveSponsorSlug: s.setActiveSponsorSlug,
+    }))
+  );
 
   const [typedMessage, setTypedMessage] = useState("");
   const greetingActive = !!getGreetingCommand(typedMessage);

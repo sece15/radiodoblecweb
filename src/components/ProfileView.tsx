@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { supabase } from "@/lib/supabase";
 import { isAdmin } from "@/lib/permissions";
 import { ProfileHeaderBlock } from "./profile/ProfileHeaderBlock";
@@ -40,9 +41,30 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
     liveStatusText,
     listenedSeconds,
     punkPoints,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      userProfile: s.userProfile,
+      saveProfile: s.saveProfile,
+      isAuthenticated: s.isAuthenticated,
+      signOut: s.signOut,
+      signInWithGoogle: s.signInWithGoogle,
+      stations: s.stations,
+      songs: s.songs,
+      toggleSongFavorite: s.toggleSongFavorite,
+      playSong: s.playSong,
+      playStation: s.playStation,
+      activeTheme: s.activeTheme,
+      selectTheme: s.selectTheme,
+      currentTrack: s.currentTrack,
+      isPlaying: s.isPlaying,
+      togglePlayPause: s.togglePlayPause,
+      liveStatusText: s.liveStatusText,
+      listenedSeconds: s.listenedSeconds,
+      punkPoints: s.punkPoints,
+    }))
+  );
 
-  const { cCoins, streakDays } = useGamification(listenedSeconds, isPlaying);
+  const { cCoins, streakDays } = useGamification();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);

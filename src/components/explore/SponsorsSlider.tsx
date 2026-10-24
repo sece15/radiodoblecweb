@@ -66,7 +66,8 @@ const SPONSORS_DATA = [
 ];
 
 export const SponsorsSlider = () => {
-  const { setIsSponsorModalOpen, setActiveSponsorSlug } = useAudio();
+  const setIsSponsorModalOpen = useAudio((s) => s.setIsSponsorModalOpen);
+  const setActiveSponsorSlug = useAudio((s) => s.setActiveSponsorSlug);
   const [brands, setBrands] = useState<SponsorBusiness[]>(INITIAL_SPONSORS);
   const [selectedBrand, setSelectedBrand] = useState<SponsorBusiness | null>(null);
 

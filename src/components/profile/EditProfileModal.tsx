@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { NeoModal } from "../common/NeoModal";
-import { UserProfile } from "@/types";
+import { UserProfile } from "@/types/user";
 import { getRoleBadgeInfo } from "@/lib/permissions";
 
 interface EditProfileModalProps {

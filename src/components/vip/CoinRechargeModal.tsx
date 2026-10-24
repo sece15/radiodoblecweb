@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { NeoModal } from "../common/NeoModal";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { COIN_PACKS_LIST, createMercadoPagoPreference } from "@/services/mercadoPagoService";
 import {
   Flame,
@@ -23,7 +24,13 @@ export const CoinRechargeModal = ({
   onClose,
   suggestedPackId = "pack_trono",
 }: CoinRechargeModalProps) => {
-  const { userProfile, puntosC, isAuthenticated } = useAudio();
+  const { userProfile, puntosC, isAuthenticated } = useAudio(
+    useShallow((s) => ({
+      userProfile: s.userProfile,
+      puntosC: s.puntosC,
+      isAuthenticated: s.isAuthenticated,
+    }))
+  );
   const request = useRef<{ packId: string; userId: string; requestId: string } | null>(null);
   const [selectedPackId, setSelectedPackId] = useState<string>(suggestedPackId);
   const [isLoading, setIsLoading] = useState(false);

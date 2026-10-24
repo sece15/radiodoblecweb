@@ -1,4 +1,4 @@
-import { CartItem } from "@/types";
+import { CartItem } from "@/types/shop";
 import { parsePrice } from "./priceUtils";
 
 export interface CouponDefinition {

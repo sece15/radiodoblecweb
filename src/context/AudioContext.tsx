@@ -4,16 +4,16 @@ import { useState, useEffect, useRef, ReactNode, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Subscription, Session } from "@supabase/supabase-js";
 import Hls from "hls.js";
-import {
+import type {
   Station,
   RadioProgram,
   PastBroadcast,
   Song,
   Album,
-  UserProfile,
   VipSongRequest,
   CurrentTrack,
-} from "@/types";
+} from "@/types/radio";
+import type { UserProfile } from "@/types/user";
 import {
   INITIAL_STATIONS,
   INITIAL_PROGRAMS,
@@ -28,8 +28,6 @@ import {
 import { useLocalStorage, useLocalStorageToggle } from "@/hooks/useLocalStorage";
 import { useMediaSession } from "@/hooks/useMediaSession";
 import { isVip } from "@/lib/permissions";
-import { useAzuraCastMetadata } from "@/hooks/useAzuraCastMetadata";
-import { useChatSocket } from "@/hooks/useChatSocket";
 import { audioStore } from "@/store/useAudioStore";
 
 export const AudioProvider = ({ children }: { children: ReactNode }) => {
@@ -48,9 +46,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     isLive: true,
   });
 
-  const [progress, setProgress] = useState(1.0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [totalTime, setTotalTime] = useState(1);
+  const liveTickerRef = useRef(1);
   const [volume, setVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -73,6 +69,10 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // Tiempo real sintonizado en segundos
   const [listenedSeconds, setListenedSeconds] = useLocalStorage<number>("doblec_listened_seconds", 4800);
+  const setListenedSecondsRef = useRef(setListenedSeconds);
+  useEffect(() => {
+    setListenedSecondsRef.current = setListenedSeconds;
+  }, [setListenedSeconds]);
 
   // Gamificación: Puntos C (C-Puntos) sincronizados con el servidor
   const [puntosC, setPuntosC] = useLocalStorage<number>("doblec_puntos_c", 2);
@@ -159,16 +159,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     claimDailyReward();
   }, [isAuthenticated, setPuntosC]);
 
-  // Integración de Custom Hooks
-  const {
-    isStreamerLive,
-    liveShowName,
-    liveTrackTitle,
-    liveStatusText,
-    listenersCount,
-  } = useAzuraCastMetadata({ currentTrack, setCurrentTrack });
 
-  const chatSocket = useChatSocket({ userProfile, isAuthenticated, refreshProfile });
 
   // 1. Inicializar elemento de Audio al montar el componente
   useEffect(() => {
@@ -194,37 +185,43 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTheme]);
 
-  // Contador de tiempo de sintonía real (Métricas de escucha limpias, sin exploit de monedas)
+  // Contador de tiempo de sintonía real (Métricas de escucha limpias, actualiza Zustand directamente)
   useEffect(() => {
     const progressInterval = setInterval(() => {
       if (audioRef.current && !audioRef.current.paused) {
-        setListenedSeconds((prev) => (prev || 0) + 1);
+        setListenedSecondsRef.current((prev) => {
+          const next = (prev || 0) + 1;
+          audioStore.setState({ listenedSeconds: next });
+          return next;
+        });
 
         if (currentTrack.isLive) {
-          setTotalTime((prev) => {
-            const nextTotal = prev + 1;
-            setCurrentTime((curr) => {
-              if (curr >= prev - 2) {
-                setProgress(1.0);
-                return nextTotal;
-              } else {
-                const nextCurr = curr + 1;
-                setProgress(nextCurr / nextTotal);
-                return nextCurr;
-              }
-            });
-            return nextTotal;
+          liveTickerRef.current += 1;
+          const nextTotal = liveTickerRef.current;
+          audioStore.setState({
+            currentTime: nextTotal,
+            totalTime: nextTotal,
+            progress: 1.0,
           });
         } else {
           const curr = Math.floor(audioRef.current.currentTime);
-          const dur = Math.floor(audioRef.current.duration) || totalTime;
-          setCurrentTime(curr);
-          setTotalTime(dur);
-          setProgress(curr / dur);
+          const dur = Math.floor(audioRef.current.duration) || 1;
+          audioStore.setState({
+            currentTime: curr,
+            totalTime: dur,
+            progress: dur > 0 ? curr / dur : 0,
+          });
         }
       }
     }, 1000);
 
+    return () => {
+      clearInterval(progressInterval);
+    };
+  }, [currentTrack.isLive]);
+
+  // Sincronización de Autenticación Supabase y Conexión de Chat
+  useEffect(() => {
     let subscription: Subscription | null = null;
 
     const handleAuthMessage = (event: MessageEvent) => {
@@ -296,8 +293,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           }
           return updated;
         });
-
-        chatSocket.connectChatSocket(dbName, session.access_token);
       } else {
         setIsAuthenticated(false);
         setUserProfile({
@@ -310,7 +305,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         if (typeof window !== "undefined") {
           localStorage.removeItem("user_profile");
         }
-        chatSocket.connectChatSocket("Oyente", "guest");
       }
     };
 
@@ -328,8 +322,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       subscription = data.subscription;
-    } else {
-      chatSocket.connectChatSocket("Oyente", "guest");
     }
 
     return () => {
@@ -337,19 +329,16 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         subscription.unsubscribe();
       }
       window.removeEventListener("message", handleAuthMessage);
-      clearInterval(progressInterval);
-      chatSocket.disconnectChatSocket();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrack.isLive]);
+  }, []);
 
   // Implementación de reproducción de audio
   // Implementación de reproducción de audio optimizada con HLS.js + Fallback nativo
   const playUrl = useCallback((url: string) => {
     if (!audioRef.current) return;
 
-    setCurrentTime(0);
-    setProgress(0);
+    audioStore.setState({ currentTime: 0, progress: 0 });
     audioRef.current.muted = isMuted;
 
     // Destruir instancia previa de HLS si existía para liberar memoria y workers
@@ -447,18 +436,20 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [isMuted]);
 
   const playLiveStream = useCallback(() => {
+    const state = audioStore.getState();
     const track = {
-      title: liveTrackTitle,
-      album: liveShowName,
+      title: state.liveTrackTitle || "RADIO DOBLE C",
+      album: state.liveShowName || "RADIO DOBLE C ONLINE",
       artist: "Doble C Live",
       imageUrl: "/RADIO.png",
       streamUrl: DEFAULT_STREAM,
       isLive: true,
     };
     setCurrentTrack(track);
-    setTotalTime(1);
+    liveTickerRef.current = 1;
+    audioStore.setState({ totalTime: 1, currentTime: 0, progress: 1.0 });
     playUrl(track.streamUrl);
-  }, [liveTrackTitle, liveShowName, playUrl]);
+  }, [playUrl]);
 
   // Al terminar una canción: reproducir siguiente tema de la Rockola VIP o volver a la radio en vivo
   useEffect(() => {
@@ -485,7 +476,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         setCurrentTrack(track);
         playUrl(track.streamUrl);
 
-        chatSocket.sendChatMessage(
+        audioStore.getState().sendChatMessage(
           `⭐ ¡AL AIRE EN LA ROCKOLA VIP! ${nextVip.requestedBy} puso: "${nextVip.title} - ${nextVip.artist}"${nextVip.dedication ? ` (Dedicatoria: "${nextVip.dedication}")` : ""} 🎶📻`
         );
         return;
@@ -501,7 +492,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [currentTrack.isLive, playLiveStream, playUrl, chatSocket]);
+  }, [currentTrack.isLive, playLiveStream, playUrl]);
 
   const requestVipSong = useCallback(
     (
@@ -531,20 +522,20 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         setCurrentTrack(track);
         playUrl(track.streamUrl);
 
-        chatSocket.sendChatMessage(
+        audioStore.getState().sendChatMessage(
           `⭐ ¡AL AIRE AHORA EN LA ROCKOLA VIP! ${req.requestedBy} puso: "${req.title} - ${req.artist}"${
             req.dedication ? ` (Dedicatoria: "${req.dedication}")` : ""
           } 🎶📻`
         );
       } else {
         setVipQueue((prev) => [...prev, newReq]);
-        chatSocket.sendChatMessage(
+        audioStore.getState().sendChatMessage(
           `⭐ ${req.requestedBy} encoló en la Rockola VIP: "${req.title} - ${req.artist}". ¡Sonará al terminar el tema actual! ⚡`
         );
       }
       return true;
     },
-    [chatSocket, playUrl]
+    [playUrl]
   );
 
   const skipToNextVipSong = useCallback(() => {
@@ -567,11 +558,11 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       setCurrentTrack(track);
       playUrl(track.streamUrl);
 
-      chatSocket.sendChatMessage(
+      audioStore.getState().sendChatMessage(
         `⭐ ¡AL AIRE EN LA ROCKOLA VIP! ${nextVip.requestedBy} puso: "${nextVip.title} - ${nextVip.artist}"${nextVip.dedication ? ` (Dedicatoria: "${nextVip.dedication}")` : ""} 🎶📻`
       );
     }
-  }, [playUrl, chatSocket]);
+  }, [playUrl]);
 
   // Controles del reproductor (Opción 2: Reconexión Live Edge garantizada)
   const togglePlayPause = useCallback(() => {
@@ -632,9 +623,9 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   const seekToProgress = useCallback((prg: number) => {
     if (!audioRef.current) return;
-    const target = prg * totalTime;
-    setCurrentTime(Math.floor(target));
-    setProgress(prg);
+    const dur = Math.floor(audioRef.current.duration) || liveTickerRef.current || 1;
+    const target = prg * dur;
+    audioStore.setState({ currentTime: Math.floor(target), progress: prg });
 
     if (currentTrack.isLive) {
       if (hlsRef.current) {
@@ -643,21 +634,24 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     } else {
       audioRef.current.currentTime = target;
     }
-  }, [totalTime, currentTrack.isLive]);
+  }, [currentTrack.isLive]);
 
   const seekBackMinutes = useCallback((minutes: number) => {
     if (!audioRef.current) return;
     const target = Math.max(0, audioRef.current.currentTime - minutes * 60);
     audioRef.current.currentTime = target;
-    setCurrentTime(Math.floor(target));
+    const dur = Math.floor(audioRef.current.duration) || liveTickerRef.current || 1;
+    audioStore.setState({
+      currentTime: Math.floor(target),
+      progress: dur > 0 ? target / dur : 0,
+    });
   }, []);
 
   const seekToLiveEdge = useCallback(() => {
     if (!audioRef.current || !currentTrack.isLive) return;
     playUrl(currentTrack.streamUrl);
-    setCurrentTime(totalTime);
-    setProgress(1.0);
-  }, [currentTrack.isLive, currentTrack.streamUrl, playUrl, totalTime]);
+    audioStore.setState({ currentTime: liveTickerRef.current, progress: 1.0 });
+  }, [currentTrack.isLive, currentTrack.streamUrl, playUrl]);
 
   const playStation = useCallback((station: Station) => {
     const track = {
@@ -669,7 +663,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       isLive: true,
     };
     setCurrentTrack(track);
-    setTotalTime(1);
+    liveTickerRef.current = 1;
+    audioStore.setState({ totalTime: 1, currentTime: 0, progress: 1.0 });
     playUrl(track.streamUrl);
   }, [playUrl]);
 
@@ -690,7 +685,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       isLive: false,
     };
     setCurrentTrack(track);
-    setTotalTime(song.durationSeconds);
+    audioStore.setState({ totalTime: song.durationSeconds, currentTime: 0, progress: 0 });
     playUrl(track.streamUrl);
   }, [userProfile.role, playUrl]);
 
@@ -721,7 +716,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         dur = parseInt(parts[0]) * 60 + parseInt(parts[1]);
       }
     } catch { }
-    setTotalTime(dur);
+    audioStore.setState({ totalTime: dur, currentTime: 0, progress: 0 });
     playUrl(track.streamUrl);
   }, [userProfile.role, playUrl]);
 
@@ -813,17 +808,13 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
               console.error("Error al actualizar la tabla profiles en Supabase:", profileError);
             }
 
-            // 3. Re-sync chat socket with the updated username
-            if (session.access_token) {
-              chatSocket.connectChatSocket(trimmedName, session.access_token);
-            }
           }
         } catch (err) {
           console.error("Error al guardar el perfil en Supabase:", err);
         }
       }
     },
-    [userProfile.role, setUserProfile, chatSocket]
+    [userProfile.role, setUserProfile]
   );
 
   const addAlbum = useCallback((name: string, artist: string, releaseYear: string, genre: string, imageUrl: string) => {
@@ -931,17 +922,9 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Sincronizar el estado y acciones con el store atómico audioStore (estilo Zustand)
+  // 1. Acciones globales (registradas de forma estable en el store)
   useEffect(() => {
     audioStore.setState({
-      isPlaying,
-      currentTrack,
-      progress,
-      currentTime,
-      totalTime,
-      volume,
-      isMuted,
-      listenedSeconds,
       playLiveStream,
       playStation,
       playSong,
@@ -955,13 +938,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       skipNext,
       skipPrevious,
       changeVolume,
-      stations,
-      programs,
-      pastBroadcasts,
-      songs,
-      albums,
-      userProfile,
-      playlistTracks,
       toggleStationLike,
       toggleSongFavorite,
       addCurrentTrackToPlaylist,
@@ -969,64 +945,20 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       saveProfile,
       updateUserRole,
       addAlbum,
-      chatMessages: chatSocket.chatMessages,
-      isLiveChatModeActive: chatSocket.isLiveChatModeActive,
-      setLiveChatModeActive: chatSocket.setLiveChatModeActive,
-      sendChatMessage: chatSocket.sendChatMessage,
-      lunaGreetings: chatSocket.lunaGreetings,
-      bannedWords: chatSocket.bannedWords,
-      bannedUsers: chatSocket.bannedUsers,
-      deletedMessageIds: chatSocket.deletedMessageIds,
-      isSlowMode: chatSocket.isSlowMode,
-      isEmoteOnly: chatSocket.isEmoteOnly,
-      isLinksAllowed: chatSocket.isLinksAllowed,
-      isCurrentUserBanned: chatSocket.isCurrentUserBanned,
-      isModPanelVisible: chatSocket.isModPanelVisible,
-      setModPanelVisible: chatSocket.setModPanelVisible,
-      toggleSlowMode: chatSocket.toggleSlowMode,
-      toggleEmoteOnly: chatSocket.toggleEmoteOnly,
-      toggleLinksAllowed: chatSocket.toggleLinksAllowed,
-      addBannedWord: chatSocket.addBannedWord,
-      removeBannedWord: chatSocket.removeBannedWord,
-      banUser: chatSocket.banUser,
-      unbanUser: chatSocket.unbanUser,
-      deleteMessage: chatSocket.deleteMessage,
-      clearChat: chatSocket.clearChat,
-      puntosC,
-      punkPoints: puntosC,
       addPuntosC,
       consumePuntosC,
       addPunkPoints: addPuntosC,
       consumePunkPoints: consumePuntosC,
-      pendingVoiceGreetings: chatSocket.pendingVoiceGreetings,
-      submitVoiceGreeting: chatSocket.submitVoiceGreeting,
-      approveVoiceGreeting: chatSocket.approveVoiceGreeting,
-      rejectVoiceGreeting: chatSocket.rejectVoiceGreeting,
-      isAuthenticated,
+      requestVipSong,
+      skipToNextVipSong,
       refreshProfile,
       signOut,
       signInWithGoogle,
-      isStreamerLive,
-      liveShowName,
-      liveTrackTitle,
-      liveStatusText,
-      listenersCount,
-      activeTheme,
       selectTheme,
-      isSponsorModalOpen,
       setIsSponsorModalOpen,
-      activeSponsorSlug,
       setActiveSponsorSlug,
     });
   }, [
-    isPlaying,
-    currentTrack,
-    progress,
-    currentTime,
-    totalTime,
-    volume,
-    isMuted,
-    listenedSeconds,
     playLiveStream,
     playStation,
     playSong,
@@ -1040,13 +972,6 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     skipNext,
     skipPrevious,
     changeVolume,
-    stations,
-    programs,
-    pastBroadcasts,
-    songs,
-    albums,
-    userProfile,
-    playlistTracks,
     toggleStationLike,
     toggleSongFavorite,
     addCurrentTrackToPlaylist,
@@ -1054,54 +979,62 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     saveProfile,
     updateUserRole,
     addAlbum,
-    chatSocket.chatMessages,
-    chatSocket.isLiveChatModeActive,
-    chatSocket.setLiveChatModeActive,
-    chatSocket.sendChatMessage,
-    chatSocket.lunaGreetings,
-    chatSocket.bannedWords,
-    chatSocket.bannedUsers,
-    chatSocket.deletedMessageIds,
-    chatSocket.isSlowMode,
-    chatSocket.isEmoteOnly,
-    chatSocket.isLinksAllowed,
-    chatSocket.isCurrentUserBanned,
-    chatSocket.isModPanelVisible,
-    chatSocket.setModPanelVisible,
-    chatSocket.toggleSlowMode,
-    chatSocket.toggleEmoteOnly,
-    chatSocket.toggleLinksAllowed,
-    chatSocket.addBannedWord,
-    chatSocket.removeBannedWord,
-    chatSocket.banUser,
-    chatSocket.unbanUser,
-    chatSocket.deleteMessage,
-    chatSocket.clearChat,
-    puntosC,
     addPuntosC,
     consumePuntosC,
-    chatSocket.pendingVoiceGreetings,
-    chatSocket.submitVoiceGreeting,
-    chatSocket.approveVoiceGreeting,
-    chatSocket.rejectVoiceGreeting,
-    vipQueue,
-    activeVipSong,
     requestVipSong,
     skipToNextVipSong,
-    isAuthenticated,
     refreshProfile,
     signOut,
     signInWithGoogle,
-    isStreamerLive,
-    liveShowName,
-    liveTrackTitle,
-    liveStatusText,
-    listenersCount,
-    activeTheme,
     selectTheme,
-    isSponsorModalOpen,
-    activeSponsorSlug,
+    setIsSponsorModalOpen,
+    setActiveSponsorSlug,
   ]);
+
+  // 2. Estado de reproducción de audio
+  useEffect(() => {
+    audioStore.setState({
+      isPlaying,
+      currentTrack,
+      volume,
+      isMuted,
+    });
+  }, [isPlaying, currentTrack, volume, isMuted]);
+
+
+  // 5. Usuario, sesión y puntos
+  useEffect(() => {
+    audioStore.setState({
+      isAuthenticated,
+      userProfile,
+      puntosC,
+      punkPoints: puntosC,
+      listenedSeconds,
+    });
+  }, [isAuthenticated, userProfile, puntosC, listenedSeconds]);
+
+  // 6. Colecciones y cola VIP
+  useEffect(() => {
+    audioStore.setState({
+      stations,
+      programs,
+      pastBroadcasts,
+      songs,
+      albums,
+      playlistTracks,
+      vipQueue,
+      activeVipSong,
+    });
+  }, [stations, programs, pastBroadcasts, songs, albums, playlistTracks, vipQueue, activeVipSong]);
+
+  // 7. Configuración de tema y auspiciadores
+  useEffect(() => {
+    audioStore.setState({
+      activeTheme,
+      isSponsorModalOpen,
+      activeSponsorSlug,
+    });
+  }, [activeTheme, isSponsorModalOpen, activeSponsorSlug]);
 
   return <>{children}</>;
 };

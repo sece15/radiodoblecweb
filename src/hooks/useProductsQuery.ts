@@ -7,7 +7,7 @@ import {
   CreateProductInput,
   UpdateProductInput,
 } from "@/services/productService";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 
 export const PRODUCTS_QUERY_KEY = ["store_products"] as const;
 

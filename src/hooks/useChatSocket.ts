@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { ChatMessage, SocketChatMessage, SocketChatConfig, UserProfile, VoiceGreeting } from "@/types";
+import type { ChatMessage, SocketChatMessage, SocketChatConfig, VoiceGreeting } from "@/types/chat";
+import type { UserProfile } from "@/types/user";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { DEFAULT_BANNED_WORDS } from "@/constants";
+import { DEFAULT_BANNED_WORDS, CHAT_URL } from "@/constants";
 import { useLunaGreetings } from "@/hooks/useLunaGreetings";
 import { getGreetingCommand } from "@/lib/chatCommands";
 import type { LunaGreetingResult } from "@/lib/lunaGreetings";
@@ -49,7 +50,10 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
     userProfileRef.current = userProfile;
   }, [userProfile]);
 
+  const currentAuthRef = useRef<{ username: string; token: string } | null>(null);
+
   const disconnectChatSocket = () => {
+    currentAuthRef.current = null;
     if (socketRef.current) {
       socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
@@ -59,26 +63,43 @@ export const useChatSocket = ({ userProfile, isAuthenticated, refreshProfile }: 
   };
 
   const connectChatSocket = (username: string, token: string) => {
+    // Avoid redundant reconnect if already connected with same credentials
+    if (
+      socketRef.current?.connected &&
+      currentAuthRef.current?.username === username &&
+      currentAuthRef.current?.token === token
+    ) {
+      return;
+    }
+    currentAuthRef.current = { username, token };
     disconnectChatSocket();
+    currentAuthRef.current = { username, token };
 
     try {
-      let chatUrl = process.env.NEXT_PUBLIC_CHAT_URL || "https://chat.andrealvarado.dev";
-      if (!chatUrl || chatUrl.includes("radio.") || chatUrl.includes(".m3u8") || chatUrl.includes("localhost:8081")) {
-        chatUrl = "https://chat.andrealvarado.dev";
-      }
+      const chatUrl = CHAT_URL;
       const socket = io(chatUrl, {
+        transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionDelay: 2000,
+        reconnectionAttempts: 10,
+        timeout: 10000,
         auth: { token },
         query: { username },
       });
       socketRef.current = socket;
 
       socket.on("connect", () => {
+        console.log(`[Chat Socket] Conectado exitosamente (${socket.id}) como:`, username);
         lunaRef.current.connectionChanged(true);
         void lunaRef.current.refreshRequests();
       });
-      socket.on("disconnect", () => lunaRef.current.connectionChanged(false));
+      socket.on("disconnect", (reason) => {
+        console.warn("[Chat Socket] Desconectado del servidor:", reason);
+        lunaRef.current.connectionChanged(false);
+      });
+      socket.on("connect_error", (error) => {
+        console.error("[Chat Socket] Error de conexión:", error.message);
+      });
       socket.on("luna_greeting_config", (config: unknown) => lunaRef.current.receiveConfig(config));
       socket.on("luna_greeting_result", (result: LunaGreetingResult) => lunaRef.current.receiveResult(result));
 

@@ -29,6 +29,7 @@ import { SponsorOrderModal } from "@/components/sponsors/SponsorOrderModal";
 import { LiveDropNotification } from "@/components/common/LiveDropNotification";
 import { useGamification } from "@/hooks/useGamification";
 import { SpookySpider } from "@/components/halloween/SpookySpider";
+import { useShallow } from "zustand/react/shallow";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
@@ -39,13 +40,23 @@ export default function Home() {
     currentTrack,
     togglePlayPause,
     isAuthenticated,
-    listenedSeconds,
     userProfile,
     isSponsorModalOpen,
     setIsSponsorModalOpen,
     activeSponsorSlug,
-  } = useAudio();
-  const { canSpinToday, isSpinning, spinVinyl, activeDrop, claimDrop, dismissDrop } = useGamification(listenedSeconds, isPlaying);
+  } = useAudio(
+    useShallow((s) => ({
+      isPlaying: s.isPlaying,
+      currentTrack: s.currentTrack,
+      togglePlayPause: s.togglePlayPause,
+      isAuthenticated: s.isAuthenticated,
+      userProfile: s.userProfile,
+      isSponsorModalOpen: s.isSponsorModalOpen,
+      setIsSponsorModalOpen: s.setIsSponsorModalOpen,
+      activeSponsorSlug: s.activeSponsorSlug,
+    }))
+  );
+  const { canSpinToday, isSpinning, spinVinyl, activeDrop, claimDrop, dismissDrop } = useGamification();
   const [isSpinModalOpen, setSpinModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {

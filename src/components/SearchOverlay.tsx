@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { ArrowLeft, X, Music, Radio, Play } from "lucide-react";
 
 interface SearchOverlayProps {
@@ -19,7 +20,15 @@ export const SearchOverlay = ({
     songs,
     playStation,
     playSong,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      stations: s.stations,
+      programs: s.programs,
+      songs: s.songs,
+      playStation: s.playStation,
+      playSong: s.playSong,
+    }))
+  );
 
   const [query, setQuery] = useState("");
 

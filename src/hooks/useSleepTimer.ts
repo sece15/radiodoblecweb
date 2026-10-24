@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAudio } from "@/hooks/useAudio";
 
 export function useSleepTimer() {
-  const { isPlaying, togglePlayPause } = useAudio();
+  const isPlaying = useAudio((s) => s.isPlaying);
+  const togglePlayPause = useAudio((s) => s.togglePlayPause);
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);

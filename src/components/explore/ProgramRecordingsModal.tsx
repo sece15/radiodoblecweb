@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Clock, User, Disc, ScrollText, Play, Pause } from "lucide-react";
-import { RadioProgram } from "@/types";
+import { RadioProgram } from "@/types/radio";
 import { NeoModal } from "../common/NeoModal";
 import { fetchProgramRecordings, getDriveStreamUrl, DriveFile } from "@/services/driveService";
 import { formatFileSize, formatDate, cleanFileName } from "@/lib/formatters";

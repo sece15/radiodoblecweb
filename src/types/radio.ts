@@ -1,3 +1,32 @@
+// ==========================================
+// RADIO & STREAMING TYPES (src/types/radio.ts)
+// ==========================================
+
+export interface NowPlayingSong {
+  title: string;
+  artist: string;
+  album: string;
+  art: string;
+}
+
+export interface NowPlayingLive {
+  is_live: boolean;
+  streamer_name: string;
+}
+
+export interface NowPlayingListeners {
+  current: number;
+  real: number;
+}
+
+export interface NowPlayingStationPayload {
+  listeners: NowPlayingListeners;
+  live: NowPlayingLive;
+  now_playing: {
+    song: NowPlayingSong;
+  };
+}
+
 export interface Station {
   id: string;
   name: string;
@@ -56,20 +85,6 @@ export interface TrackInfo {
 
 export type CurrentTrack = TrackInfo;
 
-export interface VipSongRequest {
-  id: string;
-  title: string;
-  artist: string;
-  requestedBy: string;
-  userAvatar?: string;
-  dedication?: string;
-  audioUrl: string;
-  coverUrl: string;
-  durationSeconds?: number;
-  status: "queued" | "playing" | "played";
-  createdAt: string;
-}
-
 export interface Song {
   id: string;
   title: string;
@@ -90,85 +105,23 @@ export interface Album {
   genre: string;
 }
 
-export interface UserProfile {
-  id?: string;
-  name: string;
-  role: string;
-  bio?: string;
-  avatarUrl: string;
-  stashHours: number;
-  followersCount: string;
-}
-
-export interface VoiceGreeting {
+export interface VipSongRequest {
   id: string;
-  senderName: string;
-  senderUid?: string | null;
-  senderRole?: string;
+  title: string;
+  artist: string;
+  requestedBy: string;
+  userAvatar?: string;
+  dedication?: string;
   audioUrl: string;
-  durationSeconds: number;
-  status: "pending" | "approved" | "rejected";
+  coverUrl: string;
+  durationSeconds?: number;
+  status: "queued" | "playing" | "played";
   createdAt: string;
-  transcript?: string;
 }
 
-export interface ChatMessage {
-  id: number;
-  senderName: string;
-  senderRole: string;
-  messageText: string;
-  senderUid?: string | null;
-  stationId: string;
-  createdAt: string;
-  isDeleted: boolean;
-  voiceAudioUrl?: string;
-  greetingId?: string;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  price: string;
-  imageUrl: string;
-  rotation: number;
-  description: string;
-  colors: string[];
-  sizes: string[];
-  variantImages?: Record<string, string>;
-  badge?: string;
-  isFeatured?: boolean;
-  driveFileId?: string;
-  specs?: string;
-  careInstructions?: string;
-}
-
-export interface CartItem {
-  id: string; // Combinación: idProducto-color-talla
-  product: {
-    id: string;
-    name: string;
-    price: string; // ej. "$25.00"
-    imageUrl: string;
-  };
-  color: string;
-  size: string;
-  quantity: number;
-}
-
-export interface SocketChatMessage {
-  id?: number;
-  senderName: string;
-  senderRole?: string;
-  messageText: string;
-  timestamp?: string;
-  greetingId?: string;
-}
-
-export interface SocketChatConfig {
-  isSlowMode?: boolean;
-  isEmoteOnly?: boolean;
-}
-
+// ==========================================
+// PROGRAMACIÓN Y HORARIOS (SCHEDULE)
+// ==========================================
 export interface MusicScheduleBlock {
   id: string;
   timeSlot: string;
@@ -214,3 +167,25 @@ export interface SpecialProgramSchedule {
   genre: string;
   isLiveRightNow: boolean;
 }
+
+// ==========================================
+// CONTROL Y ESTADO DE REPRODUCCIÓN (PLAYBACK)
+// ==========================================
+export interface PlaybackState {
+  currentTrack: TrackInfo;
+  isPlaying: boolean;
+}
+
+export interface UseMediaSessionProps {
+  currentTrack: TrackInfo;
+  isPlaying: boolean;
+  togglePlayPause: () => void;
+}
+
+export interface CurrentlyPlayingCardProps {
+  currentTrack: CurrentTrack;
+  isPlaying: boolean;
+  liveStatusText: string;
+  onTogglePlayPause: () => void;
+}
+

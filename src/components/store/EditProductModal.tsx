@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { Check } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 import { UpdateProductInput } from "@/services/productService";
 import { sanitizePriceInput, formatPrice, parsePrice } from "@/lib/priceUtils";
 

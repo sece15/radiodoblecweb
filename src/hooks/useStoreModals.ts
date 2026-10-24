@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, MouseEvent } from "react";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 import {
   useCreateProduct,
   useUpdateProduct,

@@ -1,6 +1,6 @@
 "use client";
 
-import { RadioProgram } from "@/types";
+import { RadioProgram } from "@/types/radio";
 
 interface ProgramGuideSectionProps {
   programs: RadioProgram[];

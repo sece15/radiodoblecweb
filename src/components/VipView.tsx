@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { VipJukeboxModal } from "./vip/VipJukeboxModal";
 import { CoinRechargeModal } from "./vip/CoinRechargeModal";
 import { RechargeStatus } from "./vip/RechargeStatus";
@@ -21,7 +22,14 @@ interface VipViewProps {
 }
 
 export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
-  const { userProfile, puntosC, playLiveStream, isPlaying } = useAudio();
+  const { userProfile, puntosC, playLiveStream, isPlaying } = useAudio(
+    useShallow((s) => ({
+      userProfile: s.userProfile,
+      puntosC: s.puntosC,
+      playLiveStream: s.playLiveStream,
+      isPlaying: s.isPlaying,
+    }))
+  );
   const [isJukeboxOpen, setIsJukeboxOpen] = useState(false);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [selectedBidCoins, setSelectedBidCoins] = useState(2000);

@@ -12,7 +12,7 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { RadioLogo } from "@/components/RadioLogo";
 import { DAYS_OF_WEEK } from "@/constants";
 import { useSchedule } from "@/hooks/useSchedule";
-import type { MusicScheduleBlock } from "@/types";
+import type { MusicScheduleBlock } from "@/types/radio";
 import { VipJukeboxModal } from "@/components/vip/VipJukeboxModal";
 import { supabase } from "@/lib/supabase";
 import {

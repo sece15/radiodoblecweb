@@ -1,6 +1,6 @@
 import { CSSProperties, useState } from "react";
 import { ShoppingCart, X, Minus, Plus, Trash2, ArrowRight } from "lucide-react";
-import { CartItem } from "@/types";
+import { CartItem } from "@/types/shop";
 import { parsePrice, formatPrice } from "@/lib/priceUtils";
 import { calculateCartTotals } from "@/lib/cartCalculator";
 

@@ -1,14 +1,7 @@
 "use client";
 
 import { PlayCircle } from "lucide-react";
-import { CurrentTrack } from "@/types";
-
-interface CurrentlyPlayingCardProps {
-  currentTrack: CurrentTrack;
-  isPlaying: boolean;
-  liveStatusText: string;
-  onTogglePlayPause: () => void;
-}
+import type { CurrentlyPlayingCardProps } from "@/types/radio";
 
 export const CurrentlyPlayingCard = ({
   currentTrack,

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { supabase } from "@/lib/supabase";
+import { useAudioStore } from "@/store/useAudioStore";
 
 export interface ListenerBadge {
   id: string;
@@ -32,7 +33,13 @@ export const LISTENER_LEVELS = [
 export const CONTINUOUS_DROP_REQUIRED_SECS = 3 * 3600; // 3 horas continuas = 10,800s
 export const INTERMITTENT_DROP_REQUIRED_SECS = 8 * 3600; // 8 horas intermitentes = 28,800s
 
-export function useGamification(listenedSeconds: number, isPlaying: boolean) {
+export function useGamification(customListenedSeconds?: number, customIsPlaying?: boolean) {
+  const storeListenedSeconds = useAudioStore((s) => s.listenedSeconds);
+  const storeIsPlaying = useAudioStore((s) => s.isPlaying);
+
+  const listenedSeconds = customListenedSeconds !== undefined ? customListenedSeconds : storeListenedSeconds;
+  const isPlaying = customIsPlaying !== undefined ? customIsPlaying : storeIsPlaying;
+
   // 1. C-Coins (formerly puntos)
   const [cCoins, setCCoins] = useLocalStorage<number>("doblec_c_coins", 2);
 
@@ -48,7 +55,7 @@ export function useGamification(listenedSeconds: number, isPlaying: boolean) {
   // 4. Live C-Drops (Surprise Drops: 3h continuas u 8h intermitentes, máx 1 vez al día, 1 C-Coin)
   const continuousListeningSecsRef = useRef(0);
   const [lastDropDate, setLastDropDate] = useLocalStorage<string>("doblec_last_cdrop_date", "");
-  const [, setDailyListenedSecs] = useLocalStorage<number>("doblec_daily_listened_secs", 0);
+  const dailyListenedSecsRef = useRef(0);
   const [dailyListenedDate, setDailyListenedDate] = useLocalStorage<string>("doblec_daily_listened_date", "");
   const [activeDrop, setActiveDrop] = useState<{ id: string; amount: number; message: string } | null>(null);
 
@@ -56,13 +63,23 @@ export function useGamification(listenedSeconds: number, isPlaying: boolean) {
   const getTodayStr = () => new Date().toISOString().split("T")[0];
   const todayStr = getTodayStr();
 
-  // Reset daily accumulated listening seconds if day changed
+  // Reset daily accumulated listening seconds if day changed, or load from localStorage
   useEffect(() => {
     if (dailyListenedDate !== todayStr) {
       setDailyListenedDate(todayStr);
-      setDailyListenedSecs(0);
+      dailyListenedSecsRef.current = 0;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("doblec_daily_listened_secs", "0");
+        } catch {}
+      }
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("doblec_daily_listened_secs");
+        if (stored) dailyListenedSecsRef.current = Number(JSON.parse(stored)) || 0;
+      } catch {}
     }
-  }, [dailyListenedDate, todayStr, setDailyListenedDate, setDailyListenedSecs]);
+  }, [dailyListenedDate, todayStr, setDailyListenedDate]);
 
   // Streak verification logic
   useEffect(() => {
@@ -93,42 +110,51 @@ export function useGamification(listenedSeconds: number, isPlaying: boolean) {
   }, [lastActiveDate, todayStr, setLastActiveDate, setStreakDays, setCCoins]);
 
   // C-Drop timer while playing (3h continuas u 8h intermitentes en el día)
+  // Utiliza refs internos y persistencia espaciada para evitar 1 re-render por segundo en el componente consumidor
   useEffect(() => {
     if (!isPlaying) {
-      // Al pausar o detenerse, se reinicia la cuenta continua
       continuousListeningSecsRef.current = 0;
       return;
     }
 
     const interval = setInterval(() => {
       continuousListeningSecsRef.current += 1;
+      dailyListenedSecsRef.current += 1;
 
-      setDailyListenedSecs((prev) => {
-        const currentDaily = (prev || 0) + 1;
-        const alreadyClaimedToday = lastDropDate === todayStr;
-
-        if (!alreadyClaimedToday && !activeDrop) {
-          if (continuousListeningSecsRef.current >= CONTINUOUS_DROP_REQUIRED_SECS) {
-            setActiveDrop({
-              id: `drop_continuous_${todayStr}_${Date.now()}`,
-              amount: 1,
-              message: "¡C-DROP EN VIVO! Has estado 3 horas en sintonía continua.",
-            });
-          } else if (currentDaily >= INTERMITTENT_DROP_REQUIRED_SECS) {
-            setActiveDrop({
-              id: `drop_intermittent_${todayStr}_${Date.now()}`,
-              amount: 1,
-              message: "¡C-DROP EN VIVO! Has acumulado 8 horas de sintonía en el día.",
-            });
-          }
+      const alreadyClaimedToday = lastDropDate === todayStr;
+      if (!alreadyClaimedToday && !activeDrop) {
+        if (continuousListeningSecsRef.current >= CONTINUOUS_DROP_REQUIRED_SECS) {
+          setActiveDrop({
+            id: `drop_continuous_${todayStr}_${Date.now()}`,
+            amount: 1,
+            message: "¡C-DROP EN VIVO! Has estado 3 horas en sintonía continua.",
+          });
+        } else if (dailyListenedSecsRef.current >= INTERMITTENT_DROP_REQUIRED_SECS) {
+          setActiveDrop({
+            id: `drop_intermittent_${todayStr}_${Date.now()}`,
+            amount: 1,
+            message: "¡C-DROP EN VIVO! Has acumulado 8 horas de sintonía en el día.",
+          });
         }
+      }
 
-        return currentDaily;
-      });
+      // Persistir en localStorage cada 30 segundos sin provocar re-renders de React
+      if (dailyListenedSecsRef.current % 30 === 0 && typeof window !== "undefined") {
+        try {
+          localStorage.setItem("doblec_daily_listened_secs", JSON.stringify(dailyListenedSecsRef.current));
+        } catch {}
+      }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [isPlaying, activeDrop, lastDropDate, todayStr, setDailyListenedSecs]);
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("doblec_daily_listened_secs", JSON.stringify(dailyListenedSecsRef.current));
+        } catch {}
+      }
+    };
+  }, [isPlaying, activeDrop, lastDropDate, todayStr]);
 
   const claimDrop = useCallback(() => {
     if (activeDrop) {

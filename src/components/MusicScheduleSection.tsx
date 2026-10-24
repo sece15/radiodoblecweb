@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { MUSIC_SCHEDULE_BLOCKS } from "@/constants";
-import { MusicScheduleBlock } from "@/types";
+import { MusicScheduleBlock } from "@/types/radio";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { 
   Clock, 
   Calendar,
@@ -29,7 +30,12 @@ interface MusicScheduleSectionProps {
 type TimeFilter = "all" | "morning" | "afternoon" | "night" | "autodj";
 
 export const MusicScheduleSection = ({ onNavigateToPlayer }: MusicScheduleSectionProps) => {
-  const { playLiveStream, isPlaying } = useAudio();
+  const { playLiveStream, isPlaying } = useAudio(
+    useShallow((s) => ({
+      playLiveStream: s.playLiveStream,
+      isPlaying: s.isPlaying,
+    }))
+  );
   const [activeFilter, setActiveFilter] = useState<TimeFilter>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentHour, setCurrentHour] = useState<number>(() => new Date().getHours());

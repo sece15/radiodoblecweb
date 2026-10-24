@@ -2,15 +2,9 @@
 
 import { create } from "zustand";
 import type { LunaGreetingsController } from "@/hooks/useLunaGreetings";
-import {
-  Station,
-  RadioProgram,
-  PastBroadcast,
-  Song,
-  Album,
-  UserProfile,
-  ChatMessage,
-} from "@/types";
+import type { Station, RadioProgram, PastBroadcast, Song, Album } from "@/types/radio";
+import type { UserProfile } from "@/types/user";
+import type { ChatMessage } from "@/types/chat";
 import {
   INITIAL_STATIONS,
   INITIAL_PROGRAMS,
@@ -246,7 +240,7 @@ export const initialStoreState: AudioStoreState = {
   liveShowName: "RADIO DOBLE C ONLINE",
   liveTrackTitle: "RADIO DOBLE C - SEÑAL EN VIVO",
   liveStatusText: "ON AIR",
-  listenersCount: 12,
+  listenersCount: 0,
   activeTheme: "PUNK_NEON",
   selectTheme: noop,
 };

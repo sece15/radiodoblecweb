@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock, User, Sparkles, Heart, ScrollText } from "lucide-react";
-import { RadioProgram } from "@/types";
+import { RadioProgram } from "@/types/radio";
 import { NeoModal } from "../common/NeoModal";
 
 interface HostProfileModalProps {

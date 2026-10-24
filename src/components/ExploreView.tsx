@@ -5,7 +5,8 @@ import Image from "next/image";
 import { RADIO_BANNERS } from "@/constants/banners";
 import styles from "./ExploreView.module.css";
 import { useAudio } from "@/hooks/useAudio";
-import { RadioProgram } from "@/types";
+import { useShallow } from "zustand/react/shallow";
+import { RadioProgram } from "@/types/radio";
 import { RadioVideosSection } from "./RadioVideosSection";
 import { LiveNowBanner } from "./explore/LiveNowBanner";
 import { SponsorsSlider } from "./explore/SponsorsSlider";
@@ -76,7 +77,22 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle, isChatOpen = fa
     currentTrack,
     isPlaying,
     togglePlayPause,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      stations: s.stations,
+      programs: s.programs,
+      playLiveStream: s.playLiveStream,
+      playPastBroadcast: s.playPastBroadcast,
+      playRadar: s.playRadar,
+      toggleStationLike: s.toggleStationLike,
+      liveShowName: s.liveShowName,
+      liveTrackTitle: s.liveTrackTitle,
+      liveStatusText: s.liveStatusText,
+      currentTrack: s.currentTrack,
+      isPlaying: s.isPlaying,
+      togglePlayPause: s.togglePlayPause,
+    }))
+  );
 
   const [selectedStyle, setSelectedStyle] = useState<string>(filteredStyle || "TODOS");
   const [prevFilteredStyle, setPrevFilteredStyle] = useState<string | null | undefined>(filteredStyle);

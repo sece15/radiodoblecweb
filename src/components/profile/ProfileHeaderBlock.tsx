@@ -2,7 +2,7 @@
 
 import { CSSProperties } from "react";
 import { Check, Edit, Share2, LogOut } from "lucide-react";
-import { UserProfile } from "@/types";
+import { UserProfile } from "@/types/user";
 import { getRoleBadgeInfo } from "@/lib/permissions";
 
 interface ProfileHeaderBlockProps {

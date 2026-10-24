@@ -1,5 +1,6 @@
 import { useRef, useState, MouseEvent, TouchEvent } from "react";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import { Play, Pause, Volume2, VolumeX, FastForward, User } from "lucide-react";
 import { ChatMessageList } from "./chat/ChatMessageList";
 import { ChatInputBar } from "./chat/ChatInputBar";
@@ -32,7 +33,29 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
     isCurrentUserBanned,
     bannedUsers,
     deletedMessageIds,
-  } = useAudio();
+  } = useAudio(
+    useShallow((s) => ({
+      isPlaying: s.isPlaying,
+      currentTrack: s.currentTrack,
+      progress: s.progress,
+      currentTime: s.currentTime,
+      totalTime: s.totalTime,
+      volume: s.volume,
+      isMuted: s.isMuted,
+      togglePlayPause: s.togglePlayPause,
+      toggleMute: s.toggleMute,
+      seekToProgress: s.seekToProgress,
+      seekToLiveEdge: s.seekToLiveEdge,
+      chatMessages: s.chatMessages,
+      sendChatMessage: s.sendChatMessage,
+      listenersCount: s.listenersCount,
+      isAuthenticated: s.isAuthenticated,
+      signInWithGoogle: s.signInWithGoogle,
+      isCurrentUserBanned: s.isCurrentUserBanned,
+      bannedUsers: s.bannedUsers,
+      deletedMessageIds: s.deletedMessageIds,
+    }))
+  );
 
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const [mobileTab, setMobileTab] = useState<"player" | "chat">(initialTab);

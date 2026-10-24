@@ -9,6 +9,7 @@ import { SpotifyPlayerBar } from "@/components/SpotifyPlayerBar";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { PlayerView } from "@/components/PlayerView";
 import { useAudio } from "@/hooks/useAudio";
+import { useShallow } from "zustand/react/shallow";
 import {
   Radio,
   ArrowLeft,
@@ -25,7 +26,14 @@ import {
 
 export default function NotFound() {
   const router = useRouter();
-  const { isPlaying, togglePlayPause, playLiveStream, currentTrack } = useAudio();
+  const { isPlaying, togglePlayPause, playLiveStream, currentTrack } = useAudio(
+    useShallow((s) => ({
+      isPlaying: s.isPlaying,
+      togglePlayPause: s.togglePlayPause,
+      playLiveStream: s.playLiveStream,
+      currentTrack: s.currentTrack,
+    }))
+  );
   const [isPlayerExpanded, setPlayerExpanded] = useState(false);
   const [isChatSidebarOpen, setChatSidebarOpen] = useState(false);
 

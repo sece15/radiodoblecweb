@@ -35,7 +35,7 @@ export const Header = ({
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { userProfile } = useAudio();
+  const userProfile = useAudio((s) => s.userProfile);
 
   // News hook integration
   const {

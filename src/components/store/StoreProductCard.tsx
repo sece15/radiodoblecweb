@@ -2,7 +2,7 @@
 
 import { MouseEvent } from "react";
 import { ShoppingCart, Trash2, Pencil } from "lucide-react";
-import { Product } from "@/types";
+import { Product } from "@/types/shop";
 import { formatPrice } from "@/lib/priceUtils";
 
 interface StoreProductCardProps {

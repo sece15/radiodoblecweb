@@ -1,4 +1,5 @@
-import { Station, RadioProgram, PastBroadcast, Album, Song, Product, MusicScheduleBlock, DayOfWeekItem } from "@/types";
+import type { Station, RadioProgram, PastBroadcast, Album, Song, MusicScheduleBlock, DayOfWeekItem } from "@/types/radio";
+import type { Product } from "@/types/shop";
 
 export const MP_ALIAS = process.env.NEXT_PUBLIC_MP_ALIAS || "";
 export const MP_CVU = process.env.NEXT_PUBLIC_MP_CVU || "";
@@ -7,20 +8,16 @@ export const DEFAULT_AVATAR =
   process.env.NEXT_PUBLIC_DEFAULT_AVATAR ||
   "https://lh3.googleusercontent.com/aida-public/AB6AXuA6srmeb-vk1Q2DfS7yC25Domf9c0kLipds57TXJh5KR9tiwF0baTSxCYrkymfzHxHofWx2YGAQDG57_xmYQtC9MQx8VQPS6a0rLLTKzaPewxsyENt8isBr4H-DAbKm6rLb-w9dsT6EiKYAAbHSbGQA863cyUibAznEG1WcAP_Dj4yODOI3MVpRgwobV6sGpli8fKGgEMGNGPG7wXpGs26dibxLVsd1eiJZvnFe-8M6cXt8AYRNIw6JQ294dBMMJ4TD46rF6izIPJeP";
 
-export const HLS_URL =
-  process.env.NEXT_PUBLIC_STREAM_URL ||
-  "https://radio.andrealvarado.dev/hls/radiodoblec/aac_lofi.m3u8";
+export const HLS_URL = process.env.NEXT_PUBLIC_STREAM_URL || "";
 
-export const HLS_ADAPTIVE_URL =
-  process.env.NEXT_PUBLIC_STREAM_ADAPTIVE_URL ||
-  "https://radio.andrealvarado.dev/hls/radiodoblec/live.m3u8";
+export const HLS_ADAPTIVE_URL = process.env.NEXT_PUBLIC_STREAM_ADAPTIVE_URL || "";
 
-export const FALLBACK_URL =
-  process.env.NEXT_PUBLIC_STREAM_FALLBACK_URL ||
-  "https://radio.andrealvarado.dev/listen/radiodoblec/radio.aac";
+export const FALLBACK_URL = process.env.NEXT_PUBLIC_STREAM_FALLBACK_URL || "";
 
 export const DEFAULT_STREAM = HLS_URL;
 export const DEFAULT_FALLBACK_STREAM = FALLBACK_URL;
+
+export const CHAT_URL = process.env.NEXT_PUBLIC_CHAT_URL || "";
 
 export const DEFAULT_BANNED_WORDS = [
   "spam", "toxico", "sonico", "sonica", "hack", "virus", "puta", "puto",
