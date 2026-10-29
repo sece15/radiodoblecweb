@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import { ZineBackgroundFrame } from "@/components/ZineBackgroundFrame";
 import { ExploreView } from "@/components/ExploreView";
@@ -29,6 +29,8 @@ import { SponsorOrderModal } from "@/components/sponsors/SponsorOrderModal";
 import { LiveDropNotification } from "@/components/common/LiveDropNotification";
 import { useGamification } from "@/hooks/useGamification";
 import { SpookySpider } from "@/components/halloween/SpookySpider";
+import { SpookyCobwebs } from "@/components/halloween/SpookyCobwebs";
+import { SpookyBats } from "@/components/halloween/SpookyBats";
 import { useShallow } from "zustand/react/shallow";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
@@ -69,6 +71,20 @@ export default function Home() {
     }
     return "explore";
   });
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Reset scroll state during render when active tab changes (avoiding cascading effect renders)
+  const [prevTab, setPrevTab] = useState(activeTab);
+  if (prevTab !== activeTab) {
+    setPrevTab(activeTab);
+    setIsScrolled(false);
+  }
+
+  const handleTabChange = useCallback((tab: ActiveTab) => {
+    setActiveTab(tab);
+    setIsScrolled(false);
+  }, []);
+
   const [isSearchActive, setSearchActive] = useState(false);
   const [filteredStyle, setFilteredStyle] = useState<string | null>(null);
 
@@ -140,20 +156,26 @@ export default function Home() {
       {!isAnyModalOpen && (
         <Header
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleTabChange}
           setSearchActive={setSearchActive}
           setFilteredStyle={setFilteredStyle}
           setCartOpen={setCartOpen}
           cartCount={cartCount}
           onOpenSpin={() => setSpinModalOpen(true)}
+          isScrolled={isScrolled}
         />
       )}
 
       {/* 2. BODY CONTENT SIDE-BY-SIDE GRID */}
-      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden", position: "relative" }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "visible", position: "relative" }}>
         {/* Main page scroll view */}
         <div
           data-radio-content
+          onScroll={(e) => {
+            const st = e.currentTarget.scrollTop;
+            if (st > 20 && !isScrolled) setIsScrolled(true);
+            else if (st <= 20 && isScrolled) setIsScrolled(false);
+          }}
           style={{
             flex: 1,
             overflowY: "auto",
@@ -161,31 +183,11 @@ export default function Home() {
             flexDirection: "column",
             paddingBottom: activeTab === "store" ? "80px" : "120px", // spacing for footer bar/floating player
             position: "relative",
+            marginTop: activeTab === "explore" ? "-122px" : "0px",
             zIndex: isProductModalOpen ? 4000 : "auto",
           }}
         >
           <ZineBackgroundFrame>
-            {/* Body header title */}
-            <div
-              className="zine-header-title-container"
-              style={{
-                padding: "16px 16px 8px 16px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                textAlign: "center",
-              }}
-            >
-              <h1 className="zine-title-large">
-                RADIO DOBLE C
-              </h1>
-              <div className="zine-subtitle-sticker">
-                Fucking good Shit
-              </div>
-            </div>
-
             {renderActiveView()}
           </ZineBackgroundFrame>
         </div>
@@ -195,8 +197,10 @@ export default function Home() {
           <ChatSidebar onClose={() => setChatSidebarOpen(false)} />
         )}
 
-        {/* Araña interactiva de Halloween */}
+        {/* Decoraciones y animaciones ambientales de Halloween */}
         <SpookySpider idleTimeoutMs={5000} />
+        <SpookyCobwebs opacity={0.55} allCorners={true} />
+        <SpookyBats count={5} />
       </div>
 
       {/* 3. PERSISTENT SPOTIFY-STYLE FOOTER PLAYER BAR OR FLOATING PLAYER */}
@@ -311,7 +315,7 @@ export default function Home() {
           onNavigateToExploreWithStyle={(style) => {
             setFilteredStyle(style);
             setSearchActive(false);
-            setActiveTab("explore");
+            handleTabChange("explore");
           }}
         />
       )}
@@ -333,7 +337,7 @@ export default function Home() {
         removeFromCart={removeFromCart}
         isAuthenticated={isAuthenticated}
         showToast={showToast}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         onCheckout={() => setCheckoutStep("shipping")}
       />
 

@@ -924,39 +924,41 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // 1. Acciones globales (registradas de forma estable en el store)
   useEffect(() => {
-    audioStore.setState({
-      playLiveStream,
-      playStation,
-      playSong,
-      playPastBroadcast,
-      playRadar,
-      togglePlayPause,
-      toggleMute,
-      seekToProgress,
-      seekBackMinutes,
-      seekToLiveEdge,
-      skipNext,
-      skipPrevious,
-      changeVolume,
-      toggleStationLike,
-      toggleSongFavorite,
-      addCurrentTrackToPlaylist,
-      deleteTrackFromPlaylist,
-      saveProfile,
-      updateUserRole,
-      addAlbum,
-      addPuntosC,
-      consumePuntosC,
-      addPunkPoints: addPuntosC,
-      consumePunkPoints: consumePuntosC,
-      requestVipSong,
-      skipToNextVipSong,
-      refreshProfile,
-      signOut,
-      signInWithGoogle,
-      selectTheme,
-      setIsSponsorModalOpen,
-      setActiveSponsorSlug,
+    queueMicrotask(() => {
+      audioStore.setState({
+        playLiveStream,
+        playStation,
+        playSong,
+        playPastBroadcast,
+        playRadar,
+        togglePlayPause,
+        toggleMute,
+        seekToProgress,
+        seekBackMinutes,
+        seekToLiveEdge,
+        skipNext,
+        skipPrevious,
+        changeVolume,
+        toggleStationLike,
+        toggleSongFavorite,
+        addCurrentTrackToPlaylist,
+        deleteTrackFromPlaylist,
+        saveProfile,
+        updateUserRole,
+        addAlbum,
+        addPuntosC,
+        consumePuntosC,
+        addPunkPoints: addPuntosC,
+        consumePunkPoints: consumePuntosC,
+        requestVipSong,
+        skipToNextVipSong,
+        refreshProfile,
+        signOut,
+        signInWithGoogle,
+        selectTheme,
+        setIsSponsorModalOpen,
+        setActiveSponsorSlug,
+      });
     });
   }, [
     playLiveStream,
@@ -993,46 +995,54 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // 2. Estado de reproducción de audio
   useEffect(() => {
-    audioStore.setState({
-      isPlaying,
-      currentTrack,
-      volume,
-      isMuted,
+    queueMicrotask(() => {
+      audioStore.setState({
+        isPlaying,
+        currentTrack,
+        volume,
+        isMuted,
+      });
     });
   }, [isPlaying, currentTrack, volume, isMuted]);
 
 
   // 5. Usuario, sesión y puntos
   useEffect(() => {
-    audioStore.setState({
-      isAuthenticated,
-      userProfile,
-      puntosC,
-      punkPoints: puntosC,
-      listenedSeconds,
+    queueMicrotask(() => {
+      audioStore.setState({
+        isAuthenticated,
+        userProfile,
+        puntosC,
+        punkPoints: puntosC,
+        listenedSeconds,
+      });
     });
   }, [isAuthenticated, userProfile, puntosC, listenedSeconds]);
 
   // 6. Colecciones y cola VIP
   useEffect(() => {
-    audioStore.setState({
-      stations,
-      programs,
-      pastBroadcasts,
-      songs,
-      albums,
-      playlistTracks,
-      vipQueue,
-      activeVipSong,
+    queueMicrotask(() => {
+      audioStore.setState({
+        stations,
+        programs,
+        pastBroadcasts,
+        songs,
+        albums,
+        playlistTracks,
+        vipQueue,
+        activeVipSong,
+      });
     });
   }, [stations, programs, pastBroadcasts, songs, albums, playlistTracks, vipQueue, activeVipSong]);
 
   // 7. Configuración de tema y auspiciadores
   useEffect(() => {
-    audioStore.setState({
-      activeTheme,
-      isSponsorModalOpen,
-      activeSponsorSlug,
+    queueMicrotask(() => {
+      audioStore.setState({
+        activeTheme,
+        isSponsorModalOpen,
+        activeSponsorSlug,
+      });
     });
   }, [activeTheme, isSponsorModalOpen, activeSponsorSlug]);
 

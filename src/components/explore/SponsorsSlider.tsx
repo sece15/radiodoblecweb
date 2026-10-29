@@ -95,7 +95,7 @@ export const SponsorsSlider = () => {
           flexDirection: "column",
           alignItems: "center",
           gap: "10px",
-          margin: "8px 0 16px 0",
+          margin: "0 0 16px 0",
         }}
       >
         <h3

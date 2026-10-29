@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { RADIO_BANNERS } from "@/constants/banners";
+import { RADIO_BANNERS, SHOW_SIDE_BANNERS } from "@/constants/banners";
 import styles from "./ExploreView.module.css";
 import { useAudio } from "@/hooks/useAudio";
 import { useShallow } from "zustand/react/shallow";
@@ -32,6 +32,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle, isChatOpen = fa
   const leftBannerRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (!SHOW_SIDE_BANNERS) return;
     const banner = bannerRef.current;
     const leftBanner = leftBannerRef.current;
     const content = contentRef.current;
@@ -148,7 +149,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle, isChatOpen = fa
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        padding: "20px 16px 180px 16px",
+        padding: "54px 16px 180px 16px",
         width: "100%",
         maxWidth: "768px",
         margin: "0 auto",
@@ -168,29 +169,35 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle, isChatOpen = fa
           {/* 2. SPONSOR & PARTNER LOGOS */}
           <SponsorsSlider />
         </div>
-        {(["left", "right"] as const).map((side) => (
-        <aside
-          key={side}
-          ref={side === "left" ? leftBannerRef : bannerRef}
-          className={`${styles.eventBanner} ${side === "left" ? styles.leftBanner : ""}`}
-          aria-label={`Evento destacado ${side === "left" ? "izquierdo" : "derecho"}`}
-        >
-          <a
-            href={featuredBanner.src}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Ampliar afiche de ${featuredBanner.title} (abre en otra pestaña)`}
+        {/* BANNERS LATERALES (COSTADOS IZQUIERDO Y DERECHO)
+            Actualmente ocultos a petición.
+            Para reactivarlos o cambiarlos en el futuro:
+            1. Cambiar SHOW_SIDE_BANNERS = true en '@/constants/banners'
+            2. Ajustar o añadir imágenes en RADIO_BANNERS
+        */}
+        {SHOW_SIDE_BANNERS && (["left", "right"] as const).map((side) => (
+          <aside
+            key={side}
+            ref={side === "left" ? leftBannerRef : bannerRef}
+            className={`${styles.eventBanner} ${side === "left" ? styles.leftBanner : ""}`}
+            aria-label={`Evento destacado ${side === "left" ? "izquierdo" : "derecho"}`}
           >
-            <Image
-              src={featuredBanner.src}
-              alt={featuredBanner.alt}
-              width={featuredBanner.width}
-              height={featuredBanner.height}
-              sizes="(max-width: 768px) calc(90vw - 29px), (min-width: 1232px) calc((100vw - 768px) / 2), 663px"
-              className={styles.eventImage}
-            />
-          </a>
-        </aside>
+            <a
+              href={featuredBanner.src}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Ampliar afiche de ${featuredBanner.title} (abre en otra pestaña)`}
+            >
+              <Image
+                src={featuredBanner.src}
+                alt={featuredBanner.alt}
+                width={featuredBanner.width}
+                height={featuredBanner.height}
+                sizes="(max-width: 768px) calc(90vw - 29px), (min-width: 1232px) calc((100vw - 768px) / 2), 663px"
+                className={styles.eventImage}
+              />
+            </a>
+          </aside>
         ))}
       </div>
 

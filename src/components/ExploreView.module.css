@@ -19,7 +19,7 @@
 .radioColumn {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
   min-width: 0;
   width: 100%;
 }

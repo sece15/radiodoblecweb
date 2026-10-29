@@ -21,6 +21,7 @@ interface HeaderProps {
   setCartOpen: (open: boolean) => void;
   cartCount: number;
   onOpenSpin?: () => void;
+  isScrolled?: boolean;
 }
 
 export const Header = ({
@@ -31,6 +32,7 @@ export const Header = ({
   setCartOpen,
   cartCount,
   onOpenSpin,
+  isScrolled = false,
 }: HeaderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -59,6 +61,7 @@ export const Header = ({
   const isStore = pathname === "/" && activeTab === "store";
   const isVipTab = pathname === "/" && activeTab === "vip";
   const isProfile = pathname === "/" && activeTab === "profile";
+  const isTransparent = isExplore && !isScrolled;
 
   // Navigation handler that works across routes
   const handleNavClick = (tab: ActiveTab) => {
@@ -103,16 +106,18 @@ export const Header = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "var(--background)",
-            borderBottom: "4px solid var(--primary)",
+            backgroundColor: isTransparent ? "transparent" : "var(--background)",
+            borderBottom: isTransparent ? "4px solid transparent" : "4px solid var(--primary)",
             padding: "10px 18px",
             height: "80px",
             width: "100%",
             position: "relative",
+            pointerEvents: isTransparent ? "none" : "auto",
+            transition: "background-color 0.25s ease, border-color 0.25s ease",
           }}
         >
           {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", pointerEvents: "auto" }}>
             <button
               onClick={() => setSearchActive(true)}
               className="neo-button fun-hover-wobble"
@@ -176,6 +181,7 @@ export const Header = ({
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
+              pointerEvents: "auto",
             }}
             title="Radio Doble C - Inicio"
           >
@@ -183,7 +189,7 @@ export const Header = ({
           </div>
 
           {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", pointerEvents: "auto" }}>
             {/* Rocola VIP Badge (Desktop) */}
             <button
               onClick={() => handleNavClick("vip")}

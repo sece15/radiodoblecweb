@@ -7,7 +7,14 @@ export interface RadioBanner {
   height: number;
 }
 
-// Ordered catalog shared by both sides. For now, display the first banner.
+/**
+ * Control de visualización de banners laterales (izquierdo y derecho en los costados de la web).
+ * Cambiar a true para reactivar los banners laterales cuando se requiera.
+ */
+export const SHOW_SIDE_BANNERS = false;
+
+// Catálogo ordenado de banners para los costados.
+// Sirve como referencia y plantilla para incorporar nuevos banners en el futuro.
 export const RADIO_BANNERS = [
   {
     id: "expo-anime-2026",
@@ -18,3 +25,4 @@ export const RADIO_BANNERS = [
     height: 1350,
   },
 ] as const satisfies readonly RadioBanner[];
+

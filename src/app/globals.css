@@ -1286,3 +1286,1088 @@ button {
   }
 }
 
+/* ==============================================================
+   HALLOWEEN THEME: TELARAÑAS EN LAS ESQUINAS (SpookyCobwebs)
+   ============================================================== */
+.spooky-cobweb-corner svg {
+  width: clamp(100px, 15vw, 190px);
+  height: clamp(100px, 15vw, 190px);
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 8px rgba(204, 255, 0, 0.12));
+  transition: opacity 0.3s ease;
+}
+
+.spooky-cobweb-tl {
+  transform-origin: top left;
+  animation: webSwayTL 8s ease-in-out infinite alternate;
+}
+
+.spooky-cobweb-tr {
+  transform-origin: top right;
+  animation: webSwayTR 9s ease-in-out infinite alternate;
+}
+
+.spooky-cobweb-bl {
+  transform-origin: bottom left;
+  animation: webSwayBL 8.5s ease-in-out infinite alternate;
+}
+
+.spooky-cobweb-br {
+  transform-origin: bottom right;
+  animation: webSwayBR 9.5s ease-in-out infinite alternate;
+}
+
+@keyframes webSwayTL {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(0.8deg) scale(1.02);
+  }
+}
+
+@keyframes webSwayTR {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(-0.8deg) scale(1.02);
+  }
+}
+
+@keyframes webSwayBL {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(0.8deg) scale(1.02);
+  }
+}
+
+@keyframes webSwayBR {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(-0.8deg) scale(1.02);
+  }
+}
+
+
+
+/* ==============================================================
+   HALLOWEEN THEME: MURCIÉLAGOS VOLANDO (SpookyBats)
+   ============================================================== */
+/* Trayectoria 1: Izquierda a Derecha (Vuelo ondulante alto) */
+@keyframes batFlyLtoR1 {
+  0% {
+    transform: translate3d(-100px, 12vh, 0) rotate(8deg);
+  }
+  20% {
+    transform: translate3d(20vw, 22vh, 0) rotate(16deg);
+  }
+  45% {
+    transform: translate3d(48vw, 9vh, 0) rotate(-10deg);
+  }
+  70% {
+    transform: translate3d(75vw, 24vh, 0) rotate(14deg);
+  }
+  90% {
+    transform: translate3d(95vw, 14vh, 0) rotate(-4deg);
+  }
+  100% {
+    transform: translate3d(108vw, 10vh, 0) rotate(2deg);
+  }
+}
+
+/* Trayectoria 2: Derecha a Izquierda (Swoop rápido intermedio) */
+@keyframes batFlyRtoL1 {
+  0% {
+    transform: translate3d(108vw, 26vh, 0) rotate(-12deg);
+  }
+  25% {
+    transform: translate3d(80vw, 15vh, 0) rotate(8deg);
+  }
+  50% {
+    transform: translate3d(52vw, 32vh, 0) rotate(-16deg);
+  }
+  75% {
+    transform: translate3d(25vw, 12vh, 0) rotate(12deg);
+  }
+  100% {
+    transform: translate3d(-100px, 20vh, 0) rotate(-6deg);
+  }
+}
+
+/* Trayectoria 3: Izquierda a Derecha (Descenso profundo y subida) */
+@keyframes batFlyLtoR2 {
+  0% {
+    transform: translate3d(-120px, 38vh, 0) rotate(15deg);
+  }
+  30% {
+    transform: translate3d(32vw, 58vh, 0) rotate(18deg);
+  }
+  55% {
+    transform: translate3d(60vw, 34vh, 0) rotate(-18deg);
+  }
+  80% {
+    transform: translate3d(82vw, 44vh, 0) rotate(8deg);
+  }
+  100% {
+    transform: translate3d(108vw, 26vh, 0) rotate(-10deg);
+  }
+}
+
+/* Trayectoria 4: Derecha a Izquierda (Murciélago lejano en zona alta) */
+@keyframes batFlyRtoL2 {
+  0% {
+    transform: translate3d(108vw, 5vh, 0) rotate(-6deg);
+  }
+  30% {
+    transform: translate3d(70vw, 12vh, 0) rotate(10deg);
+  }
+  65% {
+    transform: translate3d(35vw, 4vh, 0) rotate(-12deg);
+  }
+  100% {
+    transform: translate3d(-80px, 8vh, 0) rotate(4deg);
+  }
+}
+
+/* Trayectoria 5: Izquierda a Derecha (Onda veloz diagonal) */
+@keyframes batFlyLtoR3 {
+  0% {
+    transform: translate3d(-100px, 18vh, 0) rotate(12deg);
+  }
+  35% {
+    transform: translate3d(38vw, 30vh, 0) rotate(14deg);
+  }
+  65% {
+    transform: translate3d(68vw, 14vh, 0) rotate(-14deg);
+  }
+  100% {
+    transform: translate3d(108vw, 28vh, 0) rotate(8deg);
+  }
+}
+
+/* Micro-oscilación vertical del cuerpo al aletear */
+@keyframes batBodyBob {
+  0%, 100% {
+    transform: translateY(-1.5px);
+  }
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+
+/* Aleteo ala izquierda */
+@keyframes batWingFlapL {
+  0%, 100% {
+    transform: rotate(26deg) scaleY(0.72);
+  }
+  50% {
+    transform: rotate(-24deg) scaleY(1.08);
+  }
+}
+
+/* Aleteo ala derecha */
+@keyframes batWingFlapR {
+  0%, 100% {
+    transform: rotate(-26deg) scaleY(0.72);
+  }
+  50% {
+    transform: rotate(24deg) scaleY(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spooky-bat-carrier {
+    animation: none !important;
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   MASCOT HERO BANNER (RADIO DOBLE C MASCOT ANIMATION)
+   ========================================================================== */
+
+.mascot-hero-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  /* Espaciado superior compacto para subir personaje y card */
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Contenedor de escenario de la mascota (asomándose con rostro y expresión amigable) */
+.mascot-stage-container {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 350px;
+  height: auto;
+  z-index: 5;
+  margin-bottom: -90px; /* Sube la cabeza para mostrar nariz y borde de la boca con colmillos, menos misterioso */
+  pointer-events: none;
+}
+
+/* Wrapper del personaje con estados interactivos */
+.mascot-character-wrapper {
+  position: relative;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  transform-origin: center bottom;
+  transition: transform 0.85s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.5s ease;
+}
+
+.mascot-character-wrapper:hover {
+  filter: brightness(1.04);
+}
+
+.mascot-character-wrapper:active {
+  transform: scale(0.96);
+}
+
+/* Estado 1: Asomándose cómodamente (Intro) */
+.mascot-character-wrapper.mascot-peeking {
+  transform: translateY(12px) scale(0.97);
+  opacity: 0.98;
+}
+
+/* Estado 2: Elevado y despegado completamente en el aire */
+.mascot-character-wrapper.mascot-revealed {
+  transform: translateY(0px) scale(1);
+  opacity: 1;
+}
+
+/* Estado 3: Levitación suave en el aire (Idle Float) */
+.mascot-character-wrapper.mascot-revealed.mascot-hovering {
+  animation: mascotHover 3.4s ease-in-out infinite;
+}
+
+/* Estado 4: Groove rítmico de lado a lado al ritmo de la música (Sin arriba/abajo) */
+.mascot-character-wrapper.mascot-revealed.mascot-beating {
+  animation: mascotGrooveSide 1.25s ease-in-out infinite;
+}
+
+/* Elevación y slam coordinado al hacer clic (1.4s total) */
+.mascot-character-wrapper.mascot-clicked-jump {
+  animation: mascotJump 1.4s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* ==========================================================================
+   ALAS ARTICULADAS QUE SALEN Y ALETEAN CONTINUAMENTE
+   ========================================================================== */
+
+.mascot-wings-layer {
+  position: absolute;
+  top: 84px; /* Bajadas ligeramente para que nazcan a la altura de los hombros/mejillas */
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(430px, 62vw, 530px); /* Envergadura más amplia e imponente */
+  height: 210px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mascot-wing-socket {
+  position: relative;
+  display: flex;
+  align-items: center;
+  transition: transform 0.4s ease;
+}
+
+.mascot-wing-left-socket {
+  justify-content: flex-start;
+  transform-origin: 88% 78%;
+}
+
+.mascot-wing-right-socket {
+  justify-content: flex-end;
+  transform-origin: 12% 78%;
+}
+
+/* Micro-interacción suave al pasar el cursor (Hover) */
+.mascot-character-wrapper:hover .mascot-wing-left-socket {
+  transform: rotate(-4deg);
+}
+
+.mascot-character-wrapper:hover .mascot-wing-right-socket {
+  transform: rotate(4deg);
+}
+
+/* Estado plegado durante el asomo */
+.mascot-wing-socket.wing-folded {
+  opacity: 0;
+  transform: scale(0.18) translateY(55px);
+  transition: transform 0.75s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.5s ease;
+}
+
+/* Estado desplegado al despegar la mascota */
+.mascot-wing-socket.wing-deployed {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: transform 0.85s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.5s ease;
+}
+
+.mascot-wing-graphic {
+  width: clamp(165px, 24vw, 215px); /* Alas más grandes y llamativas */
+  height: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+  transition: filter 0.3s ease;
+}
+
+/* Aleteo dinámico en el salto sin crecer (scale: 1 constante) */
+.mascot-wing-left.wing-burst-left {
+  transform-origin: 88% 78%;
+  animation: wingBurstL 1.5s ease-in-out forwards !important;
+}
+
+.mascot-wing-right.wing-burst-right {
+  transform-origin: 12% 78%;
+  animation: wingBurstR 1.5s ease-in-out forwards !important;
+}
+
+/* Aleteo continuo en vuelo Idle */
+.mascot-wing-left.wing-flapping-left {
+  transform-origin: 88% 78%;
+  animation: wingFlapL 2.8s ease-in-out infinite;
+}
+
+.mascot-wing-right.wing-flapping-right {
+  transform-origin: 12% 78%;
+  animation: wingFlapR 2.8s ease-in-out infinite;
+}
+
+/* Aleteo rítmico coordinado de lado a lado con la música */
+.mascot-wing-left.wing-beating-left {
+  transform-origin: 88% 78%;
+  animation: wingBeatL 1.25s ease-in-out infinite;
+}
+
+.mascot-wing-right.wing-beating-right {
+  transform-origin: 12% 78%;
+  animation: wingBeatR 1.25s ease-in-out infinite;
+}
+
+/* Rostro completo sin recortes (100% visible) */
+.mascot-body-box {
+  position: relative;
+  z-index: 3;
+  width: clamp(260px, 44vw, 340px);
+  max-height: none;
+  overflow: visible;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.mascot-image-asset {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Ondas sonoras de los audífonos DJ */
+.mascot-soundwaves {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 120px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wave-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(204, 255, 0, 0.55);
+  border-radius: 50%;
+  opacity: 0;
+  animation: headphoneWave 1.6s ease-out infinite;
+}
+
+.wave-ring-1 {
+  width: 160px;
+  height: 70px;
+  animation-delay: 0s;
+}
+
+.wave-ring-2 {
+  width: 210px;
+  height: 90px;
+  animation-delay: 0.5s;
+}
+
+.wave-ring-3 {
+  width: 260px;
+  height: 110px;
+  animation-delay: 1s;
+}
+
+/* Bocadillo de cómic flotante en la frente de la mascota */
+.mascot-speech-bubble {
+  position: absolute;
+  top: 165px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #CCFF00;
+  color: #0b0e06;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: 'Space Grotesk', -apple-system, sans-serif;
+  font-weight: 900;
+  font-size: clamp(0.74rem, 1.8vw, 0.92rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 60;
+  pointer-events: none;
+  animation: comicBubblePop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.mascot-speech-arrow {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 9px solid #000000;
+}
+
+/* ==========================================================================
+   CARTEL NEO-BRUTALISTA (MIDDLE & FRONT LAYER)
+   ========================================================================== */
+
+.mascot-banner-card {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #CCFF00;
+  border: 3.5px solid #000000;
+  box-shadow: 6px 6px 0px #000000;
+  border-radius: 12px;
+  padding: 16px 28px 14px 28px;
+  max-width: 520px;
+  width: 92%;
+  margin: 0 auto;
+  text-align: center;
+  transform: rotate(-0.5deg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mascot-banner-card:hover {
+  transform: rotate(0deg) translateY(-2px);
+  box-shadow: 8px 8px 0px #000000;
+}
+
+/* Impacto físico y shockwave eléctrico sobre el cartel (Opciones 1 + 2) */
+.mascot-banner-card.card-electric-impact,
+.card-electric-impact {
+  animation: cardSlamImpact 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes cardSlamImpact {
+  0%, 30% {
+    transform: rotate(-1deg) translateY(0px);
+    box-shadow: 6px 6px 0px var(--primary, #000000);
+  }
+  38% {
+    /* Golpe físico de las garras hacia abajo */
+    transform: rotate(-1.5deg) translateY(6px);
+    box-shadow: 6px 10px 0px var(--primary, #000000);
+  }
+  46% {
+    /* Destello eléctrico y shockwave neón sobre el cartel */
+    transform: rotate(-0.5deg) translateY(3px);
+    box-shadow: 0 0 35px rgba(204, 255, 0, 0.95), 0 0 60px rgba(57, 255, 20, 0.6), 6px 9px 0px var(--primary, #000000);
+  }
+  58% {
+    transform: rotate(-1.2deg) translateY(2px);
+    box-shadow: 0 0 24px rgba(204, 255, 0, 0.7), 6px 8px 0px var(--primary, #000000);
+  }
+  74% {
+    transform: rotate(-0.8deg) translateY(1px);
+    box-shadow: 0 0 12px rgba(204, 255, 0, 0.4), 6px 7px 0px var(--primary, #000000);
+  }
+  100% {
+    transform: rotate(-1deg) translateY(0px);
+    box-shadow: 6px 6px 0px var(--primary, #000000);
+  }
+}
+
+/* Capa de rayos y arcos eléctricos sobre el cartel */
+.mascot-electric-sparks-layer {
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 90px;
+  pointer-events: none;
+  z-index: 28;
+  overflow: visible;
+}
+
+.electric-lightning-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.spark-path {
+  fill: none;
+  stroke: #CCFF00;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: bevel;
+  filter: drop-shadow(0 0 8px #CCFF00) drop-shadow(0 0 16px #00FF66);
+  opacity: 0;
+}
+
+.spark-path-1 {
+  animation: sparkFlash1 1.4s ease-out forwards;
+}
+
+.spark-path-2 {
+  animation: sparkFlash2 1.4s ease-out forwards;
+}
+
+.spark-path-3 {
+  animation: sparkFlash3 1.4s ease-out forwards;
+}
+
+.spark-path-4 {
+  animation: sparkFlash4 1.4s ease-out forwards;
+}
+
+.spark-path-center {
+  stroke: #ffffff;
+  stroke-width: 4;
+  animation: sparkFlashCenter 1.4s ease-out forwards;
+}
+
+@keyframes sparkFlash1 {
+  0%, 34% { opacity: 0; }
+  38% { opacity: 1; }
+  44% { opacity: 0.15; }
+  50% { opacity: 1; }
+  62% { opacity: 0.7; }
+  75% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes sparkFlash2 {
+  0%, 36% { opacity: 0; }
+  40% { opacity: 1; }
+  46% { opacity: 0.25; }
+  52% { opacity: 0.9; }
+  64% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes sparkFlash3 {
+  0%, 35% { opacity: 0; }
+  38% { opacity: 1; }
+  44% { opacity: 0.15; }
+  50% { opacity: 1; }
+  62% { opacity: 0.6; }
+  75% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes sparkFlash4 {
+  0%, 37% { opacity: 0; }
+  42% { opacity: 1; }
+  48% { opacity: 0.2; }
+  56% { opacity: 0.85; }
+  68% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes sparkFlashCenter {
+  0%, 36% { opacity: 0; }
+  39% { opacity: 1; stroke: #ffffff; }
+  45% { opacity: 0.35; }
+  51% { opacity: 1; stroke: #CCFF00; }
+  66% { opacity: 0.8; }
+  82% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* ==========================================================================
+   GARRITAS QUE SALEN AL ASOMARSE Y SE ESCONDEN AL DESPEGAR
+   ========================================================================== */
+
+.mascot-paws-anchor {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16%;
+  pointer-events: none;
+  z-index: 25;
+  transition: transform 0.6s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.45s ease;
+}
+
+/* Las garras salen y se plantan en el borde superior del cartel */
+.mascot-paws-anchor.paws-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Las garras se repliegan y se esconden detrás del cartel al despegar */
+.mascot-paws-anchor.paws-hidden {
+  opacity: 0;
+  transform: translateY(32px) scale(0.65);
+}
+
+.mascot-paw-wrapper {
+  width: clamp(58px, 8.5vw, 78px);
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+}
+
+.mascot-paw-left {
+  transform-origin: top center;
+  animation: pawGripL 3.4s ease-in-out infinite;
+}
+
+.mascot-paw-right {
+  transform-origin: top center;
+  animation: pawGripR 3.4s ease-in-out infinite;
+}
+
+/* Toque rítmico de garritas con la música (Beat tap) */
+.mascot-paw-left.paw-tapping-left {
+  animation: pawTapL 1.25s ease-in-out infinite;
+}
+
+.mascot-paw-right.paw-tapping-right {
+  animation: pawTapR 1.25s ease-in-out infinite;
+}
+
+.mascot-paw-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Garras coordinadas en el salto y slam (Opciones 1 + 2) */
+.mascot-paws-anchor.paws-clicked-slam {
+  animation: pawsJumpSlam 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes pawsJumpSlam {
+  0% {
+    transform: translateY(0px);
+  }
+  14% {
+    /* Las garras se elevan junto a la mascota preparándose para el zarpazo */
+    transform: translateY(-20px);
+  }
+  24% {
+    /* Pico del salto: garras elevadas con la cabeza */
+    transform: translateY(-30px);
+  }
+  38% {
+    /* ¡SLAM! Clavan las uñas en el borde superior del cartel */
+    transform: translateY(5px);
+  }
+  48% {
+    transform: translateY(3px);
+  }
+  60% {
+    transform: translateY(2px);
+  }
+  80% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Efecto eléctrico en cada garra individual */
+.mascot-paw-wrapper.paw-claw-electric {
+  animation: pawElectricSurge 1.4s ease-out forwards;
+}
+
+@keyframes pawElectricSurge {
+  0%, 15% {
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+    transform: scale(1);
+  }
+  22% {
+    transform: scale(1.1);
+  }
+  38% {
+    /* Al clavar las garras en el cartel se dispara la descarga */
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 18px #CCFF00) drop-shadow(0 0 35px #00FF66) brightness(1.35);
+  }
+  48% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 26px #CCFF00) drop-shadow(0 0 45px #39FF14) brightness(1.45);
+  }
+  60% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 16px #CCFF00) drop-shadow(0 0 28px #00FF66) brightness(1.25);
+  }
+  76% {
+    filter: drop-shadow(0 0 10px #CCFF00) drop-shadow(0 0 18px #00FF66) brightness(1.12);
+  }
+  100% {
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+    transform: scale(1);
+  }
+}
+
+/* Título de Radio Doble C */
+.mascot-banner-title {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(2.1rem, 6.2vw, 3.4rem);
+  font-weight: 900;
+  color: #0b0e06;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  margin: 0;
+  padding: 0;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.4);
+}
+
+/* Subtítulo Badge Pill */
+.mascot-banner-subtitle-badge {
+  background-color: #0e1208;
+  color: #CCFF00;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 900;
+  font-size: clamp(0.72rem, 1.8vw, 0.92rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 16px;
+  border-radius: 6px;
+  margin-top: 5px;
+  box-shadow: 2px 2px 0px #000000;
+  transform: rotate(-1deg);
+}
+
+/* ==========================================================================
+   KEYFRAME ANIMATIONS
+   ========================================================================== */
+
+/* Levitación Idle suave */
+@keyframes mascotHover {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-0.5deg);
+  }
+}
+
+/* Balanceo rítmico de cabeza de un lado a otro con música (0% arriba/abajo) */
+@keyframes mascotGrooveSide {
+  0%, 100% {
+    transform: translateX(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-5px) rotate(-3.5deg);
+  }
+  50% {
+    transform: translateX(0px) rotate(0deg);
+  }
+  75% {
+    transform: translateX(5px) rotate(3.5deg);
+  }
+}
+
+/* Toque rítmico de garritas sobre el cartel con la música */
+@keyframes pawTapL {
+  0%, 50%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-4px) rotate(-3deg);
+  }
+}
+
+@keyframes pawTapR {
+  0%, 50%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-4px) rotate(3deg);
+  }
+}
+
+/* Salto coordinado con zarpazo, slam y descarga eléctrica (Opciones 1 + 2 combinadas) */
+@keyframes mascotJump {
+  0% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+  }
+  14% {
+    /* Sube con anticipación (-22px) */
+    transform: translateY(-22px) scale(1.03) rotate(-2deg);
+  }
+  24% {
+    /* Pico del salto: asoma la boca abierta y colmillos en el zarpazo (-36px) */
+    transform: translateY(-36px) scale(1.05) rotate(1.5deg);
+  }
+  38% {
+    /* ¡SLAM hacia abajo! Cae con fuerza sobre el cartel */
+    transform: translateY(5px) scale(1.02) rotate(-0.5deg);
+  }
+  48% {
+    /* Micro-vibración con la descarga eléctrica */
+    transform: translateY(3px) scale(1.02) rotate(0.6deg);
+  }
+  56% {
+    transform: translateY(4px) scale(1.01) rotate(-0.6deg);
+  }
+  68% {
+    transform: translateY(2px) scale(1.01) rotate(0.3deg);
+  }
+  84% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+  }
+  100% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+  }
+}
+
+/* Aleteo continuo del ala izquierda */
+@keyframes wingFlapL {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  30% {
+    transform: rotate(-9deg) scaleY(1.07) scaleX(0.97);
+  }
+  65% {
+    transform: rotate(6deg) scaleY(0.94) scaleX(1.03);
+  }
+}
+
+/* Aleteo continuo del ala derecha */
+@keyframes wingFlapR {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  30% {
+    transform: rotate(9deg) scaleY(1.07) scaleX(0.97);
+  }
+  65% {
+    transform: rotate(-6deg) scaleY(0.94) scaleX(1.03);
+  }
+}
+
+/* Aleteo rítmico coordinado con el balanceo de cabeza */
+@keyframes wingBeatL {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes wingBeatR {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
+  75% {
+    transform: rotate(12deg);
+  }
+}
+
+/* Gran aleteo energético al hacer clic (sin crecer de escala) */
+@keyframes wingBurstL {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  18% {
+    transform: scale(1) rotate(-26deg);
+  }
+  38% {
+    transform: scale(1) rotate(10deg);
+  }
+  58% {
+    transform: scale(1) rotate(-22deg);
+  }
+  76% {
+    transform: scale(1) rotate(6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes wingBurstR {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  18% {
+    transform: scale(1) rotate(26deg);
+  }
+  38% {
+    transform: scale(1) rotate(-10deg);
+  }
+  58% {
+    transform: scale(1) rotate(22deg);
+  }
+  76% {
+    transform: scale(1) rotate(-6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Flexión sutil de las patas sobre el cartel */
+@keyframes pawGripL {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.04) rotate(-2deg);
+  }
+}
+
+@keyframes pawGripR {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.04) rotate(2deg);
+  }
+}
+
+/* Ondas sonoras de audífonos */
+@keyframes headphoneWave {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* Aparición de bocadillo de cómic pop */
+@keyframes comicBubblePop {
+  0% {
+    transform: translate(-50%, 14px) scale(0.35) rotate(-5deg);
+    opacity: 0;
+  }
+  70% {
+    transform: translate(-50%, -3px) scale(1.08) rotate(1.5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1) rotate(-0.5deg);
+    opacity: 1;
+  }
+}
+
+/* Ajustes Responsive en Móviles */
+@media (max-width: 640px) {
+  .mascot-hero-section {
+    margin: 0 auto;
+  }
+
+  .mascot-stage-container {
+    min-height: 290px;
+    height: auto;
+    margin-bottom: -64px; /* Sube la cabeza en móviles mostrando nariz y expresión amigable */
+  }
+
+  .mascot-speech-bubble {
+    top: 115px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+  }
+
+  .mascot-wings-layer {
+    width: clamp(320px, 94vw, 420px);
+    top: 58px;
+  }
+
+  .mascot-wing-graphic {
+    width: clamp(135px, 34vw, 175px);
+  }
+
+  .mascot-banner-card {
+    padding: 12px 18px 10px 18px;
+    border-width: 3px;
+    box-shadow: 4px 4px 0px #000000;
+  }
+
+  .mascot-paws-anchor {
+    top: -18px;
+    padding: 0 12%;
+  }
+
+  .mascot-paw-wrapper {
+    width: clamp(48px, 13vw, 64px);
+  }
+
+  .mascot-body-box {
+    width: clamp(220px, 66vw, 290px);
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+
+
+
