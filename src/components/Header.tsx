@@ -22,6 +22,7 @@ interface HeaderProps {
   cartCount: number;
   onOpenSpin?: () => void;
   isScrolled?: boolean;
+  isChatOpen?: boolean;
 }
 
 export const Header = ({
@@ -33,6 +34,7 @@ export const Header = ({
   cartCount,
   onOpenSpin,
   isScrolled = false,
+  isChatOpen = false,
 }: HeaderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -189,7 +191,10 @@ export const Header = ({
           </div>
 
           {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", pointerEvents: "auto" }}>
+          <div
+            className={isChatOpen && isTransparent ? "header-chat-dock-open" : ""}
+            style={{ display: "flex", alignItems: "center", gap: "10px", pointerEvents: "auto" }}
+          >
             {/* Rocola VIP Badge (Desktop) */}
             <button
               onClick={() => handleNavClick("vip")}

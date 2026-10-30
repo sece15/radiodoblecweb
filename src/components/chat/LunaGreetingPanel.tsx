@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import type { LunaGreetingsController } from "@/hooks/useLunaGreetings";
 import { greetingRecipient, LUNA_GREETING_STATUSES } from "@/lib/lunaGreetings";
 import { CHAT_COMMAND_BACKGROUND, CHAT_COMMAND_COLOR } from "@/lib/chatCommands";
@@ -11,6 +12,15 @@ interface Props {
   senderName: string;
   active: boolean;
   authenticated: boolean;
+  onDismiss?: () => void;
+}
+
+function cleanLunaNotice(text: string): string {
+  if (!text) return "";
+  if (/el pepe/i.test(text)) {
+    return "Usa /saludos. No se cobró.";
+  }
+  return text;
 }
 
 function formatCooldown(sec: number): string {
@@ -19,7 +29,7 @@ function formatCooldown(sec: number): string {
   return `${m}:${s < 10 ? "0" : ""}${s} min`;
 }
 
-export function LunaGreetingPanel({ luna, messageText, senderName, active, authenticated }: Props) {
+export function LunaGreetingPanel({ luna, messageText, senderName, active, authenticated, onDismiss }: Props) {
   const open = luna?.open;
   const connected = luna?.connected;
   const pendingPhase = luna?.pending?.phase;
@@ -73,13 +83,17 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
   const receptionClosed = options?.accepting === false;
   const recipient = greetingRecipient(messageText, senderName);
   const enteredRecipient = greetingRecipient(messageText, "");
-  const textLength = Array.from(enteredRecipient.normalize("NFC")).length;
+  const trimmedRecipient = enteredRecipient.trim();
+  const wordsCount = trimmedRecipient ? trimmedRecipient.split(/\s+/).filter(Boolean).length : 0;
+  const textLength = Array.from(trimmedRecipient.normalize("NFC")).length;
   const messageTooLong = textLength > 140;
+  const recipientTooLong = textLength > 40;
+  const recipientTooManyWords = wordsCount > 5;
   const missing = options && luna.balance !== null ? Math.max(0, options.price - luna.balance) : null;
   const waiting = pending?.phase === "sending";
   const uncertain = pending?.phase === "unknown" && pending.messageText === messageText;
   const disabled = !authenticated || !luna.connected || luna.checking || waiting || uncertain ||
-    !options?.accepting || missing === null || missing > 0 || messageTooLong;
+    !options?.accepting || missing === null || missing > 0 || messageTooLong || recipientTooLong || recipientTooManyWords;
 
   return (
     <div style={{ fontSize: "0.68rem", lineHeight: "1rem", marginTop: "5px" }}>
@@ -90,11 +104,38 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
               <span style={{ color: CHAT_COMMAND_COLOR, backgroundColor: CHAT_COMMAND_BACKGROUND, borderRadius: "3px", padding: "1px 5px", fontSize: "0.65rem" }}>/saludos</span>
               {" "}Luna ✨
             </span>
-            {options && (
-              <span style={{ fontSize: "0.68rem", fontWeight: 900, color: CHAT_COMMAND_COLOR }}>
-                {options.price} {options.currency}
-              </span>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {options && (
+                <span style={{ fontSize: "0.68rem", fontWeight: 900, color: CHAT_COMMAND_COLOR }}>
+                  {options.price} {options.currency}
+                </span>
+              )}
+              {onDismiss && (
+                <button
+                  type="button"
+                  onClick={onDismiss}
+                  title="Borrar y cerrar saludo"
+                  aria-label="Borrar y cerrar saludo"
+                  style={{
+                    backgroundColor: "#111111",
+                    color: "#ffffff",
+                    border: "1px solid #000000",
+                    borderRadius: "3px",
+                    padding: "2px 6px",
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "3px",
+                    boxShadow: "1px 1px 0px #000000",
+                  }}
+                >
+                  <X size={10} />
+                  <span>BORRAR</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {receptionClosed ? (
@@ -106,6 +147,16 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
               <p style={{ margin: "2px 0 3px", fontSize: "0.66rem", overflowWrap: "anywhere" }}>
                 Para: <strong>{recipient || "quien tú quieras"}</strong> · De: <strong>{senderName}</strong>
               </p>
+              {recipientTooLong && (
+                <p role="status" style={{ color: "#ef4444", margin: "2px 0", fontSize: "0.63rem", fontWeight: 700 }}>
+                  El nombre debe tener hasta 40 letras ({textLength}/40 letras).
+                </p>
+              )}
+              {recipientTooManyWords && (
+                <p role="status" style={{ color: "#ef4444", margin: "2px 0", fontSize: "0.63rem", fontWeight: 700 }}>
+                  El nombre debe tener como máximo 5 palabras ({wordsCount}/5 palabras).
+                </p>
+              )}
               {messageTooLong && (
                 <p role="status" style={{ color: "#ef4444", margin: "2px 0", fontSize: "0.63rem", fontWeight: 700 }}>
                   El saludo es muy largo ({textLength}/140 caracteres).
@@ -166,8 +217,28 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
                 >
                   {waiting ? "Enviando…" : luna.checking ? "Consultando…" :
                     options && !options.accepting ? "Fuera de horario" :
-                    options ? `ENVIAR · ${options.price} ${options.currency}` : "Precio no disponible"}
+                      options ? `ENVIAR · ${options.price} ${options.currency}` : "Precio no disponible"}
                 </button>
+                {onDismiss && (
+                  <button
+                    type="button"
+                    className="neo-button"
+                    onClick={onDismiss}
+                    title="Borrar texto del saludo"
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "0.65rem",
+                      fontWeight: 800,
+                      backgroundColor: "#222222",
+                      color: "#ffffff",
+                      cursor: "pointer",
+                      boxShadow: "1.5px 1.5px 0px #111111",
+                      flexShrink: 0,
+                    }}
+                  >
+                    🗑️ Borrar
+                  </button>
+                )}
                 {!luna.checking && !waiting && !uncertain && authenticated && (
                   <button
                     type="button"
@@ -209,7 +280,10 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
             <button
               type="button"
               className="neo-button"
-              onClick={() => luna.discardPending()}
+              onClick={() => {
+                luna.discardPending();
+                onDismiss?.();
+              }}
               style={{ padding: "4px 8px", fontSize: "0.65rem", fontWeight: 800, backgroundColor: "#222222", color: "#ffffff", boxShadow: "1.5px 1.5px 0px #111111" }}
             >
               🗑️ Borrar
@@ -219,7 +293,7 @@ export function LunaGreetingPanel({ luna, messageText, senderName, active, authe
       )}
       {luna.notice && (
         <p role="status" aria-live="polite" style={{ margin: "4px 0 0", fontSize: "0.65rem", color: "#facc15", overflowWrap: "anywhere" }}>
-          {luna.notice}
+          {cleanLunaNotice(luna.notice)}
         </p>
       )}
     </div>

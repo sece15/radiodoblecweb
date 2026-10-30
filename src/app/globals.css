@@ -367,6 +367,24 @@ button {
   z-index: 90;
 }
 
+/* En desktop, anclamos el bloque del header directamente sobre el sidebar del chat para evitar el vacío superior */
+@media (min-width: 769px) {
+  .header-chat-dock-open {
+    width: 360px !important;
+    height: 80px !important;
+    margin-right: -18px !important;
+    margin-top: -10px !important;
+    margin-bottom: -10px !important;
+    padding-right: 18px !important;
+    padding-left: 16px !important;
+    justify-content: flex-end !important;
+    border-left: 4px solid var(--primary) !important;
+    border-bottom: 4px solid var(--primary) !important;
+    background-color: var(--background) !important;
+    box-sizing: border-box !important;
+  }
+}
+
 @media (max-width: 768px) {
   .chat-sidebar-container {
     position: absolute;

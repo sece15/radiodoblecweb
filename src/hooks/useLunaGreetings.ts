@@ -13,6 +13,14 @@ interface Props {
   send: (messageText: string, requestId: string) => boolean;
 }
 
+function sanitizeGreetingNotice(msg: string): string {
+  if (!msg) return "";
+  if (/el pepe/i.test(msg)) {
+    return "Usa /saludos. No se cobró.";
+  }
+  return msg;
+}
+
 export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
   const [options, setOptions] = useState<LunaGreetingOptions | null>(null);
   const [optionsError, setOptionsError] = useState("");
@@ -121,8 +129,9 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
 
   const receiveResult = useCallback((result: LunaGreetingResult) => {
     if (!result || typeof result.message !== "string") return;
+    const cleanMsg = sanitizeGreetingNotice(result.message);
     if (result.informational) {
-      setNotice(result.message);
+      setNotice(cleanMsg);
       return;
     }
     const current = pendingRef.current;
@@ -130,7 +139,7 @@ export function useLunaGreetings({ userId, refreshProfile, send }: Props) {
     if (result.requestId && result.requestId !== current.requestId) return;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
-    setNotice(result.message);
+    setNotice(cleanMsg);
     if (result.status === "unknown") {
       savePending({ ...current, phase: "unknown" });
     } else if (result.success === true) {

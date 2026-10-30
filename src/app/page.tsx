@@ -163,6 +163,7 @@ export default function Home() {
           cartCount={cartCount}
           onOpenSpin={() => setSpinModalOpen(true)}
           isScrolled={isScrolled}
+          isChatOpen={isChatSidebarOpen}
         />
       )}
 

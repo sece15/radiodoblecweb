@@ -161,6 +161,12 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     });
   }, []);
 
+  const handleDismissGreeting = () => {
+    richInputRef.current?.clear();
+    setTypedMessage("");
+    lunaGreetings?.discardPending();
+  };
+
   const handleSend = () => {
     const raw = richInputRef.current?.getText() || typedMessage;
     const trimmed = raw.trim();
@@ -1273,8 +1279,14 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 <Send size={12} />
               </button>
             </div>
-            <LunaGreetingPanel luna={lunaGreetings} messageText={typedMessage} senderName={userProfile.name}
-              active={greetingActive} authenticated={isAuthenticated} />
+            <LunaGreetingPanel
+              luna={lunaGreetings}
+              messageText={typedMessage}
+              senderName={userProfile.name}
+              active={greetingActive}
+              authenticated={isAuthenticated}
+              onDismiss={handleDismissGreeting}
+            />
           </div>
         )}
       </div>
