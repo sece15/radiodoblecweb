@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
+import Script from "next/script";
 import "./globals.css";
 import { AudioProvider } from "@/context/AudioContext";
 import { ChatSync } from "@/components/chat/ChatSync";
@@ -179,9 +180,9 @@ export default function RootLayout({
   return (
     <html lang="es" data-theme="PUNK_NEON" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <script
+        <Script
           id="anti-extension-error-suppression"
-          suppressHydrationWarning
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined') {

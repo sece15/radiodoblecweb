@@ -28,9 +28,6 @@ import { VinylSpinModal } from "@/components/tools/VinylSpinModal";
 import { SponsorOrderModal } from "@/components/sponsors/SponsorOrderModal";
 import { LiveDropNotification } from "@/components/common/LiveDropNotification";
 import { useGamification } from "@/hooks/useGamification";
-import { SpookySpider } from "@/components/halloween/SpookySpider";
-import { SpookyCobwebs } from "@/components/halloween/SpookyCobwebs";
-import { SpookyBats } from "@/components/halloween/SpookyBats";
 import { useShallow } from "zustand/react/shallow";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
@@ -197,11 +194,6 @@ export default function Home() {
         {isChatSidebarOpen && (
           <ChatSidebar onClose={() => setChatSidebarOpen(false)} />
         )}
-
-        {/* Decoraciones y animaciones ambientales de Halloween */}
-        <SpookySpider idleTimeoutMs={5000} />
-        <SpookyCobwebs opacity={0.55} allCorners={true} />
-        <SpookyBats count={5} />
       </div>
 
       {/* 3. PERSISTENT SPOTIFY-STYLE FOOTER PLAYER BAR OR FLOATING PLAYER */}

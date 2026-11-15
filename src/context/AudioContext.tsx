@@ -251,6 +251,10 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       authenticatedUserIdRef.current = session?.user.id ?? null;
       if (session && session.user) {
         setIsAuthenticated(true);
+        if (typeof window !== "undefined" && session.provider_token) {
+          sessionStorage.setItem("google_provider_token", session.provider_token);
+          localStorage.setItem("google_provider_token", session.provider_token);
+        }
         const meta = session.user.user_metadata || {};
         const fallbackName = meta.full_name || session.user.email?.split("@")[0] || "Oyente";
         const fallbackAvatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/png?seed=${fallbackName}`;
@@ -304,6 +308,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         });
         if (typeof window !== "undefined") {
           localStorage.removeItem("user_profile");
+          sessionStorage.removeItem("google_provider_token");
+          localStorage.removeItem("google_provider_token");
         }
       }
     };
@@ -867,6 +873,10 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [setActiveTheme]);
 
   const signOut = useCallback(async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("google_provider_token");
+      localStorage.removeItem("google_provider_token");
+    }
     if (supabase) {
       await supabase.auth.signOut();
     }
@@ -880,6 +890,11 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         options: {
           redirectTo: window.location.origin,
           skipBrowserRedirect: true,
+          scopes: "https://www.googleapis.com/auth/youtube.readonly",
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
 
@@ -913,6 +928,10 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           }
           client.auth.getSession().then(({ data: { session } }) => {
             if (session) {
+              if (typeof window !== "undefined" && session.provider_token) {
+                sessionStorage.setItem("google_provider_token", session.provider_token);
+                localStorage.setItem("google_provider_token", session.provider_token);
+              }
               popup.close();
               clearInterval(interval);
             }

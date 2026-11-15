@@ -3,11 +3,13 @@ import type { NextConfig } from "next";
 // Construye la Content-Security-Policy como string desde un objeto legible
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline' 'unsafe-eval';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' data: blob: https:;
   media-src 'self' blob: https:;
+  frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com;
+  child-src 'self' https://www.youtube.com https://www.youtube-nocookie.com;
   connect-src 'self'
     https://*.supabase.co
     wss://*.supabase.co
@@ -18,7 +20,9 @@ const ContentSecurityPolicy = `
     wss://radio.andrealvarado.dev
     https://chat.andrealvarado.dev
     wss://chat.andrealvarado.dev
-    https://stream.andrealvarado.dev;
+    https://stream.andrealvarado.dev
+    https://www.youtube.com
+    https://*.googlevideo.com;
   frame-ancestors 'none';
 `
   .replace(/\n/g, " ")

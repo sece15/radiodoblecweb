@@ -110,7 +110,7 @@ export const Header = ({
             justifyContent: "space-between",
             backgroundColor: isTransparent ? "transparent" : "var(--background)",
             borderBottom: isTransparent ? "4px solid transparent" : "4px solid var(--primary)",
-            padding: "10px 18px",
+            padding: "0 18px",
             height: "80px",
             width: "100%",
             position: "relative",
@@ -119,7 +119,7 @@ export const Header = ({
           }}
         >
           {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", pointerEvents: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", height: "100%", pointerEvents: "auto" }}>
             <button
               onClick={() => setSearchActive(true)}
               className="neo-button fun-hover-wobble"
@@ -166,6 +166,31 @@ export const Header = ({
                 <span>🎰 TORNAMESA C</span>
               </button>
             )}
+
+            {/* C-Station Studio (C-Digger & C-Sampler) */}
+            <Link
+              href="/studio"
+              className="neo-button fun-hover-wobble desktop-only-flex"
+              style={{
+                padding: "7px 12px",
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                backgroundColor: "#161922",
+                color: "#CCFF00",
+                boxShadow: "2.5px 2.5px 0px var(--primary)",
+                border: "2px solid var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                cursor: "pointer",
+                textDecoration: "none",
+                transform: "rotate(1deg)",
+                "--rest-rot": "1deg",
+              } as CSSProperties}
+              title="Entrar a C-Station Studio (C-Digger & C-Sampler)"
+            >
+              <span>🎛️ C-STATION</span>
+            </Link>
           </div>
 
           {/* 2. CENTER: LOGO (CENTERED & CLEAN) */}
@@ -192,8 +217,8 @@ export const Header = ({
 
           {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
           <div
-            className={isChatOpen && isTransparent ? "header-chat-dock-open" : ""}
-            style={{ display: "flex", alignItems: "center", gap: "10px", pointerEvents: "auto" }}
+            className={isChatOpen ? "header-chat-dock-open" : ""}
+            style={{ display: "flex", alignItems: "center", gap: "10px", height: "100%", pointerEvents: "auto" }}
           >
             {/* Rocola VIP Badge (Desktop) */}
             <button
@@ -425,6 +450,44 @@ export const Header = ({
                 ● ACTIVO
               </span>
             )}
+          </Link>
+
+          {/* C-Station Studio */}
+          <Link
+            href="/studio"
+            onClick={() => setIsMenuOpen(false)}
+            className="mobile-nav-link fun-hover-wobble"
+            style={{
+              backgroundColor: pathname === "/studio" ? "#CCFF00" : "#161922",
+              color: pathname === "/studio" ? "#111111" : "#CCFF00",
+              border: "2.5px solid var(--primary)",
+              boxShadow: "3.5px 3.5px 0px var(--primary)",
+              transform: "rotate(-1deg)",
+              textDecoration: "none",
+              "--rest-rot": "-1deg",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "9px 14px",
+            } as CSSProperties}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "1rem" }}>🎛️</span>
+              <span style={{ fontWeight: 900 }}>C-STATION</span>
+            </div>
+            <span
+              style={{
+                backgroundColor: "#CCFF00",
+                color: "#111111",
+                fontSize: "0.55rem",
+                fontWeight: 900,
+                padding: "2px 6px",
+                letterSpacing: "0.8px",
+                border: "1px solid #000000",
+              }}
+            >
+              ✨ NUEVO
+            </span>
           </Link>
 
           {/* 3. Tienda */}

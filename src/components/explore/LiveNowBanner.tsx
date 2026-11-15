@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useAudio } from "@/hooks/useAudio";
 
@@ -282,7 +282,7 @@ export const LiveNowBanner = ({
               unoptimized
               className="mascot-paw-img"
               draggable={false}
-              style={{ width: "100%", height: "auto" }}
+              style={{ width: "auto", height: "auto" }}
             />
           </div>
 
@@ -300,7 +300,7 @@ export const LiveNowBanner = ({
               unoptimized
               className="mascot-paw-img"
               draggable={false}
-              style={{ width: "100%", height: "auto" }}
+              style={{ width: "auto", height: "auto" }}
             />
           </div>
         </div>
