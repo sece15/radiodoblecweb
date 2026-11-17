@@ -44,7 +44,7 @@ export const ProfileHeaderBlock = ({
             border: "2px solid var(--primary)",
             padding: "6px 10px",
             textAlign: "center",
-            color: "var(--primary)",
+            color: "var(--on-primary-container)",
             fontWeight: 900,
             fontSize: "0.72rem",
             boxShadow: "3px 3px 0px var(--primary)",
@@ -89,7 +89,7 @@ export const ProfileHeaderBlock = ({
             zIndex: 2,
           }}
         >
-          <Check size={18} style={{ color: "var(--primary)" }} />
+          <Check size={18} style={{ color: "var(--on-primary-container)" }} />
         </div>
       </div>
 
@@ -137,6 +137,7 @@ export const ProfileHeaderBlock = ({
           style={{
             flex: 1,
             backgroundColor: "var(--primary-container)",
+            color: "var(--on-primary-container)",
             fontSize: "0.75rem",
             fontWeight: 900,
           } as CSSProperties}
@@ -150,7 +151,8 @@ export const ProfileHeaderBlock = ({
           className="neo-button fun-hover-wobble"
           style={{
             flex: 1,
-            backgroundColor: copiedShare ? "#CCFF00" : "white",
+            backgroundColor: copiedShare ? "#CCFF00" : "var(--card-bg)",
+            color: copiedShare ? "#111111" : "var(--on-background)",
             fontSize: "0.75rem",
             fontWeight: 900,
             border: "2.5px solid var(--primary)",

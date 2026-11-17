@@ -376,6 +376,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
           <div
             style={{
               backgroundColor: "#FFF8E1",
+              color: "#111111",
               padding: "10px 12px",
               border: "2.5px solid var(--primary)",
               boxShadow: "3px 3px 0px var(--primary)",

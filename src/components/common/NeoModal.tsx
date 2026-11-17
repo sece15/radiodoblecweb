@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, ReactNode } from "react";
+import { useRef, ReactNode } from "react";
 import { X } from "lucide-react";
 import { useModalDimensions } from "@/hooks/useModalDimensions";
+import { useModalIsolation } from "@/hooks/useModalIsolation";
 
 export interface NeoModalProps {
   isOpen: boolean;
@@ -30,30 +31,20 @@ export const NeoModal = ({
   bodyOverflow = "auto",
 }: NeoModalProps) => {
   const { maxModalHeight, isMobile } = useModalDimensions();
+  const modalContainerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  useModalIsolation(isOpen, modalContainerRef, {
+    onEscape: onClose,
+  });
 
   if (!isOpen) return null;
 
   return (
     <div
+      ref={modalContainerRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
       style={{
         position: "fixed",
         top: 0,

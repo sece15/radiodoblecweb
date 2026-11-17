@@ -69,6 +69,50 @@ export const SpotifyPlayerBar = ({
 
   return (
     <div className="spotify-player-bar">
+      {/* Cerritos de nieve acumulándose encima del reproductor y cayendo al llenarse */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          bottom: "100%",
+          left: 0,
+          right: 0,
+          height: "28px",
+          pointerEvents: "none",
+          zIndex: 1002,
+          overflow: "visible",
+          display: "flex",
+          alignItems: "flex-end",
+        }}
+      >
+        {[
+          { delay: "0s", dur: "18s" },
+          { delay: "0.4s", dur: "18s" },
+          { delay: "0.2s", dur: "18s" },
+        ].map((chunk, idx) => (
+          <svg
+            key={idx}
+            viewBox="0 0 400 32"
+            preserveAspectRatio="none"
+            style={{
+              width: "33.34%",
+              height: "26px",
+              display: "block",
+              transformOrigin: "center bottom",
+              animation: `snow-mounds-cycle ${chunk.dur} ease-in-out ${chunk.delay} infinite`,
+              filter: "drop-shadow(0 -1px 2px rgba(56, 189, 248, 0.45)) drop-shadow(0 2px 3px rgba(0,0,0,0.25))",
+            }}
+          >
+            <path
+              d="M0 32 C22 10, 48 6, 76 22 C104 4, 146 2, 178 20 C206 6, 242 4, 272 21 C302 5, 342 8, 372 22 C384 14, 394 18, 400 32 Z"
+              fill="#FFFFFF"
+              stroke="#BAE6FD"
+              strokeWidth="1.8"
+            />
+          </svg>
+        ))}
+      </div>
+
       {/* 1. LEFT: Track details & Thumbnail */}
       <div
         className="player-bar-left"
@@ -279,6 +323,7 @@ export const SpotifyPlayerBar = ({
               height: "40px",
               borderRadius: "50%",
               backgroundColor: "var(--primary-container)",
+              color: "var(--on-primary-container)",
               boxShadow: "2px 2px 0px var(--primary)",
               display: "flex",
               alignItems: "center",
@@ -287,9 +332,9 @@ export const SpotifyPlayerBar = ({
             }}
           >
             {isPlaying ? (
-              <Pause size={18} style={{ fill: "var(--primary)" }} />
+              <Pause size={18} style={{ fill: "var(--on-primary-container)", color: "var(--on-primary-container)" }} />
             ) : (
-              <Play size={18} style={{ fill: "var(--primary)", marginLeft: "2px" }} />
+              <Play size={18} style={{ fill: "var(--on-primary-container)", color: "var(--on-primary-container)", marginLeft: "2px" }} />
             )}
           </button>
 
@@ -421,7 +466,7 @@ export const SpotifyPlayerBar = ({
           style={{
             padding: "6px 10px",
             backgroundColor: "var(--primary-container)",
-            color: "var(--primary)",
+            color: "var(--on-primary-container)",
             boxShadow: "2.5px 2.5px 0px var(--primary)",
             display: "flex",
             alignItems: "center",
@@ -440,6 +485,7 @@ export const SpotifyPlayerBar = ({
           style={{
             padding: "6px 10px",
             backgroundColor: isChatOpen ? "var(--primary-container)" : "var(--card-bg)",
+            color: isChatOpen ? "var(--on-primary-container)" : "var(--on-background)",
             transform: isChatOpen ? "translate(1px, 1px)" : "none",
             boxShadow: isChatOpen ? "1px 1px 0px var(--primary)" : "3px 3px 0px var(--primary)",
             display: "flex",

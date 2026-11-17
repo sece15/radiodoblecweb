@@ -406,7 +406,7 @@ export const StudioToolsModal = ({ isOpen, onClose }: StudioToolsModalProps) => 
                       className="neo-button fun-hover-wobble"
                       style={{
                         backgroundColor: "var(--primary-container)",
-                        color: "var(--primary)",
+                        color: "var(--on-primary-container)",
                         padding: "10px",
                         fontSize: "0.75rem",
                         fontWeight: 900,

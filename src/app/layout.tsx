@@ -6,6 +6,8 @@ import { AudioProvider } from "@/context/AudioContext";
 import { ChatSync } from "@/components/chat/ChatSync";
 import { AzuraCastSync } from "@/components/audio/AzuraCastSync";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { ChristmasOverlay } from "@/components/common/ChristmasOverlay";
+import { AppVersionWatcher } from "@/components/common/AppVersionWatcher";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://radiodoblec.com";
 
@@ -224,6 +226,8 @@ export default function RootLayout({
           <AudioProvider>
             <AzuraCastSync />
             <ChatSync />
+            <ChristmasOverlay />
+            <AppVersionWatcher />
             {children}
           </AudioProvider>
         </QueryProvider>

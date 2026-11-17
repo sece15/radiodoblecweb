@@ -351,7 +351,7 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                 padding: "6px 12px",
                 fontSize: "0.65rem",
                 fontWeight: 900,
-                color: "var(--primary)",
+                color: "var(--on-primary-container)",
                 transform: "rotate(5deg)",
                 boxShadow: "2px 2px 0px var(--primary)",
               }}
@@ -445,6 +445,7 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                 width: "72px",
                 height: "72px",
                 backgroundColor: "var(--primary-container)",
+                color: "var(--on-primary-container)",
                 border: "3.5px solid var(--primary)",
                 boxShadow: "5px 5px 0px var(--primary)",
                 display: "flex",
@@ -454,9 +455,9 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
               }}
             >
               {isPlaying ? (
-                <Pause size={28} style={{ fill: "var(--primary)", color: "var(--primary)" }} />
+                <Pause size={28} style={{ fill: "var(--on-primary-container)", color: "var(--on-primary-container)" }} />
               ) : (
-                <Play size={28} style={{ fill: "var(--primary)", color: "var(--primary)", marginLeft: "4px" }} />
+                <Play size={28} style={{ fill: "var(--on-primary-container)", color: "var(--on-primary-container)", marginLeft: "4px" }} />
               )}
             </button>
 

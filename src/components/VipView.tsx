@@ -107,7 +107,8 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
       <section
         className="neo-card scanlines"
         style={{
-          backgroundColor: "#FFFBEA",
+          backgroundColor: "var(--card-bg)",
+          color: "var(--on-background)",
           border: "4px solid var(--primary)",
           boxShadow: "8px 8px 0px var(--primary)",
           padding: "24px",
@@ -212,7 +213,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
               lineHeight: "1.3rem",
               fontWeight: 700,
               margin: 0,
-              color: "var(--primary)",
+              color: "var(--on-background)",
               opacity: 0.9,
             }}
           >
@@ -481,7 +482,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
                         width: "30px",
                         height: "30px",
                         backgroundColor: pos === 2 ? "#E0E0E0" : pos === 3 ? "#CD7F32" : "var(--surface-container)",
-                        color: "#111",
+                        color: pos === 2 || pos === 3 ? "#111111" : "var(--on-background)",
                         fontWeight: 900,
                         fontSize: "0.8rem",
                         display: "flex",
@@ -590,7 +591,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
         </span>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
-          <div style={{ backgroundColor: "#FFF8E1", padding: "10px", border: "1.5px solid var(--primary)" }}>
+          <div style={{ backgroundColor: "#FFF8E1", color: "#111111", padding: "10px", border: "1.5px solid var(--primary)" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
               📻 1,000 C-Coins (Encolar)
             </span>
@@ -599,7 +600,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
             </span>
           </div>
 
-          <div style={{ backgroundColor: "#E6FFFA", padding: "10px", border: "1.5px solid var(--primary)" }}>
+          <div style={{ backgroundColor: "#E6FFFA", color: "#111111", padding: "10px", border: "1.5px solid var(--primary)" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
               ⚡ 2,000 C-Coins (Corte en Vivo)
             </span>
@@ -608,7 +609,7 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
             </span>
           </div>
 
-          <div style={{ backgroundColor: "#FFDE82", padding: "10px", border: "1.5px solid var(--primary)" }}>
+          <div style={{ backgroundColor: "#FFDE82", color: "#111111", padding: "10px", border: "1.5px solid var(--primary)" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
               👑 3,500+ C-Coins (Rey del Dial)
             </span>

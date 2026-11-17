@@ -2,7 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Upload, X, Disc, RefreshCw, Scissors, Square, Plus, Trash2, Pencil, Shuffle, ZoomIn, ZoomOut, Maximize2, ArrowLeft, Play, Pause, Loader2 } from "lucide-react";
+import { Upload, Download, X, Disc, RefreshCw, Scissors, Square, Plus, Trash2, Pencil, ZoomIn, ZoomOut, Maximize2, ArrowLeft, Play, Pause, Loader2 } from "lucide-react";
+import { CSamplerMasterModal } from "./CSamplerMasterModal";
+import { CSamplerCutPadModal } from "./CSamplerCutPadModal";
+import { useModalIsolation } from "@/hooks/useModalIsolation";
 import type { SamplerCuePoint, SamplerTriggerMode, Akai16LevelsType, LoadedSampleData, DiggerTrack, StemType, StemsSeparationResult } from "@/types/studio";
 import { studioAudio } from "@/lib/studio/audioEngine";
 import {
@@ -11,6 +14,13 @@ import {
   createStemsFromTrack,
   extractStemPeaks,
 } from "@/lib/studio/stemEngine";
+import {
+  separateAudioInBrowserWorker,
+  encodeAudioBufferToWavBlob,
+  saveYouTubeAudioToBrowserCache,
+  loadYouTubeAudioFromBrowserCache,
+  clearYouTubeAudioFromBrowserCache,
+} from "@/lib/studio/browserStemAI";
 import { calculateSliceBoundary } from "@/lib/contracts/samplerContracts";
 import { buildSampletteYouTubeEmbedUrl } from "@/lib/studio/crateEngine";
 import WaveSurfer from "wavesurfer.js";
@@ -25,24 +35,24 @@ interface CSamplerPluginModalProps {
   isStandalone?: boolean;
 }
 
-// Paleta oficial de 16 colores Neón estilo Serato Sample VST
+// Paleta minimalista: Amarillo, Negro y Grises
 const SERATO_COLORS = [
-  "#CCFF00", // 1: Lime Green
-  "#00E5FF", // 2: Cyan
-  "#FF007A", // 3: Hot Pink
-  "#FFD600", // 4: Golden Yellow
-  "#FF6D00", // 5: Neon Orange
-  "#00E676", // 6: Spring Mint
-  "#E040FB", // 7: Neon Violet
-  "#2979FF", // 8: Electric Blue
-  "#FF1744", // 9: Bright Red
-  "#00B0FF", // 10: Light Sky Blue
-  "#76FF03", // 11: Electric Chartreuse
-  "#FF9100", // 12: Deep Amber
-  "#F50057", // 13: Neon Rose
-  "#7C4DFF", // 14: Deep Purple
-  "#1DE9B6", // 15: Teal Cyan
-  "#FFEA00", // 16: Lemon Yellow
+  "#FFD600", // 1: Amarillo Estudio
+  "#D4D4D8", // 2: Gris Claro
+  "#FACC15", // 3: Amarillo Vivo
+  "#A1A1AA", // 4: Gris Medio
+  "#EAB308", // 5: Amarillo Dorado
+  "#71717A", // 6: Gris Acero
+  "#FDE047", // 7: Amarillo Suave
+  "#E4E4E7", // 8: Gris Plata
+  "#CA8A04", // 9: Amarillo Ocre
+  "#A1A1AA", // 10: Gris Medio
+  "#FFD600", // 11: Amarillo Estudio
+  "#D4D4D8", // 12: Gris Claro
+  "#FACC15", // 13: Amarillo Vivo
+  "#71717A", // 14: Gris Acero
+  "#EAB308", // 15: Amarillo Dorado
+  "#E4E4E7", // 16: Gris Plata
 ];
 
 // Akai MPC 16 Levels: Parámetros legendarios por tipo (Tune, Velocity, Filter, Decay)
@@ -60,7 +70,15 @@ const DEFAULT_CUES: SamplerCuePoint[] = [
   { id: 5, name: "CHOP 5 (HOOK)", startSec: 36.0, color: SERATO_COLORS[4], active: true },
   { id: 6, name: "CHOP 6 (CORTE)", startSec: 48.5, color: SERATO_COLORS[5], active: true },
   { id: 7, name: "CHOP 7 (CLIMAX)", startSec: 62.0, color: SERATO_COLORS[6], active: true },
-  { id: 8, name: "CHOP 8 (OUTRO)", startSec: 75.0, color: SERATO_COLORS[7], active: true },
+  { id: 8, name: "CHOP 8 (BRIDGE)", startSec: 75.0, color: SERATO_COLORS[7], active: true },
+  { id: 9, name: "CHOP 9 (VERSE A)", startSec: 86.0, color: SERATO_COLORS[8], active: true },
+  { id: 10, name: "CHOP 10 (VERSE B)", startSec: 98.0, color: SERATO_COLORS[9], active: true },
+  { id: 11, name: "CHOP 11 (STAB)", startSec: 110.0, color: SERATO_COLORS[10], active: true },
+  { id: 12, name: "CHOP 12 (VOCAL)", startSec: 122.0, color: SERATO_COLORS[11], active: true },
+  { id: 13, name: "CHOP 13 (DROP)", startSec: 134.0, color: SERATO_COLORS[12], active: true },
+  { id: 14, name: "CHOP 14 (BREAK)", startSec: 146.0, color: SERATO_COLORS[13], active: true },
+  { id: 15, name: "CHOP 15 (FILL)", startSec: 158.0, color: SERATO_COLORS[14], active: true },
+  { id: 16, name: "CHOP 16 (OUTRO)", startSec: 170.0, color: SERATO_COLORS[15], active: true },
 ];
 
 // Mapeo de teclas estilo MPC / Serato Sample (Fila Q-I para 1-8 y A-K para 9-16)
@@ -126,9 +144,12 @@ export const CSamplerPluginModal = ({
   const [scrubDirection, setScrubDirection] = useState<"forward" | "backward" | null>(null);
   const [editingCueId, setEditingCueId] = useState<number | null>(null);
   const [editingCueName, setEditingCueName] = useState<string>("");
-  const [activeBank, setActiveBank] = useState<"A" | "B" | "ALL">("A");
+  const [activeBank, setActiveBank] = useState<"A" | "B" | "ALL">("ALL");
 
   const [pitchSemi, setPitchSemi] = useState<number>(0);
+  const [fineTuneCents, setFineTuneCents] = useState<number>(0);
+  const [chopGatePct, setChopGatePct] = useState<number>(100);
+  const [startOffsetMs, setStartOffsetMs] = useState<number>(0);
   const [triggerMode, setTriggerMode] = useState<SamplerTriggerMode>("one_shot");
   const [activeCueId, setActiveCueId] = useState<number | null>(null);
   const [sampleName, setSampleName] = useState<string>("RADIO DOBLE C VAULT");
@@ -160,8 +181,10 @@ export const CSamplerPluginModal = ({
   const activeStemFilterRef = useRef<StemType | null>(null);
   const [stemsResult, setStemsResult] = useState<StemsSeparationResult | null>(null);
   const [isSeparatingStems, setIsSeparatingStems] = useState<boolean>(false);
-  const [isYtRestricted, setIsYtRestricted] = useState<boolean>(false);
-  const [aiEngineName, setAiEngineName] = useState<string>("DSP");
+  const [stemProgress, setStemProgress] = useState<{ pct: number; stage: string } | null>(null);
+  const [fxFilterSweep, setFxFilterSweep] = useState<number>(0); // -100..+100
+  const [fxCrunch, setFxCrunch] = useState<number>(0); // 0..100
+  const [fxMasterVol, setFxMasterVol] = useState<number>(90); // 0..120
   const [showAiModal, setShowAiModal] = useState<boolean>(false);
   const [aiServerStatus, setAiServerStatus] = useState<{
     hasLocalWorker: boolean;
@@ -169,11 +192,59 @@ export const CSamplerPluginModal = ({
     activeProvider: string;
   } | null>(null);
   const stemMixerRef = useRef<RealtimeStemMixer | null>(null);
+  const [padCustomBuffers, setPadCustomBuffers] = useState<Record<number, AudioBuffer>>({});
+  const padCustomBuffersRef = useRef<Record<number, AudioBuffer>>({});
+  padCustomBuffersRef.current = padCustomBuffers;
+
+  const [isRecordingPads, setIsRecordingPads] = useState<boolean>(false);
+  const isRecordingPadsRef = useRef<boolean>(false);
+  isRecordingPadsRef.current = isRecordingPads;
+  const [metronomeOn, setMetronomeOn] = useState<boolean>(false);
+  const [quantizeOn, setQuantizeOn] = useState<boolean>(true);
+  const quantizeOnRef = useRef<boolean>(true);
+  quantizeOnRef.current = quantizeOn;
+  const [recordedPadEvents, setRecordedPadEvents] = useState<{ cueId: number; timeSec: number }[]>([]);
+  const [isPlayingRecording, setIsPlayingRecording] = useState<boolean>(false);
+  const [isRenderingRecording, setIsRenderingRecording] = useState<boolean>(false);
+  const recordingStartPerfRef = useRef<number>(0);
+  const recordingTimersRef = useRef<number[]>([]);
+
+  const [isCuttingPad, setIsCuttingPad] = useState<boolean>(false);
+  const [isRescuingAudio, setIsRescuingAudio] = useState<boolean>(false);
+  const rescuedYoutubeIdRef = useRef<string | null>(null);
+  const modalContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const { isTopModal } = useModalIsolation(isOpen && !isStandalone, modalContainerRef, {
+    captureSpace: false,
+  });
+  const [cutPadModalData, setCutPadModalData] = useState<{
+    cueId: number;
+    padLabel: string;
+    rangeLabel: string;
+    sliceStartSec: number;
+    sliceEndSec: number;
+    isRealAudio: boolean;
+    bpm: number;
+    musicalKey: string;
+    genre: string;
+    rawSliceBuffer: AudioBuffer;
+  } | null>(null);
+  const [masterModalData, setMasterModalData] = useState<{
+    padLabel: string;
+    rangeLabel: string;
+    initialBpm: number;
+    channels: {
+      raw: AudioBuffer | null;
+      drums: AudioBuffer | null;
+      bass: AudioBuffer | null;
+      melody: AudioBuffer | null;
+      vocals: AudioBuffer | null;
+    };
+  } | null>(null);
 
   // Estado y Refs del Puntero de Reproducción Continuo
   const [playbackPointerSec, setPlaybackPointerSec] = useState<number>(0);
   const [isPlayingSong, setIsPlayingSong] = useState<boolean>(false);
-  const [loadingStem, setLoadingStem] = useState<StemType | null>(null);
 
   const playbackPointerSecRef = useRef<number>(0);
   playbackPointerSecRef.current = playbackPointerSec;
@@ -203,13 +274,6 @@ export const CSamplerPluginModal = ({
           hasReplicate: Boolean(data.hasReplicate),
           activeProvider: data.activeProvider || "web_audio_dsp_crossover",
         });
-        if (data.hasLocalWorker) {
-          setAiEngineName("DEMUCS LOCAL");
-        } else if (data.hasReplicate) {
-          setAiEngineName("DEMUCS CLOUD");
-        } else {
-          setAiEngineName("DSP EN MEMORIA");
-        }
       }
     } catch {}
   }, []);
@@ -374,10 +438,48 @@ export const CSamplerPluginModal = ({
       if (externalSample.name) {
         setSampleName(externalSample.name.toUpperCase());
       }
+      const trackDur = externalSample.trackInfo?.durationSec || 180;
       if (externalSample.cues && externalSample.cues.length > 0) {
-        setCues(externalSample.cues);
-        setSelectedCueId(externalSample.cues[0].id);
+        const baseCues = externalSample.cues.slice(0, 16);
+        if (baseCues.length < 16) {
+          const sliceLen = trackDur / 16;
+          const usedIds = new Set(baseCues.map((c) => c.id));
+          const padded: SamplerCuePoint[] = [...baseCues];
+          for (let id = 1; id <= 16 && padded.length < 16; id++) {
+            if (!usedIds.has(id)) {
+              const startSec = Math.round((id - 1) * sliceLen * 10) / 10;
+              padded.push({
+                id,
+                name: `CHOP ${id} (${formatSeconds(startSec)})`,
+                startSec,
+                color: SERATO_COLORS[(id - 1) % SERATO_COLORS.length],
+                active: true,
+              });
+            }
+          }
+          padded.sort((a, b) => a.id - b.id);
+          setCues(padded);
+        } else {
+          setCues(baseCues);
+        }
+        setSelectedCueId(baseCues[0].id);
+      } else {
+        const sliceLen = trackDur / 16;
+        const auto16: SamplerCuePoint[] = Array.from({ length: 16 }).map((_, idx) => {
+          const id = idx + 1;
+          const startSec = Math.round(idx * sliceLen * 10) / 10;
+          return {
+            id,
+            name: `CHOP ${id} (${formatSeconds(startSec)})`,
+            startSec,
+            color: SERATO_COLORS[idx % SERATO_COLORS.length],
+            active: true,
+          };
+        });
+        setCues(auto16);
+        setSelectedCueId(1);
       }
+      setActiveBank("ALL");
 
       if (externalSample.buffer) {
         setCustomAudioBuffer(externalSample.buffer);
@@ -391,7 +493,6 @@ export const CSamplerPluginModal = ({
       activeStemFilterRef.current = null;
       setStemsResult(null);
 
-      const trackDur = externalSample.trackInfo?.durationSec || 180;
       if (wavesurferRef.current) {
         loadWaveformData(trackDur, externalSample.buffer || null, externalSample.trackInfo || null, null);
       }
@@ -430,12 +531,12 @@ export const CSamplerPluginModal = ({
         console.warn(
           `[C-SAMPLER] Video bloqueado por sello comercial en iframe (Error 150 / LatinAutor): ${trackInfo?.youtubeId}. Rescatando flujo de audio...`
         );
-        setIsYtRestricted(true);
 
         if (trackInfo?.youtubeId && !customAudioBuffer) {
           fetch(`/api/studio/stream-sample?youtubeId=${trackInfo.youtubeId}`)
             .then(async (res) => {
-              if (res.ok) {
+              const contentType = res.headers.get("content-type") || "";
+              if (res.ok && (contentType.includes("audio") || contentType.includes("octet-stream"))) {
                 const arrayBuffer = await res.arrayBuffer();
                 const AudioCtx =
                   window.AudioContext ||
@@ -443,7 +544,6 @@ export const CSamplerPluginModal = ({
                 const ctx = new AudioCtx();
                 const buf = await ctx.decodeAudioData(arrayBuffer);
                 setCustomAudioBuffer(buf);
-                setIsYtRestricted(false);
               }
             })
             .catch(() => {});
@@ -454,6 +554,62 @@ export const CSamplerPluginModal = ({
     window.addEventListener("message", handleWindowMessage);
     return () => window.removeEventListener("message", handleWindowMessage);
   }, [trackInfo?.youtubeId, customAudioBuffer]);
+
+  // Rescate automático en segundo plano del audio real de YouTube hacia RAM al abrir o cambiar pista
+  const rescueYouTubeAudioIntoRam = useCallback(async (youtubeId?: string | null): Promise<AudioBuffer | null> => {
+    if (customAudioBuffer) return customAudioBuffer;
+    const targetId = youtubeId || externalSample?.trackInfo?.youtubeId || trackInfo?.youtubeId;
+    if (!targetId) return null;
+
+    setIsRescuingAudio(true);
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    try {
+      let fromCache = false;
+      let arrayBuffer: ArrayBuffer | null = await loadYouTubeAudioFromBrowserCache(targetId);
+      if (arrayBuffer) {
+        fromCache = true;
+      } else {
+        const res = await fetch(`/api/studio/stream-sample?youtubeId=${targetId}`);
+        const contentType = res.headers.get("content-type") || "";
+        if (res.ok && (contentType.includes("audio") || contentType.includes("octet-stream"))) {
+          arrayBuffer = await res.arrayBuffer();
+          await saveYouTubeAudioToBrowserCache(targetId, arrayBuffer, contentType);
+        }
+      }
+      if (!arrayBuffer) return null;
+      let decoded: AudioBuffer;
+      try {
+        decoded = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      } catch {
+        if (fromCache) {
+          await clearYouTubeAudioFromBrowserCache(targetId);
+        }
+        return null;
+      }
+      setCustomAudioBuffer(decoded);
+      if (wavesurferRef.current) {
+        loadWaveformData(decoded.duration, decoded, externalSample?.trackInfo || trackInfo || null, null);
+      }
+      return decoded;
+    } catch {
+      return null;
+    } finally {
+      setIsRescuingAudio(false);
+      await ctx.close().catch(() => {});
+    }
+  }, [customAudioBuffer, externalSample?.trackInfo, trackInfo, loadWaveformData]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const activeYtId = externalSample?.trackInfo?.youtubeId || trackInfo?.youtubeId;
+    if (!activeYtId || customAudioBuffer) return;
+    if (rescuedYoutubeIdRef.current === activeYtId) return;
+    rescuedYoutubeIdRef.current = activeYtId;
+    void rescueYouTubeAudioIntoRam(activeYtId);
+  }, [isOpen, externalSample?.trackInfo?.youtubeId, trackInfo?.youtubeId, customAudioBuffer, rescueYouTubeAudioIntoRam]);
 
   // Detener audio inmediatamente (para Stop, Espacio o Modo HOLD al soltar)
   const handleStopAudio = useCallback(() => {
@@ -503,6 +659,7 @@ export const CSamplerPluginModal = ({
 
   const handleSeparateStems = useCallback(async (): Promise<StemsSeparationResult> => {
     setIsSeparatingStems(true);
+    setStemProgress({ pct: 0, stage: "Preparando separación de 4 canales..." });
     try {
       let sourceBuffer = customAudioBuffer;
       const currentTrack = externalSample?.trackInfo || trackInfo;
@@ -511,73 +668,172 @@ export const CSamplerPluginModal = ({
       const genre = currentTrack?.genre || "funk";
       const duration = currentTrack?.durationSec || totalDuration || 180;
 
-      // 1. Intentar separar con IA Meta Demucs v4 (Worker Local o Replicate Cloud)
+      // 1. Intentar separar en la PC del usuario (Worker Local en 127.0.0.1:8010) o vía API (Cloud / Dev)
       let aiResult: StemsSeparationResult | null = null;
-      try {
-        const sepRes = await fetch("/api/studio/separate-stems", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            youtubeId: currentTrack?.youtubeId,
-            trackTitle: currentTrack?.title || sampleName,
-            bpm,
-            key,
-          }),
-        });
-        if (sepRes.ok) {
-          const sepData = await sepRes.json();
-          if (sepData.status === "success" && sepData.stems) {
-            const AudioCtx =
-              window.AudioContext ||
-              (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-            const ctx = new AudioCtx();
-            const [drumsB, bassB, melodyB, vocalsB] = await Promise.all([
-              fetch(sepData.stems.drums).then((r) => r.arrayBuffer()).then((ab) => ctx.decodeAudioData(ab)),
-              fetch(sepData.stems.bass).then((r) => r.arrayBuffer()).then((ab) => ctx.decodeAudioData(ab)),
-              fetch(sepData.stems.melody).then((r) => r.arrayBuffer()).then((ab) => ctx.decodeAudioData(ab)),
-              fetch(sepData.stems.vocals).then((r) => r.arrayBuffer()).then((ab) => ctx.decodeAudioData(ab)),
-            ]);
-            aiResult = {
-              drums: drumsB,
-              bass: bassB,
-              melody: melodyB,
-              vocals: vocalsB,
-              durationSec: drumsB.duration,
-              sampleRate: drumsB.sampleRate,
-            };
-            setAiEngineName(sepData.provider === "meta_demucs_v4_local" ? "DEMUCS LOCAL" : "DEMUCS CLOUD");
-          }
+      const decodeRemoteStems = async (
+        stemsMap: { drums: string; bass: string; melody: string; vocals: string },
+        engineLabel: string
+      ) => {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        try {
+          const fetchStemBuffer = async (url: string) => {
+            const r = await fetch(url);
+            if (!r.ok) throw new Error(`Stem fetch failed: ${r.status}`);
+            const ab = await r.arrayBuffer();
+            return ctx.decodeAudioData(ab);
+          };
+          const [drumsB, bassB, melodyB, vocalsB] = await Promise.all([
+            fetchStemBuffer(stemsMap.drums),
+            fetchStemBuffer(stemsMap.bass),
+            fetchStemBuffer(stemsMap.melody),
+            fetchStemBuffer(stemsMap.vocals),
+          ]);
+          aiResult = {
+            drums: drumsB,
+            bass: bassB,
+            melody: melodyB,
+            vocals: vocalsB,
+            durationSec: drumsB.duration,
+            sampleRate: drumsB.sampleRate,
+          };
+          void engineLabel;
+        } finally {
+          await ctx.close().catch(() => {});
         }
-      } catch (aiErr) {
-        console.warn("AI Demucs separation notice:", aiErr);
+      };
+
+      // 1A. Primero comprobar si la PC del usuario tiene su propio worker Demucs local en 127.0.0.1:8010
+      if (currentTrack?.youtubeId) {
+        try {
+          const clientHealth = await fetch("http://127.0.0.1:8010/health", {
+            signal: AbortSignal.timeout(600),
+          });
+          if (clientHealth.ok) {
+            const clientSepRes = await fetch("http://127.0.0.1:8010/separate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                youtubeId: currentTrack.youtubeId,
+                trackTitle: currentTrack.title || sampleName,
+              }),
+            });
+            if (clientSepRes.ok) {
+              const clientSepData = await clientSepRes.json();
+              if (clientSepData.success && clientSepData.stems) {
+                await decodeRemoteStems(clientSepData.stems, "DEMUCS PC LOCAL");
+              }
+            }
+          }
+        } catch {
+          // El usuario no tiene worker Python local activo; continuamos sin bloquear
+        }
       }
 
-      // 2. Intentar obtener stream de audio binario real de YouTube si no hay buffer
+      // 1B. Si no hubo worker en la PC del usuario, consultar /api/studio/separate-stems (Cloud / Dev)
+      if (!aiResult) {
+        try {
+          const sepRes = await fetch("/api/studio/separate-stems", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              youtubeId: currentTrack?.youtubeId,
+              trackTitle: currentTrack?.title || sampleName,
+              bpm,
+              key,
+              genre,
+            }),
+          });
+          if (sepRes.ok) {
+            const sepData = await sepRes.json();
+            if (sepData.status === "success" && sepData.stems) {
+              await decodeRemoteStems(
+                sepData.stems,
+                sepData.provider === "meta_demucs_v4_local" || sepData.provider === "meta_demucs_v4_local_cache"
+                  ? "DEMUCS LOCAL"
+                  : "DEMUCS CLOUD"
+              );
+            }
+          }
+        } catch (aiErr) {
+          console.warn("AI Demucs separation notice:", aiErr);
+        }
+      }
+
+      // 2. Intentar obtener audio real de YouTube (primero desde caché local en PC, luego gateway)
       if (!aiResult && !sourceBuffer && currentTrack?.youtubeId) {
         try {
-          const res = await fetch(
-            `/api/studio/stream-sample?youtubeId=${currentTrack.youtubeId}&bpm=${bpm}&key=${encodeURIComponent(key)}&genre=${encodeURIComponent(genre)}`
-          );
-          const contentType = res.headers.get("Content-Type") || "";
-          if (res.ok && contentType.includes("audio")) {
-            const arrayBuffer = await res.arrayBuffer();
+          let arrayBuffer = await loadYouTubeAudioFromBrowserCache(currentTrack.youtubeId);
+          if (!arrayBuffer) {
+            const res = await fetch(
+              `/api/studio/stream-sample?youtubeId=${currentTrack.youtubeId}&bpm=${bpm}&key=${encodeURIComponent(key)}&genre=${encodeURIComponent(genre)}`
+            );
+            const contentType = res.headers.get("Content-Type") || "";
+            if (res.ok && contentType.includes("audio")) {
+              arrayBuffer = await res.arrayBuffer();
+              await saveYouTubeAudioToBrowserCache(currentTrack.youtubeId, arrayBuffer, contentType);
+            }
+          }
+          if (arrayBuffer) {
             const AudioCtx =
               window.AudioContext ||
               (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
             const ctx = new AudioCtx();
-            sourceBuffer = await ctx.decodeAudioData(arrayBuffer);
-            setCustomAudioBuffer(sourceBuffer);
+            try {
+              sourceBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+              setCustomAudioBuffer(sourceBuffer);
+            } finally {
+              await ctx.close().catch(() => {});
+            }
           }
         } catch {}
       }
 
-      // 3. Resultado final: IA Demucs o DSP en memoria
+      // 3. Resultado final: IA Worker Local/Cloud, IA en Navegador (WebGPU/WASM sobre el Chop activo) o DSP en memoria
       let res: StemsSeparationResult;
       if (aiResult) {
         res = aiResult;
       } else if (sourceBuffer) {
-        res = await separateAudioIntoStems(sourceBuffer, bpm, key, genre);
+        // Flujo profesional de Sampler: primero DSP base instantáneo (~50ms) y luego IA Demucs
+        // enfocada en la ventana del Chop/Cue activo (máx. 23.4s = 1 a 3 bloques = ~5-12s en WebGPU)
+        const dspBase = await separateAudioIntoStems(sourceBuffer, bpm, key, genre);
+        const targetCue = cues.find((c) => c.id === (activeCueId ?? selectedCueId)) ?? cues[0];
+        const sliceStart = targetCue ? targetCue.startSec : 0;
+        const sliceEnd = targetCue
+          ? calculateSliceBoundary(targetCue.id, cues, sourceBuffer.duration).endLimitSec
+          : Math.min(sourceBuffer.duration, 15.6);
+        const windowStartSec = Math.max(0, Math.min(sourceBuffer.duration - 1, sliceStart));
+        const windowDurationSec = Math.min(
+          23.4,
+          Math.max(7.8, sliceEnd > sliceStart ? sliceEnd - sliceStart : 15.6)
+        );
+
+        console.info(
+          `[C-Stems] Separando chop activo (${formatSeconds(windowStartSec)} -> ${formatSeconds(
+            Math.min(sourceBuffer.duration, windowStartSec + windowDurationSec)
+          )}) con IA en tu navegador...`
+        );
+        const browserAi = await separateAudioInBrowserWorker(sourceBuffer, {
+          windowStartSec,
+          windowDurationSec,
+          baseStems: dspBase,
+          onProgress: (pct, stage) => {
+            setStemProgress({ pct, stage });
+            console.info(`[C-Stems] ${pct}% - ${stage}`);
+          },
+        });
+        if (browserAi) {
+          res = browserAi.stems;
+        } else {
+          console.info("[C-Stems] Usando motor DSP en memoria (Web Audio).");
+          res = dspBase;
+        }
       } else {
+        console.warn(
+          "[C-Stems] No se pudo obtener el audio binario de YouTube desde los gateways públicos. Para probar la IA del navegador, carga un archivo local con 'CARGAR AUDIO'."
+        );
         res = createStemsFromTrack(Math.min(180, Math.max(30, duration)), bpm, key, genre);
       }
 
@@ -605,8 +861,9 @@ export const CSamplerPluginModal = ({
       return fallback;
     } finally {
       setIsSeparatingStems(false);
+      setStemProgress(null);
     }
-  }, [customAudioBuffer, trackInfo, totalDuration, externalSample, sampleName]);
+  }, [customAudioBuffer, trackInfo, totalDuration, externalSample, sampleName, cues, activeCueId, selectedCueId]);
 
   // Controles de Reproducción y Parada del Puntero Dedicado
   const handleStopSong = useCallback(() => {
@@ -829,112 +1086,6 @@ export const CSamplerPluginModal = ({
     handleSeekPointerRef.current = handleSeekPointer;
   }, [handleSeekPointer]);
 
-  // Selección de Filtro de Stems con AWAIT y carga en el botón
-  const handleSelectStemFilter = useCallback(
-    async (stem: StemType | null) => {
-      if (loadingStem !== null) return;
-
-      const nextStem = activeStemFilterRef.current === stem ? null : stem;
-
-      // 1. Si se deselecciona o se vuelve a TODO (null)
-      if (!nextStem) {
-        setActiveStemFilter(null);
-        activeStemFilterRef.current = null;
-        if (stemMixerRef.current) {
-          stemMixerRef.current.setSolo(null);
-          if (!isPlayingSongRef.current) {
-            stemMixerRef.current.stop();
-          }
-        }
-        const ws = wavesurferRef.current;
-        if (ws) {
-          ws.setOptions({
-            waveColor: ["#00E5FF", "#CCFF00", "#FF007A"],
-            progressColor: ["#CCFF00", "#00E5FF", "#FF5500"],
-          });
-        }
-        const currentDur = externalSample?.trackInfo?.durationSec || totalDuration;
-        const currentBuffer = externalSample?.buffer || customAudioBuffer;
-        const currentTrack = externalSample?.trackInfo || trackInfo;
-        loadWaveformData(currentDur, currentBuffer, currentTrack, null, stemsResult);
-
-        if (isPlayingSongRef.current) {
-          handlePlaySongFrom(playbackPointerSecRef.current);
-        }
-        return;
-      }
-
-      // 2. Si ya tenemos stemsResult en memoria: cambio instantáneo sin espera
-      if (stemsResult && stemsResult[nextStem]) {
-        setActiveStemFilter(nextStem);
-        activeStemFilterRef.current = nextStem;
-        if (stemMixerRef.current) {
-          stemMixerRef.current.setSolo(nextStem);
-        }
-        const ws = wavesurferRef.current;
-        if (ws) {
-          const colorMap = {
-            drums: "#00E5FF",
-            bass: "#CCFF00",
-            melody: "#FF007A",
-            vocals: "#FFD600",
-          };
-          ws.setOptions({
-            waveColor: colorMap[nextStem],
-            progressColor: "#FFFFFF",
-          });
-        }
-        const currentDur = stemsResult.durationSec || totalDuration;
-        const currentTrack = externalSample?.trackInfo || trackInfo;
-        loadWaveformData(currentDur, stemsResult[nextStem], currentTrack, nextStem, stemsResult);
-
-        if (isPlayingSongRef.current) {
-          handlePlaySongFrom(playbackPointerSecRef.current);
-        }
-        return;
-      }
-
-      // 3. AWAIT: Separación asíncrona con estado de carga en el botón
-      setLoadingStem(nextStem);
-      try {
-        const separated = await handleSeparateStems();
-        if (separated && separated[nextStem]) {
-          setActiveStemFilter(nextStem);
-          activeStemFilterRef.current = nextStem;
-          if (stemMixerRef.current) {
-            stemMixerRef.current.loadStems(separated);
-            stemMixerRef.current.setSolo(nextStem);
-          }
-          const ws = wavesurferRef.current;
-          if (ws) {
-            const colorMap = {
-              drums: "#00E5FF",
-              bass: "#CCFF00",
-              melody: "#FF007A",
-              vocals: "#FFD600",
-            };
-            ws.setOptions({
-              waveColor: colorMap[nextStem],
-              progressColor: "#FFFFFF",
-            });
-          }
-          const currentDur = separated.durationSec || totalDuration;
-          const currentTrack = externalSample?.trackInfo || trackInfo;
-          loadWaveformData(currentDur, separated[nextStem], currentTrack, nextStem, separated);
-
-          if (isPlayingSongRef.current) {
-            handlePlaySongFrom(playbackPointerSecRef.current);
-          }
-        }
-      } catch (err) {
-        console.error("Error al procesar separación de stem:", err);
-      } finally {
-        setLoadingStem(null);
-      }
-    },
-    [loadingStem, stemsResult, handleSeparateStems, externalSample, totalDuration, customAudioBuffer, trackInfo, loadWaveformData, handlePlaySongFrom]
-  );
-
   // Sincronizar tasa de pitch y velocidad en el reproductor de YouTube
   const applyPitchRateToYouTube = useCallback((semi: number) => {
     if (!ytPlayerRef.current?.contentWindow) return;
@@ -988,9 +1139,20 @@ export const CSamplerPluginModal = ({
         } catch {}
       }
 
-      const activePitch = options?.overridePitchSemi !== undefined ? options.overridePitchSemi : pitchSemi;
+      const activePitch = (options?.overridePitchSemi !== undefined ? options.overridePitchSemi : pitchSemi) + fineTuneCents / 100;
+      const effectiveStartSec = Math.max(0, cue.startSec + startOffsetMs / 1000);
       const velocity = options?.velocity ?? 1.0;
       const filterCutoff = options?.filterCutoff;
+
+      if (isRecordingPadsRef.current) {
+        const rawSec = Math.max(0, (performance.now() - recordingStartPerfRef.current) / 1000);
+        const curBpm = (externalSample?.trackInfo || trackInfo)?.bpm || 95;
+        const step16 = 60 / curBpm / 4;
+        const timeSec = quantizeOnRef.current
+          ? Math.round(rawSec / step16) * step16
+          : rawSec;
+        setRecordedPadEvents((prev) => [...prev, { cueId: cue.id, timeSec }]);
+      }
 
       // Límites sucesivos de corte: el marcador 1 termina en el marcador 2, el 2 en el 3, etc.
       const { naturalDurationSec } = getCueSliceLimits(
@@ -1002,7 +1164,8 @@ export const CSamplerPluginModal = ({
       // Factor de velocidad por pitch shifting
       const playbackRate = Math.pow(2, activePitch / 12);
       // Duración real en segundos de reproducción hasta alcanzar el siguiente marcador
-      const playbackDurationSec = naturalDurationSec / playbackRate;
+      const gateScale = triggerMode === "full_track" ? 1 : Math.max(0.1, chopGatePct / 100);
+      const playbackDurationSec = (naturalDurationSec * gateScale) / playbackRate;
       // Duración efectiva (permite acortar si se indicó options.duration en 16 Levels DECAY)
       const effectiveDurSec =
         options?.duration !== undefined
@@ -1017,8 +1180,21 @@ export const CSamplerPluginModal = ({
 
       const currentTrack = externalSample?.trackInfo || trackInfo;
 
-      // 1. CANCIÓN CON STEMS AISLADOS (si el usuario aisló un instrumento: drums, bass, melody o vocals)
-      if (activeStemFilter && stemMixerRef.current) {
+      const customPadBuf = padCustomBuffersRef.current[cue.id];
+
+      // 0. PAD CON CORTE REAL PERSONALIZADO
+      if (customPadBuf) {
+        studioAudio.playSamplerSlice(
+          { startSec: 0, duration: customPadBuf.duration },
+          {
+            pitchSemi: activePitch,
+            velocity,
+            filterCutoff,
+            duration: customPadBuf.duration,
+          },
+          customPadBuf
+        );
+      } else if (activeStemFilter && stemMixerRef.current) {
         if (ytPlayerRef.current?.contentWindow) {
           try {
             ytPlayerRef.current.contentWindow.postMessage(
@@ -1091,10 +1267,10 @@ export const CSamplerPluginModal = ({
             : naturalDurationSec;
 
         if (activeStemFilter && stemMixerRef.current) {
-          stemMixerRef.current.play(cue.startSec, sliceDuration);
+          stemMixerRef.current.play(effectiveStartSec, sliceDuration);
         } else if (customAudioBuffer) {
           studioAudio.playSamplerSlice(
-            { startSec: cue.startSec, duration: sliceDuration },
+            { startSec: effectiveStartSec, duration: sliceDuration },
             {
               pitchSemi: activePitch,
               velocity,
@@ -1123,7 +1299,7 @@ export const CSamplerPluginModal = ({
         }, Math.min(220, effectiveDurSec * 1000));
       }
     },
-    [pitchSemi, customAudioBuffer, trackInfo?.youtubeId, trackInfo?.key, triggerMode, applyPitchRateToYouTube, handleStopAudio, getCueSliceLimits, activeStemFilter, cues, stemsResult, totalDuration]
+    [pitchSemi, fineTuneCents, chopGatePct, startOffsetMs, customAudioBuffer, trackInfo?.youtubeId, trackInfo?.key, triggerMode, applyPitchRateToYouTube, handleStopAudio, getCueSliceLimits, activeStemFilter, cues, stemsResult, totalDuration]
   );
 
   // Disparar Pad del modo Akai MPC 16 Levels (Tune, Velocity, Filter, Decay)
@@ -1315,8 +1491,8 @@ export const CSamplerPluginModal = ({
       container: waveformContainerRef.current,
       height: 64,
       backend: "WebAudio",
-      waveColor: ["#00E5FF", "#CCFF00", "#FF007A"], // Gradiente espectral Serato RGB
-      progressColor: ["#CCFF00", "#00E5FF", "#FF5500"], // Máscara de progreso
+      waveColor: ["#FFD600", "#FFD600", "#D4D4D8"], // Gradiente espectral Serato RGB
+      progressColor: ["#FFD600", "#FFD600", "#EAB308"], // Máscara de progreso
       cursorColor: "#FFFFFF",
       cursorWidth: 2,
       barWidth: 2,
@@ -1539,7 +1715,7 @@ export const CSamplerPluginModal = ({
           reg.element.style.zIndex = isSelected ? "40" : "25";
 
           const cue = cuesRef.current.find((c) => String(c.id) === reg.id);
-          const color = cue?.color || "#CCFF00";
+          const color = cue?.color || "#FFD600";
 
           const flag = reg.element.querySelector(".marker-flag") as HTMLElement | null;
           if (flag) {
@@ -1646,6 +1822,253 @@ export const CSamplerPluginModal = ({
     }
   };
 
+  const sliceAudioBufferToWindow = (
+    ctx: AudioContext,
+    buf: AudioBuffer,
+    startSec: number,
+    endSec: number
+  ): AudioBuffer => {
+    const sr = buf.sampleRate;
+    const startSample = Math.max(0, Math.min(buf.length - 1, Math.floor(startSec * sr)));
+    const endSample = Math.max(startSample + Math.floor(0.1 * sr), Math.min(buf.length, Math.floor(endSec * sr)));
+    const frameCount = Math.max(1, endSample - startSample);
+    const out = ctx.createBuffer(buf.numberOfChannels, frameCount, sr);
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      out.getChannelData(ch).set(buf.getChannelData(ch).subarray(startSample, startSample + frameCount));
+    }
+    return out;
+  };
+
+  const handleCutSelectedPadAtPlayhead = async () => {
+    const targetCue = cues.find((c) => c.id === (selectedCueId ?? activeCueId)) ?? cues[0];
+    if (!targetCue) return;
+
+    const { startSec, endLimitSec, naturalDurationSec } = getCueSliceLimits(
+      targetCue.id,
+      cues,
+      totalDuration
+    );
+    const safeEnd = Math.max(startSec + 0.2, endLimitSec);
+
+    setIsCuttingPad(true);
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    try {
+      let sourceBuf: AudioBuffer | null = customAudioBuffer;
+      const activeTrack = externalSample?.trackInfo || trackInfo;
+
+      if (!sourceBuf && activeTrack?.youtubeId) {
+        try {
+          let arrayBuffer: ArrayBuffer | null = await loadYouTubeAudioFromBrowserCache(activeTrack.youtubeId);
+          if (!arrayBuffer) {
+            const res = await fetch(`/api/studio/stream-sample?youtubeId=${activeTrack.youtubeId}`);
+            const contentType = res.headers.get("content-type") || "";
+            if (res.ok && (contentType.includes("audio") || contentType.includes("octet-stream"))) {
+              arrayBuffer = await res.arrayBuffer();
+              await saveYouTubeAudioToBrowserCache(activeTrack.youtubeId, arrayBuffer, contentType);
+            }
+          }
+          if (arrayBuffer) {
+            sourceBuf = await ctx.decodeAudioData(arrayBuffer.slice(0));
+            setCustomAudioBuffer(sourceBuf);
+          }
+        } catch {}
+      }
+
+      let rawSliceBuffer: AudioBuffer;
+      let isRealAudio = false;
+      const existingPadBuffer = padCustomBuffers[targetCue.id];
+      if (existingPadBuffer) {
+        rawSliceBuffer = existingPadBuffer;
+        isRealAudio = true;
+      } else if (sourceBuf) {
+        rawSliceBuffer = sliceAudioBufferToWindow(ctx, sourceBuf, startSec, safeEnd);
+        isRealAudio = true;
+      } else {
+        const synth = createStemsFromTrack(
+          Math.max(1, Math.min(30, naturalDurationSec)),
+          activeTrack?.bpm || 95,
+          activeTrack?.key || "Am",
+          activeTrack?.genre || "funk"
+        );
+        rawSliceBuffer = synth.melody || synth.drums || ctx.createBuffer(2, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
+      }
+
+      setCutPadModalData({
+        cueId: targetCue.id,
+        padLabel: `CUE ${targetCue.id} · ${targetCue.name}`,
+        rangeLabel: `${formatSeconds(startSec)} ➔ ${formatSeconds(safeEnd)} (${naturalDurationSec.toFixed(1)}s)`,
+        sliceStartSec: startSec,
+        sliceEndSec: safeEnd,
+        isRealAudio,
+        bpm: activeTrack?.bpm || 95,
+        musicalKey: activeTrack?.key || "Am",
+        genre: activeTrack?.genre || "funk",
+        rawSliceBuffer,
+      });
+    } finally {
+      setIsCuttingPad(false);
+      await ctx.close().catch(() => {});
+    }
+  };
+
+  const stopRecordedMelodyPlayback = useCallback(() => {
+    for (const id of recordingTimersRef.current) {
+      window.clearTimeout(id);
+    }
+    recordingTimersRef.current = [];
+    setIsPlayingRecording(false);
+    handleStopAudio();
+  }, [handleStopAudio]);
+
+  // Metrónomo en vivo mientras se graba una secuencia de pads
+  useEffect(() => {
+    if (!isRecordingPads || !metronomeOn) return;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    const curBpm = (externalSample?.trackInfo || trackInfo)?.bpm || 95;
+    const beatMs = Math.round((60 / Math.max(50, curBpm)) * 1000);
+    let beatIdx = 0;
+
+    const playTick = () => {
+      try {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(beatIdx % 4 === 0 ? 1280 : 880, now);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+        beatIdx++;
+      } catch {}
+    };
+
+    playTick();
+    const timer = window.setInterval(playTick, beatMs);
+    return () => {
+      window.clearInterval(timer);
+      ctx.close().catch(() => {});
+    };
+  }, [isRecordingPads, metronomeOn, externalSample?.trackInfo, trackInfo]);
+
+  const handleToggleRecordPads = () => {
+    if (isRecordingPads) {
+      setIsRecordingPads(false);
+    } else {
+      stopRecordedMelodyPlayback();
+      setRecordedPadEvents([]);
+      recordingStartPerfRef.current = performance.now();
+      setIsRecordingPads(true);
+    }
+  };
+
+  const handlePlayRecordedMelody = () => {
+    if (isPlayingRecording) {
+      stopRecordedMelodyPlayback();
+      return;
+    }
+    if (recordedPadEvents.length === 0) return;
+
+    setIsPlayingRecording(true);
+    const timers: number[] = [];
+    const maxTime = recordedPadEvents[recordedPadEvents.length - 1].timeSec;
+    recordedPadEvents.forEach((ev) => {
+      const t = window.setTimeout(() => {
+        const cue = cues.find((c) => c.id === ev.cueId);
+        if (cue) handleTriggerCue(cue);
+      }, Math.round(ev.timeSec * 1000));
+      timers.push(t);
+    });
+    const endTimer = window.setTimeout(() => {
+      setIsPlayingRecording(false);
+    }, Math.round((maxTime + 1.5) * 1000));
+    timers.push(endTimer);
+    recordingTimersRef.current = timers;
+  };
+
+  const handleSendRecordedMelodyToMaster = async () => {
+    if (recordedPadEvents.length === 0) return;
+    stopRecordedMelodyPlayback();
+    setIsRenderingRecording(true);
+    try {
+      const sr = customAudioBuffer?.sampleRate || 44100;
+      const lastEv = recordedPadEvents[recordedPadEvents.length - 1];
+      const totalRenderSec = Math.max(2.0, lastEv.timeSec + 2.5);
+      const offline = new OfflineAudioContext(2, Math.ceil(totalRenderSec * sr), sr);
+
+      for (let i = 0; i < recordedPadEvents.length; i++) {
+        const ev = recordedPadEvents[i];
+        const nextEv = recordedPadEvents[i + 1];
+        const cue = cues.find((c) => c.id === ev.cueId);
+        if (!cue) continue;
+
+        const padBuf = padCustomBuffersRef.current[cue.id];
+        const { startSec, naturalDurationSec } = getCueSliceLimits(cue.id, cues, totalDuration);
+        const maxPlayDur = nextEv ? Math.max(0.12, nextEv.timeSec - ev.timeSec) : naturalDurationSec;
+
+        let hitBuf: AudioBuffer | null = null;
+        if (padBuf) {
+          hitBuf = padBuf;
+        } else if (customAudioBuffer) {
+          const hitCtx = new OfflineAudioContext(
+            customAudioBuffer.numberOfChannels,
+            Math.max(1, Math.floor(Math.min(naturalDurationSec, maxPlayDur) * sr)),
+            sr
+          );
+          const s = hitCtx.createBufferSource();
+          s.buffer = customAudioBuffer;
+          s.connect(hitCtx.destination);
+          s.start(0, startSec, Math.min(naturalDurationSec, maxPlayDur));
+          hitBuf = await hitCtx.startRendering();
+        }
+
+        if (hitBuf) {
+          const src = offline.createBufferSource();
+          src.buffer = hitBuf;
+          src.connect(offline.destination);
+          src.start(ev.timeSec, 0, Math.min(hitBuf.duration, maxPlayDur));
+        }
+      }
+
+      const rendered = await offline.startRendering();
+      const activeTrack = externalSample?.trackInfo || trackInfo;
+      const bpm = activeTrack?.bpm || 95;
+      const key = activeTrack?.key || "Am";
+      const genre = activeTrack?.genre || "funk";
+
+      const dspBase = await separateAudioIntoStems(rendered, bpm, key, genre);
+      const browserAi = await separateAudioInBrowserWorker(rendered, {
+        windowStartSec: 0,
+        windowDurationSec: rendered.duration,
+        baseStems: dspBase,
+      });
+      const finalStems = browserAi ? browserAi.stems : dspBase;
+
+      setMasterModalData({
+        padLabel: `MELODÍA GRABADA (${recordedPadEvents.length} PADS)`,
+        rangeLabel: `0:00.0 ➔ ${formatSeconds(rendered.duration)} (${rendered.duration.toFixed(1)}s)`,
+        initialBpm: bpm,
+        channels: {
+          raw: rendered,
+          drums: finalStems.drums,
+          bass: finalStems.bass,
+          melody: finalStems.melody,
+          vocals: finalStems.vocals,
+        },
+      });
+    } finally {
+      setIsRenderingRecording(false);
+    }
+  };
+
   // Renombrar Cue Point en línea
   const handleStartRename = (e: React.MouseEvent, cue: SamplerCuePoint) => {
     e.stopPropagation();
@@ -1662,75 +2085,27 @@ export const CSamplerPluginModal = ({
     setEditingCueId(null);
   };
 
-  // Auto Slicing Serato: 8 o 16 Chops
-  const handleAutoSlice = (count: 8 | 16) => {
-    const sliceLen = totalDuration / count;
-    const newCues: SamplerCuePoint[] = Array.from({ length: count }).map((_, idx) => {
-      const id = idx + 1;
-      const startSec = Math.round(idx * sliceLen * 10) / 10;
-      return {
-        id,
-        name: `CHOP ${id} (${formatSeconds(startSec)})`,
-        startSec,
-        color: SERATO_COLORS[(id - 1) % SERATO_COLORS.length],
-        active: true,
-      };
-    });
-    setCues(newCues);
-    setSelectedCueId(1);
-    if (count === 16 && activeBank === "A") {
-      setActiveBank("ALL");
-    }
-    handleTriggerCue(newCues[0]);
-  };
-
-  // Random Chops estilo MPC / Samplette (sucesivos y ordenados cronológicamente)
-  const handleRandomChops = (count = 8) => {
-    const step = totalDuration / count;
-    const times: number[] = [];
-    for (let idx = 0; idx < count; idx++) {
-      const base = idx * step;
-      const jitter = (Math.random() * 0.5 - 0.25) * step;
-      const startSec = Math.max(0, Math.min(totalDuration - 1, Math.round((base + jitter) * 10) / 10));
-      times.push(startSec);
-    }
-    times.sort((a, b) => a - b);
-    for (let i = 1; i < times.length; i++) {
-      if (times[i] <= times[i - 1]) {
-        times[i] = Math.min(totalDuration - 0.1, Math.round((times[i - 1] + 0.5) * 10) / 10);
-      }
-    }
-    const newCues: SamplerCuePoint[] = times.map((sec, idx) => {
-      const id = idx + 1;
-      return {
-        id,
-        name: `CHOP ${id} (${formatSeconds(sec)})`,
-        startSec: sec,
-        color: SERATO_COLORS[(id - 1) % SERATO_COLORS.length],
-        active: true,
-      };
-    });
-    setCues(newCues);
-    setSelectedCueId(1);
-    handleTriggerCue(newCues[0]);
-  };
-
   // Atajos de teclado físicos (Soporta Serato Chops y Akai 16 Levels con modo HOLD y monophonic choke)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isStandalone && !isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isStandalone && !isTopModal()) return;
+      if (showAiModal) return;
+
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT"
+        target.tagName === "SELECT" ||
+        target.isContentEditable
       ) {
         return;
       }
 
       if (e.code === "Space") {
         e.preventDefault();
+        e.stopPropagation();
         if (handlePlayPauseSongRef.current) {
           handlePlayPauseSongRef.current();
         } else {
@@ -1742,6 +2117,7 @@ export const CSamplerPluginModal = ({
       if (e.code === "Delete" || e.code === "Backspace") {
         if (selectedCueId !== null && cues.length > 1 && !is16Levels) {
           e.preventDefault();
+          e.stopPropagation();
           setCues((prev) => prev.filter((c) => c.id !== selectedCueId));
           setSelectedCueId(null);
           return;
@@ -1752,6 +2128,7 @@ export const CSamplerPluginModal = ({
       if (padId !== undefined) {
         if (!e.repeat) {
           e.preventDefault();
+          e.stopPropagation();
           activeKeysDownRef.current.add(e.key.toLowerCase());
           if (is16Levels) {
             handleTrigger16Level(padId);
@@ -1766,6 +2143,7 @@ export const CSamplerPluginModal = ({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (!isStandalone && !isTopModal()) return;
       const padId = KEY_PAD_MAP[e.key];
       if (padId !== undefined) {
         activeKeysDownRef.current.delete(e.key.toLowerCase());
@@ -1778,13 +2156,29 @@ export const CSamplerPluginModal = ({
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("keyup", handleKeyUp, true);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("keyup", handleKeyUp, true);
     };
-  }, [isOpen, cues, selectedCueId, is16Levels, triggerMode, handleTriggerCue, handleTrigger16Level, handleStopAudio]);
+  }, [isOpen, isStandalone, showAiModal, isTopModal, cues, selectedCueId, is16Levels, triggerMode, handleTriggerCue, handleTrigger16Level, handleStopAudio]);
+
+  const handleDownloadAudioToPc = useCallback(() => {
+    if (!customAudioBuffer) return;
+    const blob = encodeAudioBufferToWavBlob(customAudioBuffer);
+    const url = URL.createObjectURL(blob);
+    const rawName = (trackInfo?.title || sampleName || "c-studio-sample")
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .slice(0, 60);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${rawName}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }, [customAudioBuffer, trackInfo?.title, sampleName]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1803,8 +2197,8 @@ export const CSamplerPluginModal = ({
         setTrackInfo(null);
         setCustomAudioBuffer(decoded);
 
-        const sliceLen = decoded.duration / 8;
-        const autoCues: SamplerCuePoint[] = Array.from({ length: 8 }).map((_, idx) => {
+        const sliceLen = decoded.duration / 16;
+        const autoCues: SamplerCuePoint[] = Array.from({ length: 16 }).map((_, idx) => {
           const id = idx + 1;
           const startSec = Math.round(idx * sliceLen * 10) / 10;
           return {
@@ -1840,8 +2234,8 @@ export const CSamplerPluginModal = ({
       setTrackInfo(null);
       setCustomAudioBuffer(decoded);
 
-      const sliceLen = decoded.duration / 8;
-      const autoCues: SamplerCuePoint[] = Array.from({ length: 8 }).map((_, idx) => {
+      const sliceLen = decoded.duration / 16;
+      const autoCues: SamplerCuePoint[] = Array.from({ length: 16 }).map((_, idx) => {
         const id = idx + 1;
         const startSec = Math.round(idx * sliceLen * 10) / 10;
         return {
@@ -1874,13 +2268,17 @@ export const CSamplerPluginModal = ({
 
   return (
     <div
+      ref={modalContainerRef}
+      tabIndex={-1}
+      role={isStandalone ? undefined : "dialog"}
+      aria-modal={isStandalone ? undefined : true}
       suppressHydrationWarning
       style={
         isStandalone
           ? {
               minHeight: "100vh",
               width: "100%",
-              backgroundColor: "#080A0F",
+              backgroundColor: "#07080B",
               backgroundImage: "radial-gradient(#1E2436 1px, transparent 1px)",
               backgroundSize: "28px 28px",
               color: "#F9FBE5",
@@ -1898,7 +2296,7 @@ export const CSamplerPluginModal = ({
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "#080A0F",
+              backgroundColor: "#07080B",
               zIndex: 220,
               display: "flex",
               flexDirection: "column",
@@ -1909,51 +2307,100 @@ export const CSamplerPluginModal = ({
             }
       }
     >
-      {/* 0. OUTSIDE TOP BAR: Volver a la radio, C-Digger y DAW */}
-      {isStandalone && (
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDropAudio}
+        style={{
+          width: "100%",
+          maxWidth: "1180px",
+          backgroundColor: "#111215",
+          border: "2px solid #FFD600",
+          outline: "4px solid #090A0D",
+          borderRadius: "10px",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 28px 80px rgba(0,0,0,0.95)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header Bar: Estilo Modular VU202 (Negro mate + líneas amarillas + botones metálicos) */}
         <div
           style={{
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            justifyContent: "space-between",
-            width: "100%",
-            maxWidth: "1180px",
-            marginBottom: "10px",
-            flexShrink: 0,
             gap: "12px",
+            padding: "8px 14px",
+            backgroundColor: "#141519",
+            borderBottom: "1px solid rgba(255,214,0,0.45)",
           }}
         >
-          <Link
-            href="/"
-            className="neo-button fun-hover-wobble"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 12px",
-              backgroundColor: "#161922",
-              color: "#CCFF00",
-              border: "2px solid #CCFF00",
-              boxShadow: "2px 2px 0px #CCFF00",
-              borderRadius: "4px",
-              fontSize: "0.7rem",
-              fontWeight: 900,
-              textDecoration: "none",
-              cursor: "pointer",
-            }}
-            title="Volver a la señal en vivo de Radio Doble C"
-          >
-            <ArrowLeft size={13} />
-            <span>VOLVER A LA RADIO</span>
-          </Link>
+          {/* Izquierda: C-SAMPLER + VOLVER A LA RADIO + Perillas de Efectos */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                background: "linear-gradient(180deg, #3A3C42 0%, #23252A 100%)",
+                color: "#FFD600",
+                fontWeight: 900,
+                fontFamily: "monospace",
+                fontSize: "0.68rem",
+                padding: "3px 9px",
+                borderRadius: "3px",
+                border: "1px solid #4B4E57",
+                boxShadow: "0 2px 0 #07080A",
+                letterSpacing: "1px",
+              }}
+            >
+              C-SAMPLER
+            </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "0.72rem", fontWeight: 900, color: "#94A3B8", letterSpacing: "0.5px" }}>
-              RADIO DOBLE C · <span style={{ color: "#CCFF00" }}>C-SAMPLER LAB</span>
+            {isStandalone && (
+              <Link
+                href="/"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  background: "linear-gradient(180deg, #3A3C42 0%, #23252A 100%)",
+                  color: "#FFD600",
+                  fontWeight: 900,
+                  fontFamily: "monospace",
+                  fontSize: "0.68rem",
+                  padding: "3px 9px",
+                  borderRadius: "3px",
+                  border: "1px solid #4B4E57",
+                  boxShadow: "0 2px 0 #07080A",
+                  letterSpacing: "1px",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+                title="Volver a la señal en vivo de Radio Doble C"
+              >
+                <ArrowLeft size={11} />
+                <span>VOLVER A LA RADIO</span>
+              </Link>
+            )}
+          </div>
+
+          {/* Centro: RADIO DOBLE C */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span
+              style={{
+                fontSize: "0.78rem",
+                fontWeight: 900,
+                color: "#FFD600",
+                letterSpacing: "1.4px",
+                fontFamily: "monospace",
+                whiteSpace: "nowrap",
+              }}
+            >
+              RADIO DOBLE C
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* Derecha: IR A C-DIGGER + Emoji Calavera + LED */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
             {onOpenDigger && (
               <button
                 type="button"
@@ -1962,293 +2409,185 @@ export const CSamplerPluginModal = ({
                   display: "flex",
                   alignItems: "center",
                   gap: "5px",
-                  padding: "5px 12px",
-                  backgroundColor: "#161B26",
-                  color: "#CCFF00",
-                  border: "1px solid #CCFF00",
-                  borderRadius: "4px",
-                  fontSize: "0.7rem",
+                  background: "linear-gradient(180deg, #3A3C42 0%, #23252A 100%)",
+                  color: "#FFD600",
                   fontWeight: 900,
+                  fontFamily: "monospace",
+                  fontSize: "0.68rem",
+                  padding: "3px 9px",
+                  borderRadius: "3px",
+                  border: "1px solid #4B4E57",
+                  boxShadow: "0 2px 0 #07080A",
+                  letterSpacing: "1px",
                   cursor: "pointer",
+                  whiteSpace: "nowrap",
                 }}
                 title="Explorar y samplear vinilos en C-Digger"
               >
-                <Disc size={13} />
+                <Disc size={11} />
                 <span>IR A C-DIGGER</span>
               </button>
             )}
-          </div>
-        </div>
-      )}
 
-      <div
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDropAudio}
-        style={{
-          width: "100%",
-          maxWidth: "1180px",
-          backgroundColor: "#0D0F16",
-          border: "2.5px solid #CCFF00",
-          borderRadius: "6px",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 18px 70px rgba(0,0,0,0.95)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Header Bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "7px 16px",
-            backgroundColor: "#161924",
-            borderBottom: "1.5px solid #242938",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div
-              style={{
-                backgroundColor: "#CCFF00",
-                color: "#111111",
-                fontWeight: 900,
-                fontSize: "0.64rem",
-                padding: "2px 6px",
-                borderRadius: "2px",
-                letterSpacing: "0.5px",
-              }}
-            >
-              SERATO SAMPLE VST
-            </div>
-            <span style={{ fontWeight: 900, fontSize: "0.86rem", color: "#FFFFFF", letterSpacing: "0.8px" }}>
-              C-SAMPLER <span style={{ color: "#CCFF00" }}>DYNAMIC CUE &amp; SLICE LAB</span>
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <button
               onClick={onClose}
               style={{
-                padding: "2px 6px",
-                backgroundColor: "transparent",
-                border: "none",
-                color: "#A6ADC2",
+                padding: "3px 6px",
+                backgroundColor: "#262830",
+                border: "1px solid #3A3D48",
+                borderRadius: "3px",
+                boxShadow: "0 2px 0 #090A0D",
+                color: "#D4D4D8",
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
               title="Cerrar sampler"
             >
-              <X size={16} />
+              <img
+                src="/emojis/msn/c-calavera-48.png"
+                alt="Cerrar sampler"
+                style={{ width: "20px", height: "20px", objectFit: "contain", display: "block" }}
+              />
             </button>
+            <span
+              style={{
+                width: "9px",
+                height: "9px",
+                borderRadius: "50%",
+                backgroundColor: "#2C2F38",
+                border: "1px solid #0B0C0F",
+                boxShadow: "inset 0 1px 1px rgba(0,0,0,0.9)",
+                display: "inline-block",
+              }}
+            />
           </div>
         </div>
 
-        {/* Live Audio Source Banner (YouTube Vinyl) */}
+        {/* Hidden YouTube Audio Player (sin banner visible para ahorrar espacio) */}
         {(() => {
           const activeTrack = externalSample?.trackInfo || trackInfo;
           if (!activeTrack?.youtubeId) return null;
           return (
             <div
+              aria-hidden="true"
               style={{
-                padding: "5px 16px",
-                backgroundColor: "#10131E",
-                borderBottom: "1px solid #232A3B",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "10px",
-                flexWrap: "wrap",
+                position: "fixed",
+                left: "-9999px",
+                top: 0,
+                width: "1px",
+                height: "1px",
+                opacity: 0,
+                pointerEvents: "none",
+                overflow: "hidden",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    backgroundColor: "#CCFF00",
-                    boxShadow: "0 0 8px #CCFF00",
-                    display: "inline-block",
-                  }}
-                />
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ fontSize: "0.58rem", fontWeight: 900, color: "#CCFF00", letterSpacing: "0.4px" }}>
-                    VINILO EN VIVO:
-                  </span>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 900, color: "#FFFFFF" }}>
-                    {activeTrack.artist || "Artista"} — {activeTrack.title || "Pista"}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <button
-                  onClick={handleStopAudio}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    padding: "3px 8px",
-                    backgroundColor: "#202638",
-                    color: "#FF3366",
-                    border: "1px solid #FF3366",
-                    borderRadius: "3px",
-                    fontSize: "0.62rem",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                    boxShadow: "0 1px 6px rgba(255, 51, 102, 0.25)",
-                  }}
-                  title="Pausar / Detener audio (Tecla Espacio)"
-                >
-                  <Square size={9} fill="#FF3366" />
-                  <span>STOP (ESPACIO)</span>
-                </button>
-
-                <div
-                  style={{
-                    width: "140px",
-                    height: "58px",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    border: "1.5px solid #323A50",
-                    backgroundColor: "#000000",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.8)",
-                    position: "relative",
-                  }}
-                  title="Reproductor de Audio YouTube de C-Digger"
-                >
-                  <iframe
-                    ref={ytPlayerRef}
-                    key={activeTrack.youtubeId}
-                    id="csampler-yt-audio-player"
-                    src={buildSampletteYouTubeEmbedUrl(activeTrack.youtubeId, {
-                      enableJsApi: true,
-                      controls: false,
-                      autoplay: false,
-                    })}
-                    title={`${activeTrack.artist || "Vinyl"} - ${activeTrack.title || "Track"}`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                  onLoad={() => {
-                    if (ytPlayerRef.current?.contentWindow) {
-                      try {
-                        ytPlayerRef.current.contentWindow.postMessage(
-                          JSON.stringify({ event: "listening" }),
-                          "*"
-                        );
-                        ytPlayerRef.current.contentWindow.postMessage(
-                          JSON.stringify({ event: "command", func: "addEventListener", args: ["onError"] }),
-                          "*"
-                        );
-                        ytPlayerRef.current.contentWindow.postMessage(
-                          JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }),
-                          "*"
-                        );
-                        ytPlayerRef.current.contentWindow.postMessage(
-                          JSON.stringify({ event: "command", func: "unMute", args: [] }),
-                          "*"
-                        );
-                      } catch {}
-                    }
-                  }}
-                  style={{ width: "100%", height: "100%", border: "none" }}
-                />
-              </div>
+              <iframe
+                ref={ytPlayerRef}
+                key={activeTrack.youtubeId}
+                id="csampler-yt-audio-player"
+                src={buildSampletteYouTubeEmbedUrl(activeTrack.youtubeId, {
+                  enableJsApi: true,
+                  controls: false,
+                  autoplay: false,
+                })}
+                title={`${activeTrack.artist || "Vinyl"} - ${activeTrack.title || "Track"}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                onLoad={() => {
+                  if (ytPlayerRef.current?.contentWindow) {
+                    try {
+                      ytPlayerRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "listening" }),
+                        "*"
+                      );
+                      ytPlayerRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "command", func: "addEventListener", args: ["onError"] }),
+                        "*"
+                      );
+                      ytPlayerRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }),
+                        "*"
+                      );
+                      ytPlayerRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "command", func: "unMute", args: [] }),
+                        "*"
+                      );
+                    } catch {}
+                  }
+                }}
+                style={{ width: "100%", height: "100%", border: "none" }}
+              />
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
         {/* Modal Main Content */}
         <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: "8px", maxHeight: "86vh", overflowY: "auto" }}>
-          {/* 1. Track Info & Action Tools */}
+          {/* 1. Modular VU202 Top Bar: Fuente de Audio + Caja EFECTOS + Stems */}
           <div
             style={{
-              backgroundColor: "#07080B",
-              border: "1.5px solid #232838",
-              borderRadius: "5px",
-              padding: "7px 12px",
+              backgroundColor: "#0A0B0E",
+              border: "1px solid rgba(255,214,0,0.45)",
+              borderRadius: "6px",
+              padding: "8px 10px",
               display: "flex",
               flexDirection: "column",
-              gap: "6px",
+              gap: "8px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Disc size={14} style={{ color: "#CCFF00" }} className="animate-spin" />
-                <span style={{ fontSize: "0.78rem", fontWeight: 900, color: "#FFFFFF", fontFamily: "monospace" }}>
-                  {sampleName}
-                </span>
-                <span
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "stretch", gap: "10px", flexWrap: "wrap" }}>
+              {/* Caja EFECTOS (Botones Blancos Táctiles estilo VU202) */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  backgroundColor: "#111215",
+                  border: "1px solid rgba(255,214,0,0.45)",
+                  borderRadius: "5px",
+                  padding: "6px 10px",
+                }}
+              >
+                <div
                   style={{
-                    fontSize: "0.58rem",
-                    fontWeight: 900,
-                    backgroundColor: "#1F2536",
-                    color: "#CCFF00",
-                    padding: "1px 5px",
-                    borderRadius: "2px",
-                    border: "1px solid #333D56",
+                    borderBottom: "1px solid rgba(255,214,0,0.35)",
+                    paddingBottom: "3px",
+                    textAlign: "center",
                   }}
                 >
-                  {cues.length} CUES
-                </span>
-                {isYtRestricted && (
                   <span
                     style={{
                       fontSize: "0.54rem",
                       fontWeight: 900,
-                      backgroundColor: "#2E1018",
-                      color: "#FF3366",
-                      border: "1px solid #FF3366",
-                      padding: "1px 6px",
-                      borderRadius: "2px",
-                      letterSpacing: "0.4px",
+                      color: "#FFD600",
+                      letterSpacing: "1.6px",
+                      fontFamily: "monospace",
                     }}
                   >
-                    ⚠️ BLOQUEO LATINAUTOR · AUDIO RESCATADO EN RAM
+                    EFECTOS
                   </span>
-                )}
-              </div>
+                </div>
 
-              {/* Serato Slicing Tools & Add Cue */}
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                {onOpenDigger && (
-                  <button
-                    onClick={onOpenDigger}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      padding: "4px 9px",
-                      backgroundColor: "#2B1115",
-                      color: "#FF3366",
-                      border: "1.5px solid #FF3366",
-                      borderRadius: "3px",
-                      fontSize: "0.68rem",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                    title="Explorar vinilos en YouTube con C-Digger"
-                  >
-                    <span>📻</span>
-                    <span>C-DIGGER YOUTUBE</span>
-                  </button>
-                )}
-
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                 <button
                   onClick={() => handleAddCue()}
                   disabled={cues.length >= 16}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "3px",
-                    padding: "3px 8px",
-                    backgroundColor: "#162B1D",
-                    color: "#00E676",
-                    border: "1.2px solid #00E676",
-                    borderRadius: "3px",
+                    gap: "4px",
+                    padding: "4px 9px",
+                    background: "linear-gradient(180deg, #F0F0F2 0%, #D4D4D8 100%)",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "4px",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 0 #07080A",
                     fontSize: "0.64rem",
                     fontWeight: 900,
+                    fontFamily: "monospace",
                     cursor: cues.length >= 16 ? "not-allowed" : "pointer",
                     opacity: cues.length >= 16 ? 0.5 : 1,
                   }}
@@ -2259,66 +2598,29 @@ export const CSamplerPluginModal = ({
                 </button>
 
                 <button
-                  onClick={() => handleAutoSlice(8)}
+                  type="button"
+                  disabled={isCuttingPad}
+                  onClick={handleCutSelectedPadAtPlayhead}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "3px",
-                    padding: "3px 8px",
-                    backgroundColor: "#182235",
-                    color: "#00E5FF",
-                    border: "1px solid #00E5FF",
-                    borderRadius: "3px",
+                    gap: "4px",
+                    padding: "4px 9px",
+                    background: "linear-gradient(180deg, #F0F0F2 0%, #D4D4D8 100%)",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "4px",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 0 #07080A",
                     fontSize: "0.64rem",
                     fontWeight: 900,
-                    cursor: "pointer",
+                    fontFamily: "monospace",
+                    cursor: isCuttingPad ? "wait" : "pointer",
+                    opacity: isCuttingPad ? 0.65 : 1,
                   }}
-                  title="Dividir en 8 chops simétricos estilo Serato"
+                  title="Abre el editor de corte con el tramo exacto del pad seleccionado para ajustar pitch, efectos y separar instrumentos"
                 >
                   <Scissors size={11} />
-                  <span>SLICE 8</span>
-                </button>
-
-                <button
-                  onClick={() => handleAutoSlice(16)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "3px",
-                    padding: "3px 8px",
-                    backgroundColor: "#2A1835",
-                    color: "#E040FB",
-                    border: "1px solid #E040FB",
-                    borderRadius: "3px",
-                    fontSize: "0.64rem",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                  }}
-                  title="Dividir en 16 chops simétricos estilo Serato"
-                >
-                  <Scissors size={11} />
-                  <span>SLICE 16</span>
-                </button>
-
-                <button
-                  onClick={() => handleRandomChops(8)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "3px",
-                    padding: "3px 8px",
-                    backgroundColor: "#2A2518",
-                    color: "#FFD600",
-                    border: "1px solid #FFD600",
-                    borderRadius: "3px",
-                    fontSize: "0.64rem",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                  }}
-                  title="Cortes aleatorios distribuidos a lo largo del vinilo"
-                >
-                  <Shuffle size={11} />
-                  <span>RANDOM</span>
+                  <span>{isCuttingPad ? "CORTANDO..." : "CORTAR PAD"}</span>
                 </button>
 
                 {/* Botón Akai MPC 16 Levels */}
@@ -2328,27 +2630,32 @@ export const CSamplerPluginModal = ({
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",
-                    padding: "3px 9px",
-                    backgroundColor: is16Levels ? "#FF5500" : "#241710",
-                    color: is16Levels ? "#FFFFFF" : "#FF7733",
-                    border: is16Levels ? "1.5px solid #FFFFFF" : "1.2px solid #FF5500",
-                    borderRadius: "3px",
+                    padding: "4px 9px",
+                    background: is16Levels
+                      ? "linear-gradient(180deg, #FFE135 0%, #FFD600 100%)"
+                      : "linear-gradient(180deg, #F0F0F2 0%, #D4D4D8 100%)",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "4px",
                     fontSize: "0.64rem",
                     fontWeight: 900,
+                    fontFamily: "monospace",
                     cursor: "pointer",
-                    boxShadow: is16Levels ? "0 0 12px rgba(255, 85, 0, 0.7)" : "none",
-                    transition: "all 0.15s ease",
+                    boxShadow: is16Levels
+                      ? "inset 0 1px 0 rgba(255,255,255,0.7), 0 0 12px rgba(255, 214, 0, 0.55), 0 3px 0 #07080A"
+                      : "inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 0 #07080A",
+                    transition: "all 0.12s ease",
                   }}
                   title="Efecto Akai MPC 16 Levels: Mapea el chop seleccionado cromáticamente en 16 semitonos (-7st a +8st) para tocar melodías con el teclado"
                 >
                   <span>🎹</span>
-                  <span>16 LEVELS (AKAI)</span>
+                  <span>16 LEVELS</span>
                   {is16Levels && (
                     <span
                       style={{
                         fontSize: "0.52rem",
-                        backgroundColor: "#111111",
-                        color: "#FF5500",
+                        backgroundColor: "#090A0D",
+                        color: "#FFD600",
                         padding: "1px 4px",
                         borderRadius: "2px",
                         fontWeight: 900,
@@ -2359,234 +2666,165 @@ export const CSamplerPluginModal = ({
                   )}
                 </button>
 
-                {/* GRUPO SERATO STEMS EN LA MISMA ONDA (BATERÍA, BAJO, MELODÍA, VOCAL) */}
+                {/* Fin Caja EFECTOS */}
+                </div>
+              </div>
+
+              {/* Perillas de Efectos Reales al lado de EFECTOS (FILTER · CRUNCH · VOLUME) */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "6px",
+                  backgroundColor: "#111215",
+                  border: "1px solid rgba(255,214,0,0.45)",
+                  borderRadius: "5px",
+                  padding: "6px 10px",
+                }}
+              >
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2px",
-                    backgroundColor: "#080B12",
-                    padding: "2px 4px",
-                    borderRadius: "4px",
-                    border: "1px solid #1E2738",
+                    borderBottom: "1px solid rgba(255,214,0,0.35)",
+                    paddingBottom: "3px",
+                    textAlign: "center",
                   }}
                 >
                   <span
                     style={{
-                      fontSize: "0.56rem",
+                      fontSize: "0.54rem",
                       fontWeight: 900,
-                      color: "#6E778E",
-                      padding: "0 2px",
-                      letterSpacing: "0.5px",
+                      color: "#FFD600",
+                      letterSpacing: "1.6px",
+                      fontFamily: "monospace",
                     }}
                   >
-                    STEMS:
+                    DSP / MASTER
                   </span>
-
-                  {/* BOTÓN ESTADO Y PRUEBA IA DEMUCS */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      checkAiStatus();
-                      setShowAiModal(true);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "3px",
-                      padding: "2px 6px",
-                      backgroundColor:
-                        aiServerStatus?.hasLocalWorker || aiServerStatus?.hasReplicate
-                          ? "#00E5FF22"
-                          : "#161B26",
-                      color:
-                        aiServerStatus?.hasLocalWorker || aiServerStatus?.hasReplicate
-                          ? "#00E5FF"
-                          : "#94A3B8",
-                      border: `1px solid ${
-                        aiServerStatus?.hasLocalWorker || aiServerStatus?.hasReplicate
-                          ? "#00E5FF66"
-                          : "#2D3748"
-                      }`,
-                      borderRadius: "3px",
-                      fontSize: "0.58rem",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                      marginRight: "3px",
-                      transition: "all 0.12s ease",
-                    }}
-                    title="Configuración y pruebas de IA Meta Demucs v4"
-                  >
-                    <span>✨</span>
-                    <span>{aiEngineName}</span>
-                  </button>
-
-                  {/* TODO / MASTER */}
-                  <button
-                    type="button"
-                    disabled={loadingStem !== null}
-                    onClick={() => handleSelectStemFilter(null)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "3px 7px",
-                      backgroundColor: activeStemFilter === null ? "#1A2536" : "transparent",
-                      color: activeStemFilter === null ? "#00E5FF" : "#6E778E",
-                      border: activeStemFilter === null ? "1.2px solid #00E5FF" : "1px solid #1E293B",
-                      borderRadius: "3px",
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      cursor: loadingStem !== null ? "wait" : "pointer",
-                      opacity: loadingStem !== null ? 0.6 : 1,
-                      transition: "all 0.12s ease",
-                    }}
-                    title="Todo el vinilo completo (Espectro Serato RGB multicolor)"
-                  >
-                    <span>🌐</span>
-                    <span>TODO</span>
-                    {stemsResult && (
-                      <span style={{ fontSize: "0.55rem", color: "#00E5FF", fontWeight: 900 }}>✓</span>
-                    )}
-                  </button>
-
-                  {/* BATERÍA */}
-                  <button
-                    type="button"
-                    disabled={loadingStem !== null}
-                    onClick={() => handleSelectStemFilter("drums")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "3px 8px",
-                      backgroundColor: activeStemFilter === "drums" ? "#00E5FF" : "#0D1822",
-                      color: activeStemFilter === "drums" ? "#07080B" : "#00E5FF",
-                      border: activeStemFilter === "drums" ? "1.5px solid #FFFFFF" : "1px solid #00E5FF44",
-                      borderRadius: "3px",
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      cursor: loadingStem !== null ? "wait" : "pointer",
-                      opacity: loadingStem !== null && loadingStem !== "drums" ? 0.5 : 1,
-                      boxShadow: activeStemFilter === "drums" ? "0 0 10px rgba(0, 229, 255, 0.7)" : "none",
-                      transition: "all 0.12s ease",
-                    }}
-                    title="Aislar Batería: reproduce y visualiza solo la pista de batería en Web Audio"
-                  >
-                    {loadingStem === "drums" ? (
-                      <Loader2 size={10} className="animate-spin" />
-                    ) : (
-                      <span>🥁</span>
-                    )}
-                    <span>{loadingStem === "drums" ? "SEPARANDO..." : "BATERÍA"}</span>
-                    {stemsResult?.drums && loadingStem !== "drums" && (
-                      <span style={{ fontSize: "0.55rem", fontWeight: 900, color: activeStemFilter === "drums" ? "#07080B" : "#00E5FF" }}>✓</span>
-                    )}
-                  </button>
-
-                  {/* BAJO */}
-                  <button
-                    type="button"
-                    disabled={loadingStem !== null}
-                    onClick={() => handleSelectStemFilter("bass")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "3px 8px",
-                      backgroundColor: activeStemFilter === "bass" ? "#CCFF00" : "#141D0D",
-                      color: activeStemFilter === "bass" ? "#07080B" : "#CCFF00",
-                      border: activeStemFilter === "bass" ? "1.5px solid #FFFFFF" : "1px solid #CCFF0044",
-                      borderRadius: "3px",
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      cursor: loadingStem !== null ? "wait" : "pointer",
-                      opacity: loadingStem !== null && loadingStem !== "bass" ? 0.5 : 1,
-                      boxShadow: activeStemFilter === "bass" ? "0 0 10px rgba(204, 255, 0, 0.7)" : "none",
-                      transition: "all 0.12s ease",
-                    }}
-                    title="Aislar Bajo: reproduce y visualiza solo la línea de bajo en Web Audio"
-                  >
-                    {loadingStem === "bass" ? (
-                      <Loader2 size={10} className="animate-spin" />
-                    ) : (
-                      <span>🎸</span>
-                    )}
-                    <span>{loadingStem === "bass" ? "SEPARANDO..." : "BAJO"}</span>
-                    {stemsResult?.bass && loadingStem !== "bass" && (
-                      <span style={{ fontSize: "0.55rem", fontWeight: 900, color: activeStemFilter === "bass" ? "#07080B" : "#CCFF00" }}>✓</span>
-                    )}
-                  </button>
-
-                  {/* MELODÍA */}
-                  <button
-                    type="button"
-                    disabled={loadingStem !== null}
-                    onClick={() => handleSelectStemFilter("melody")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "3px 8px",
-                      backgroundColor: activeStemFilter === "melody" ? "#FF007A" : "#220D18",
-                      color: activeStemFilter === "melody" ? "#07080B" : "#FF007A",
-                      border: activeStemFilter === "melody" ? "1.5px solid #FFFFFF" : "1px solid #FF007A44",
-                      borderRadius: "3px",
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      cursor: loadingStem !== null ? "wait" : "pointer",
-                      opacity: loadingStem !== null && loadingStem !== "melody" ? 0.5 : 1,
-                      boxShadow: activeStemFilter === "melody" ? "0 0 10px rgba(255, 0, 122, 0.7)" : "none",
-                      transition: "all 0.12s ease",
-                    }}
-                    title="Aislar Melodía: reproduce y visualiza solo la melodía y armonía en Web Audio"
-                  >
-                    {loadingStem === "melody" ? (
-                      <Loader2 size={10} className="animate-spin" />
-                    ) : (
-                      <span>🎹</span>
-                    )}
-                    <span>{loadingStem === "melody" ? "SEPARANDO..." : "MELODÍA"}</span>
-                    {stemsResult?.melody && loadingStem !== "melody" && (
-                      <span style={{ fontSize: "0.55rem", fontWeight: 900, color: activeStemFilter === "melody" ? "#07080B" : "#FF007A" }}>✓</span>
-                    )}
-                  </button>
-
-                  {/* VOCAL */}
-                  <button
-                    type="button"
-                    disabled={loadingStem !== null}
-                    onClick={() => handleSelectStemFilter("vocals")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "3px 8px",
-                      backgroundColor: activeStemFilter === "vocals" ? "#FFD600" : "#221E0D",
-                      color: activeStemFilter === "vocals" ? "#07080B" : "#FFD600",
-                      border: activeStemFilter === "vocals" ? "1.5px solid #FFFFFF" : "1px solid #FFD60044",
-                      borderRadius: "3px",
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      cursor: loadingStem !== null ? "wait" : "pointer",
-                      opacity: loadingStem !== null && loadingStem !== "vocals" ? 0.5 : 1,
-                      boxShadow: activeStemFilter === "vocals" ? "0 0 10px rgba(255, 214, 0, 0.7)" : "none",
-                      transition: "all 0.12s ease",
-                    }}
-                    title="Aislar Vocales: reproduce y visualiza solo la pista vocal en Web Audio"
-                  >
-                    {loadingStem === "vocals" ? (
-                      <Loader2 size={10} className="animate-spin" />
-                    ) : (
-                      <span>🎤</span>
-                    )}
-                    <span>{loadingStem === "vocals" ? "SEPARANDO..." : "VOCAL"}</span>
-                    {stemsResult?.vocals && loadingStem !== "vocals" && (
-                      <span style={{ fontSize: "0.55rem", fontWeight: 900, color: activeStemFilter === "vocals" ? "#07080B" : "#FFD600" }}>✓</span>
-                    )}
-                  </button>
                 </div>
 
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                  {(
+                    [
+                      {
+                        label: "FILTER",
+                        valText: fxFilterSweep === 0 ? "FLAT" : fxFilterSweep < 0 ? `LP ${fxFilterSweep}` : `HP +${fxFilterSweep}`,
+                        deg: (fxFilterSweep / 100) * 135,
+                        min: -100,
+                        max: 100,
+                        value: fxFilterSweep,
+                        onReset: () => {
+                          setFxFilterSweep(0);
+                          stemMixerRef.current?.setFilterSweep(0);
+                        },
+                        onChange: (v: number) => {
+                          setFxFilterSweep(v);
+                          stemMixerRef.current?.setFilterSweep(v);
+                        },
+                        title: "Filtro DJ Sweep (-100 LowPass / 0 Flat / +100 HighPass). Arrastra verticalmente o doble clic para resetear.",
+                      },
+                      {
+                        label: "CRUNCH",
+                        valText: `${fxCrunch}%`,
+                        deg: (fxCrunch / 100) * 270 - 135,
+                        min: 0,
+                        max: 100,
+                        value: fxCrunch,
+                        onReset: () => {
+                          setFxCrunch(0);
+                          stemMixerRef.current?.setCrunchDrive(0);
+                        },
+                        onChange: (v: number) => {
+                          setFxCrunch(v);
+                          stemMixerRef.current?.setCrunchDrive(v);
+                        },
+                        title: "Saturación 12-Bit / SP-404 Crunch (0% a 100%). Arrastra verticalmente o doble clic para resetear.",
+                      },
+                      {
+                        label: "VOLUME",
+                        valText: `${fxMasterVol}%`,
+                        deg: (fxMasterVol / 120) * 270 - 135,
+                        min: 0,
+                        max: 120,
+                        value: fxMasterVol,
+                        onReset: () => {
+                          setFxMasterVol(90);
+                          stemMixerRef.current?.setMasterVolume(0.9);
+                        },
+                        onChange: (v: number) => {
+                          setFxMasterVol(v);
+                          stemMixerRef.current?.setMasterVolume(v / 100);
+                        },
+                        title: "Volumen Maestro del Sampler (0% a 120%). Arrastra verticalmente o doble clic para resetear.",
+                      },
+                    ] as const
+                  ).map((knob) => (
+                    <div key={knob.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          const startY = e.clientY;
+                          const startVal = knob.value;
+                          const range = knob.max - knob.min;
+                          const onMove = (ev: PointerEvent) => {
+                            const delta = Math.round(((startY - ev.clientY) / 100) * range);
+                            const next = Math.max(knob.min, Math.min(knob.max, startVal + delta));
+                            knob.onChange(next);
+                          };
+                          const onUp = () => {
+                            window.removeEventListener("pointermove", onMove);
+                            window.removeEventListener("pointerup", onUp);
+                          };
+                          window.addEventListener("pointermove", onMove);
+                          window.addEventListener("pointerup", onUp);
+                        }}
+                        onDoubleClick={knob.onReset}
+                        title={knob.title}
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "50%",
+                          background: "radial-gradient(circle at 50% 45%, #2B2D33 0%, #191A1E 75%, #0D0E10 100%)",
+                          border: "1.5px dashed #FFD600",
+                          boxShadow: "0 0 12px rgba(255, 214, 0, 0.55), inset 0 0 8px rgba(255, 214, 0, 0.2), 0 2px 5px rgba(0,0,0,0.85)",
+                          position: "relative",
+                          cursor: "ns-resize",
+                          transform: `rotate(${knob.deg}deg)`,
+                          userSelect: "none",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: "4px",
+                            left: "50%",
+                            transform: "translateX(-50%) rotate(45deg)",
+                            width: "4px",
+                            height: "4px",
+                            backgroundColor: "#FFD600",
+                            boxShadow: "0 0 8px #FFD600, 0 0 14px rgba(255, 214, 0, 0.9)",
+                            borderRadius: "1px",
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
+                        <span style={{ fontSize: "0.48rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "0.8px", textShadow: "0 0 8px rgba(255, 214, 0, 0.65)" }}>
+                          {knob.label}
+                        </span>
+                        <span style={{ fontSize: "0.52rem", fontWeight: 800, color: "#D4D4D8", fontFamily: "monospace" }}>
+                          {knob.valText}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              </div>
+
+              {/* CARGAR AUDIO, GUARDAR EN PC y GRABAR alineados a la derecha */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginLeft: "auto" }}>
                 <input
                   type="file"
                   accept="audio/*"
@@ -2595,26 +2833,263 @@ export const CSamplerPluginModal = ({
                   style={{ display: "none" }}
                 />
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "3px",
-                    padding: "3px 8px",
-                    backgroundColor: "#1E2230",
-                    color: "#CCFF00",
-                    border: "1px solid #3E465E",
-                    borderRadius: "3px",
-                    fontSize: "0.64rem",
+                    gap: "4px",
+                    padding: "5px 10px",
+                    background: "linear-gradient(180deg, #3A3C42 0%, #23252A 100%)",
+                    color: "#FFD600",
+                    border: "1px solid #4B4E57",
+                    borderRadius: "4px",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 3px 0 #07080A",
+                    fontSize: "0.62rem",
                     fontWeight: 900,
+                    fontFamily: "monospace",
                     cursor: "pointer",
                   }}
                 >
                   <Upload size={11} />
                   <span>CARGAR AUDIO</span>
                 </button>
+                {customAudioBuffer ? (
+                  <button
+                    type="button"
+                    onClick={handleDownloadAudioToPc}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "5px 10px",
+                      background: "linear-gradient(180deg, #FFE135 0%, #FFD600 100%)",
+                      color: "#090A0D",
+                      border: "1px solid #090A0D",
+                      borderRadius: "4px",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7), 0 3px 0 #07080A",
+                      fontSize: "0.62rem",
+                      fontWeight: 900,
+                      fontFamily: "monospace",
+                      cursor: "pointer",
+                    }}
+                    title="Descarga el audio en memoria como .WAV a tu PC para reutilizarlo cuando quieras"
+                  >
+                    <Download size={11} />
+                    <span>GUARDAR WAV</span>
+                  </button>
+                ) : isRescuingAudio ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "5px 9px",
+                      backgroundColor: "#1B1F2A",
+                      color: "#FFD600",
+                      border: "1px solid #3A3D48",
+                      borderRadius: "4px",
+                      fontSize: "0.58rem",
+                      fontWeight: 800,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    <Loader2 size={10} className="animate-spin" />
+                    <span>RESCATANDO...</span>
+                  </span>
+                ) : null}
+
+                {/* Botón Grabar Secuencia de Pads + Metrónomo + Quantize */}
+                <button
+                  type="button"
+                  onClick={() => setMetronomeOn((p) => !p)}
+                  style={{
+                    padding: "5px 7px",
+                    background: metronomeOn
+                      ? "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)"
+                      : "linear-gradient(180deg, #2B2D33 0%, #191A1E 100%)",
+                    color: metronomeOn ? "#090A0D" : "#D4D4D8",
+                    border: "1px solid #4B4E57",
+                    borderRadius: "4px",
+                    fontSize: "0.56rem",
+                    fontWeight: 900,
+                    fontFamily: "monospace",
+                    cursor: "pointer",
+                  }}
+                  title="Activa o desactiva el clic del metrónomo al grabar tu melodía de pads"
+                >
+                  METRO {metronomeOn ? "ON" : "OFF"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setQuantizeOn((p) => !p)}
+                  style={{
+                    padding: "5px 7px",
+                    background: quantizeOn
+                      ? "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)"
+                      : "linear-gradient(180deg, #2B2D33 0%, #191A1E 100%)",
+                    color: quantizeOn ? "#090A0D" : "#D4D4D8",
+                    border: "1px solid #4B4E57",
+                    borderRadius: "4px",
+                    fontSize: "0.56rem",
+                    fontWeight: 900,
+                    fontFamily: "monospace",
+                    cursor: "pointer",
+                  }}
+                  title="Cuantiza automáticamente tus golpes de pad a semicorcheas (1/16) según el BPM"
+                >
+                  Q 1/16 {quantizeOn ? "ON" : "OFF"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleRecordPads}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "5px 10px",
+                    background: isRecordingPads
+                      ? "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)"
+                      : "linear-gradient(180deg, #F0F0F2 0%, #D4D4D8 100%)",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "4px",
+                    boxShadow: isRecordingPads
+                      ? "0 0 14px rgba(255,214,0,0.85), 0 3px 0 #07080A"
+                      : "inset 0 1px 0 rgba(255,255,255,0.9), 0 3px 0 #07080A",
+                    fontSize: "0.62rem",
+                    fontWeight: 900,
+                    fontFamily: "monospace",
+                    cursor: "pointer",
+                  }}
+                  title="Graba tu melodía tocando los pads en vivo con el teclado o mouse"
+                >
+                  <span>{isRecordingPads ? "■" : "●"}</span>
+                  <span>{isRecordingPads ? `PARAR (${recordedPadEvents.length})` : "GRABAR"}</span>
+                </button>
+
+                {recordedPadEvents.length > 0 && !isRecordingPads && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePlayRecordedMelody}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "5px 9px",
+                        background: isPlayingRecording
+                          ? "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)"
+                          : "linear-gradient(180deg, #F0F0F2 0%, #D4D4D8 100%)",
+                        color: "#090A0D",
+                        border: "1px solid #090A0D",
+                        borderRadius: "4px",
+                        boxShadow: "0 3px 0 #07080A",
+                        fontSize: "0.60rem",
+                        fontWeight: 900,
+                        fontFamily: "monospace",
+                        cursor: "pointer",
+                      }}
+                      title="Escucha la melodía grabada con tus pads"
+                    >
+                      <span>{isPlayingRecording ? "■" : "▶"}</span>
+                      <span>MELODÍA</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isRenderingRecording}
+                      onClick={handleSendRecordedMelodyToMaster}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "5px 9px",
+                        background: "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)",
+                        color: "#090A0D",
+                        border: "1px solid #FFE866",
+                        borderRadius: "4px",
+                        boxShadow: "0 0 12px rgba(255,214,0,0.7), 0 3px 0 #07080A",
+                        fontSize: "0.60rem",
+                        fontWeight: 900,
+                        fontFamily: "monospace",
+                        cursor: isRenderingRecording ? "wait" : "pointer",
+                      }}
+                      title="Exporta tu melodía grabada a C-Master para agregar batería, bajo 808 y exportar WAV"
+                    >
+                      <span>{isRenderingRecording ? "EXPORTANDO..." : "A C-MASTER"}</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
+
+            {isSeparatingStems && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  padding: "8px 12px",
+                  margin: "6px 0",
+                  backgroundColor: "#0B0C0F",
+                  border: "1px solid #FFD600",
+                  borderRadius: "6px",
+                  boxShadow: "0 0 14px rgba(255, 214, 0, 0.15)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Loader2 size={14} className="animate-spin" style={{ color: "#FFD600" }} />
+                    <span style={{ fontSize: "0.72rem", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.04em" }}>
+                      SEPARANDO CANALES IA:
+                    </span>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FFD600" }}>
+                      {stemProgress?.stage || "Procesando audio en tu PC..."}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.72rem",
+                      fontWeight: 900,
+                      color: "#FFD600",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {stemProgress?.pct ?? 0}%
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "7px",
+                    backgroundColor: "#1A1C22",
+                    borderRadius: "999px",
+                    overflow: "hidden",
+                    border: "1px solid #2A2D36",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.max(4, stemProgress?.pct ?? 4)}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #FFD600 0%, #FFD600 100%)",
+                      borderRadius: "999px",
+                      transition: "width 250ms ease",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* SERATO INTERACTIVE HIGH-RES WAVEFORM (WAVESURFER.JS) CON ZOOM DINÁMICO */}
             <div
@@ -2635,30 +3110,11 @@ export const CSamplerPluginModal = ({
                   gap: "6px",
                   padding: "4px 8px",
                   backgroundColor: "#07090F",
-                  border: "1px solid #1F273B",
+                  border: "1px solid #22242C",
                   borderRadius: "4px 4px 0 0",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span
-                    style={{
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      color:
-                        activeStemFilter === "drums"
-                          ? "#00E5FF"
-                          : activeStemFilter === "bass"
-                          ? "#CCFF00"
-                          : activeStemFilter === "melody"
-                          ? "#FF007A"
-                          : activeStemFilter === "vocals"
-                          ? "#FFD600"
-                          : "#00E5FF",
-                      letterSpacing: "0.6px",
-                    }}
-                  >
-                    🌊 ONDA SERATO HIGH-RES
-                  </span>
                   {activeStemFilter ? (
                     <span
                       style={{
@@ -2666,27 +3122,27 @@ export const CSamplerPluginModal = ({
                         fontWeight: 900,
                         backgroundColor:
                           activeStemFilter === "drums"
-                            ? "#00E5FF22"
+                            ? "#FFD60022"
                             : activeStemFilter === "bass"
-                            ? "#CCFF0022"
+                            ? "#FFD60022"
                             : activeStemFilter === "melody"
-                            ? "#FF007A22"
+                            ? "#D4D4D822"
                             : "#FFD60022",
                         color:
                           activeStemFilter === "drums"
-                            ? "#00E5FF"
+                            ? "#FFD600"
                             : activeStemFilter === "bass"
-                            ? "#CCFF00"
+                            ? "#FFD600"
                             : activeStemFilter === "melody"
-                            ? "#FF007A"
+                            ? "#D4D4D8"
                             : "#FFD600",
                         border: `1px solid ${
                           activeStemFilter === "drums"
-                            ? "#00E5FF"
+                            ? "#FFD600"
                             : activeStemFilter === "bass"
-                            ? "#CCFF00"
+                            ? "#FFD600"
                             : activeStemFilter === "melody"
-                            ? "#FF007A"
+                            ? "#D4D4D8"
                             : "#FFD600"
                         }`,
                         padding: "1px 6px",
@@ -2704,7 +3160,7 @@ export const CSamplerPluginModal = ({
                       style={{
                         fontSize: "0.54rem",
                         fontWeight: 800,
-                        color: "#8E94A5",
+                        color: "#8E939E",
                         backgroundColor: "#111622",
                         padding: "1px 5px",
                         borderRadius: "2px",
@@ -2716,25 +3172,35 @@ export const CSamplerPluginModal = ({
                   {isSeparatingStems && (
                     <span
                       style={{
-                        fontSize: "0.52rem",
-                        color: "#00E5FF",
+                        fontSize: "0.55rem",
+                        fontWeight: 800,
+                        color: "#FFD600",
+                        backgroundColor: "rgba(255, 214, 0, 0.1)",
+                        border: "1px solid rgba(255, 214, 0, 0.35)",
+                        padding: "2px 7px",
+                        borderRadius: "3px",
                         display: "flex",
                         alignItems: "center",
-                        gap: "3px",
+                        gap: "5px",
                       }}
                     >
-                      <RefreshCw size={9} className="animate-spin" /> SEPARANDO STEMS IA...
+                      <RefreshCw size={10} className="animate-spin" />
+                      <span>
+                        {stemProgress?.stage
+                          ? `${stemProgress.pct > 0 ? `${stemProgress.pct}% · ` : ""}${stemProgress.stage}`
+                          : "SEPARANDO STEMS IA..."}
+                      </span>
                     </span>
                   )}
                   <span
                     style={{
                       fontSize: "0.55rem",
                       fontWeight: 900,
-                      backgroundColor: "#161D2C",
-                      color: "#CCFF00",
+                      backgroundColor: "#14151A",
+                      color: "#FFD600",
                       padding: "1px 5px",
                       borderRadius: "2px",
-                      border: "1px solid #293855",
+                      border: "1px solid #2E313B",
                       fontFamily: "monospace",
                     }}
                   >
@@ -2744,7 +3210,7 @@ export const CSamplerPluginModal = ({
                     style={{
                       fontSize: "0.52rem",
                       fontWeight: 900,
-                      color: isWaveReady ? "#00E676" : "#FF9100",
+                      color: isWaveReady ? "#D4D4D8" : "#FFD600",
                     }}
                   >
                     ● {isWaveReady ? "READY" : "DECODING"}
@@ -2757,7 +3223,7 @@ export const CSamplerPluginModal = ({
                     style={{
                       fontSize: "0.58rem",
                       fontWeight: 900,
-                      color: "#CCFF00",
+                      color: "#FFD600",
                       letterSpacing: "0.4px",
                     }}
                   >
@@ -2771,9 +3237,9 @@ export const CSamplerPluginModal = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: "#161D2C",
+                      backgroundColor: "#14151A",
                       color: "#FFFFFF",
-                      border: "1px solid #293855",
+                      border: "1px solid #2E313B",
                       borderRadius: "2px",
                       fontSize: "0.75rem",
                       fontWeight: 900,
@@ -2793,7 +3259,7 @@ export const CSamplerPluginModal = ({
                     style={{
                       width: "80px",
                       height: "4px",
-                      accentColor: "#CCFF00",
+                      accentColor: "#FFD600",
                       cursor: "pointer",
                     }}
                     title="Nivel de zoom en segundos"
@@ -2806,9 +3272,9 @@ export const CSamplerPluginModal = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: "#161D2C",
+                      backgroundColor: "#14151A",
                       color: "#FFFFFF",
-                      border: "1px solid #293855",
+                      border: "1px solid #2E313B",
                       borderRadius: "2px",
                       fontSize: "0.75rem",
                       fontWeight: 900,
@@ -2824,13 +3290,15 @@ export const CSamplerPluginModal = ({
                       display: "flex",
                       alignItems: "center",
                       gap: "3px",
-                      padding: "1px 6px",
-                      backgroundColor: "#152336",
-                      color: "#00E5FF",
-                      border: "1px solid #00E5FF",
-                      borderRadius: "2px",
+                      padding: "2px 8px",
+                      backgroundColor: "#E4E4E7",
+                      color: "#090A0D",
+                      border: "1px solid #090A0D",
+                      borderRadius: "4px",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 0 #07080A",
                       fontSize: "0.58rem",
                       fontWeight: 900,
+                      fontFamily: "monospace",
                       cursor: "pointer",
                     }}
                     title="Ajustar toda la canción en pantalla"
@@ -2868,11 +3336,11 @@ export const CSamplerPluginModal = ({
                   flexWrap: "wrap",
                   gap: "8px",
                   padding: "5px 10px",
-                  backgroundColor: "#0B0E17",
-                  borderLeft: "2px solid #CCFF00",
-                  borderRight: "1px solid #1E2538",
-                  borderTop: "1px solid #1E2538",
-                  borderBottom: "1px solid #1E2538",
+                  backgroundColor: "#090A0D",
+                  borderLeft: "2px solid #FFD600",
+                  borderRight: "1px solid #1A1C23",
+                  borderTop: "1px solid #1A1C23",
+                  borderBottom: "1px solid #1A1C23",
                   margin: "2px 0",
                   borderRadius: "3px",
                 }}
@@ -2887,21 +3355,21 @@ export const CSamplerPluginModal = ({
                       alignItems: "center",
                       gap: "5px",
                       padding: "4px 12px",
-                      backgroundColor: isPlayingSong ? "#FF007A" : "#CCFF00",
-                      color: "#080A0F",
-                      border: "none",
+                      backgroundColor: isPlayingSong ? "#D4D4D8" : "#FFD600",
+                      color: "#07080B",
+                      border: isPlayingSong ? "1px solid #FFFFFF" : "1px solid #FFE866",
                       borderRadius: "3px",
                       fontSize: "0.68rem",
                       fontWeight: 900,
                       cursor: "pointer",
                       boxShadow: isPlayingSong
-                        ? "0 0 10px rgba(255, 0, 122, 0.6)"
-                        : "0 0 10px rgba(204, 255, 0, 0.6)",
+                        ? "0 0 14px rgba(212, 212, 216, 0.85), 0 0 28px rgba(212, 212, 216, 0.4)"
+                        : "0 0 14px rgba(255, 214, 0, 0.85), 0 0 28px rgba(255, 214, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.75)",
                       transition: "all 0.12s ease",
                     }}
                     title={isPlayingSong ? "Pausar canción [Espacio]" : "Reproducir canción continua [Espacio]"}
                   >
-                    {isPlayingSong ? <Pause size={12} fill="#080A0F" /> : <Play size={12} fill="#080A0F" />}
+                    {isPlayingSong ? <Pause size={12} fill="#07080B" /> : <Play size={12} fill="#07080B" />}
                     <span>{isPlayingSong ? "PAUSAR" : "REPRODUCIR"}</span>
                   </button>
 
@@ -2913,9 +3381,9 @@ export const CSamplerPluginModal = ({
                       alignItems: "center",
                       gap: "4px",
                       padding: "4px 10px",
-                      backgroundColor: "#161D2C",
-                      color: "#A0AEC0",
-                      border: "1px solid #2D3748",
+                      backgroundColor: "#14151A",
+                      color: "#A1A1AA",
+                      border: "1px solid #2A2D36",
                       borderRadius: "3px",
                       fontSize: "0.65rem",
                       fontWeight: 800,
@@ -2924,7 +3392,7 @@ export const CSamplerPluginModal = ({
                     }}
                     title="Detener canción y reiniciar puntero a 00:00.0"
                   >
-                    <Square size={10} fill="#A0AEC0" />
+                    <Square size={10} fill="#A1A1AA" />
                     <span>PARAR</span>
                   </button>
 
@@ -2936,19 +3404,19 @@ export const CSamplerPluginModal = ({
                       gap: "5px",
                       padding: "3px 8px",
                       backgroundColor: "#07090F",
-                      border: "1px solid #1E293B",
+                      border: "1px solid #262830",
                       borderRadius: "3px",
                       fontFamily: "monospace",
                     }}
                   >
-                    <span style={{ fontSize: "0.58rem", color: "#64748B", fontWeight: 700 }}>
+                    <span style={{ fontSize: "0.58rem", color: "#71717A", fontWeight: 700 }}>
                       PUNTERO:
                     </span>
-                    <span style={{ fontSize: "0.72rem", color: "#CCFF00", fontWeight: 900 }}>
+                    <span style={{ fontSize: "0.72rem", color: "#FFD600", fontWeight: 900 }}>
                       {formatSeconds(playbackPointerSec)}
                     </span>
                     <span style={{ fontSize: "0.65rem", color: "#475569" }}>/</span>
-                    <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>
+                    <span style={{ fontSize: "0.68rem", color: "#A1A1AA" }}>
                       {formatSeconds(totalDuration)}
                     </span>
                   </div>
@@ -2956,7 +3424,7 @@ export const CSamplerPluginModal = ({
 
                 {/* Scrubber / Control Deslizante del Puntero */}
                 <div style={{ flex: 1, minWidth: "160px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "0.58rem", color: "#64748B", fontWeight: 800, whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: "0.58rem", color: "#71717A", fontWeight: 800, whiteSpace: "nowrap" }}>
                     DESLIZAR PUNTERO:
                   </span>
                   <input
@@ -2971,14 +3439,14 @@ export const CSamplerPluginModal = ({
                       height: "5px",
                       accentColor:
                         activeStemFilter === "bass"
-                          ? "#CCFF00"
+                          ? "#FFD600"
                           : activeStemFilter === "drums"
-                          ? "#00E5FF"
+                          ? "#FFD600"
                           : activeStemFilter === "melody"
-                          ? "#FF007A"
+                          ? "#D4D4D8"
                           : activeStemFilter === "vocals"
                           ? "#FFD600"
-                          : "#CCFF00",
+                          : "#FFD600",
                       cursor: "pointer",
                     }}
                     title={`Mover puntero de la canción (${formatSeconds(playbackPointerSec)})`}
@@ -2986,54 +3454,49 @@ export const CSamplerPluginModal = ({
                 </div>
 
                 {/* Badge de Fuente Activa del Puntero */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span
-                    style={{
-                      fontSize: "0.58rem",
-                      fontWeight: 900,
-                      padding: "2px 8px",
-                      borderRadius: "3px",
-                      border: "1px solid",
-                      letterSpacing: "0.5px",
-                      backgroundColor:
-                        activeStemFilter === "bass"
-                          ? "#CCFF0018"
-                          : activeStemFilter === "drums"
-                          ? "#00E5FF18"
-                          : activeStemFilter === "melody"
-                          ? "#FF007A18"
-                          : activeStemFilter === "vocals"
-                          ? "#FFD60018"
-                          : "#161D2C",
-                      borderColor:
-                        activeStemFilter === "bass"
-                          ? "#CCFF00"
-                          : activeStemFilter === "drums"
-                          ? "#00E5FF"
-                          : activeStemFilter === "melody"
-                          ? "#FF007A"
-                          : activeStemFilter === "vocals"
-                          ? "#FFD600"
-                          : "#293855",
-                      color:
-                        activeStemFilter === "bass"
-                          ? "#CCFF00"
-                          : activeStemFilter === "drums"
-                          ? "#00E5FF"
-                          : activeStemFilter === "melody"
-                          ? "#FF007A"
-                          : activeStemFilter === "vocals"
-                          ? "#FFD600"
-                          : "#00E5FF",
-                    }}
-                  >
-                    {activeStemFilter === "bass" && "🎸 REPRODUCIENDO: STEM BAJO"}
-                    {activeStemFilter === "drums" && "🥁 REPRODUCIENDO: STEM BATERÍA"}
-                    {activeStemFilter === "melody" && "🎹 REPRODUCIENDO: STEM MELODÍA"}
-                    {activeStemFilter === "vocals" && "🎤 REPRODUCIENDO: STEM VOCAL"}
-                    {!activeStemFilter && "🌐 REPRODUCIENDO: CANCIÓN COMPLETA"}
-                  </span>
-                </div>
+                {activeStemFilter && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span
+                      style={{
+                        fontSize: "0.58rem",
+                        fontWeight: 900,
+                        padding: "2px 8px",
+                        borderRadius: "3px",
+                        border: "1px solid",
+                        letterSpacing: "0.5px",
+                        backgroundColor:
+                          activeStemFilter === "bass"
+                            ? "#FFD60018"
+                            : activeStemFilter === "drums"
+                            ? "#FFD60018"
+                            : activeStemFilter === "melody"
+                            ? "#D4D4D818"
+                            : "#FFD60018",
+                        borderColor:
+                          activeStemFilter === "bass"
+                            ? "#FFD600"
+                            : activeStemFilter === "drums"
+                            ? "#FFD600"
+                            : activeStemFilter === "melody"
+                            ? "#D4D4D8"
+                            : "#FFD600",
+                        color:
+                          activeStemFilter === "bass"
+                            ? "#FFD600"
+                            : activeStemFilter === "drums"
+                            ? "#FFD600"
+                            : activeStemFilter === "melody"
+                            ? "#D4D4D8"
+                            : "#FFD600",
+                      }}
+                    >
+                      {activeStemFilter === "bass" && "🎸 REPRODUCIENDO: STEM BAJO"}
+                      {activeStemFilter === "drums" && "🥁 REPRODUCIENDO: STEM BATERÍA"}
+                      {activeStemFilter === "melody" && "🎹 REPRODUCIENDO: STEM MELODÍA"}
+                      {activeStemFilter === "vocals" && "🎤 REPRODUCIENDO: STEM VOCAL"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Host de WaveSurfer */}
@@ -3055,7 +3518,7 @@ export const CSamplerPluginModal = ({
                       top: "6px",
                       left: "50%",
                       transform: "translateX(-50%)",
-                      backgroundColor: scrubDirection === "backward" ? "#FF007A" : "#CCFF00",
+                      backgroundColor: scrubDirection === "backward" ? "#D4D4D8" : "#FFD600",
                       color: "#111111",
                       fontWeight: 900,
                       fontSize: "0.62rem",
@@ -3103,7 +3566,7 @@ export const CSamplerPluginModal = ({
                   border-radius: 3px;
                 }
                 .csampler-wavesurfer-host ::-webkit-scrollbar-thumb:hover {
-                  background: #00E5FF;
+                  background: #FFD600;
                 }
                 .csampler-wavesurfer-host .wavesurfer-region {
                   transition: background-color 0.15s ease !important;
@@ -3123,11 +3586,11 @@ export const CSamplerPluginModal = ({
                 flexWrap: "wrap",
                 gap: "6px",
                 fontSize: "0.66rem",
-                color: "#8E94A5",
+                color: "#8E939E",
               }}
             >
               <span>
-                💡 <strong style={{ color: "#CCFF00" }}>Límites Sucesivos Serato:</strong> El límite del{" "}
+                💡 <strong style={{ color: "#FFD600" }}>Límites Sucesivos Serato:</strong> El límite del{" "}
                 <strong style={{ color: "#FFFFFF" }}>Marcador 1 es el Marcador 2</strong>, el 2 es el 3, y así sucesivamente.
               </span>
               {selectedCueId !== null && (() => {
@@ -3180,73 +3643,224 @@ export const CSamplerPluginModal = ({
 
 
           {/* 2. Serato Control Knobs & Mode Selectors */}
+          {/* VU202 Horizontal Control Strip: Perillas con anillo LED + Display BPM rectangular + Botones Blanco/Amarillo */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-              gap: "8px",
-              backgroundColor: "#0B0E14",
-              padding: "6px 12px",
+              gridTemplateColumns: "auto 1.05fr 1.25fr 1.15fr auto",
+              gap: "12px",
+              backgroundColor: "#111215",
+              padding: "10px 14px",
               borderRadius: "5px",
-              border: "1px solid #222838",
+              border: "1px solid rgba(255,214,0,0.55)",
               alignItems: "center",
             }}
           >
-            {/* Pitch / Key Shifter */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "center" }}>
-              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8E94A5" }}>PITCH (SEMITONOS)</span>
-              <input
-                type="range"
-                min="-12"
-                max="12"
-                value={pitchSemi}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  setPitchSemi(val);
-                  applyPitchRateToYouTube(val);
-                  if (selectedCueId !== null) {
-                    const cue = cues.find((c) => c.id === selectedCueId);
-                    studioAudio.playPitchHarmonic(val, cue?.keyNote || trackInfo?.key);
-                  }
+            {/* Display BPM Rectangular VU202 + Perillas con anillo de puntos amarillos */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {/* Rectangular BPM LED Screen */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "2px",
                 }}
-                style={{ accentColor: "#CCFF00", cursor: "pointer", height: "14px" }}
-              />
-              <span style={{ fontFamily: "monospace", fontSize: "0.64rem", color: "#CCFF00", lineHeight: 1 }}>
-                {pitchSemi > 0 ? `+${pitchSemi}` : pitchSemi} st
-              </span>
-            </div>
+              >
+                <span style={{ fontSize: "0.48rem", color: "#FFD600", fontWeight: 900, letterSpacing: "1.2px", fontFamily: "monospace" }}>
+                  BPM
+                </span>
+                <div
+                  style={{
+                    minWidth: "84px",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    backgroundColor: "#141106",
+                    border: "1px solid rgba(255,214,0,0.65)",
+                    boxShadow: "inset 0 2px 6px rgba(0,0,0,0.95)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    lineHeight: 1.05,
+                  }}
+                  title="Display BPM / Pitch"
+                >
+                  <span
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "1.05rem",
+                      fontWeight: 900,
+                      color: "#FFD600",
+                      letterSpacing: "1.5px",
+                      textShadow: "0 0 8px rgba(255,214,0,0.5)",
+                    }}
+                  >
+                    {(trackInfo?.bpm || 95).toFixed(1)}
+                  </span>
+                  <span style={{ fontSize: "0.48rem", color: "#A1A1AA", fontFamily: "monospace" }}>
+                    {pitchSemi > 0 ? `+${pitchSemi} st` : `${pitchSemi} st`}
+                  </span>
+                </div>
+              </div>
 
-            {/* Trigger Mode (Hold / 1-Shot / Continuo) */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "center" }}>
-              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8E94A5" }}>MODO DISPARO</span>
-              <div style={{ display: "flex", gap: "3px", justifyContent: "center" }}>
+              {/* 4 Perillas Rotatorias Arrastrables estilo DSP / MASTER (PITCH, CONTROL, FINE, OFFSET) */}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 {(
                   [
-                    { mode: "hold" as const, label: "HOLD (CORTAR)", title: "Corta el sonido en el momento al soltar el pad o la tecla" },
+                    {
+                      label: "PITCH",
+                      valText: pitchSemi > 0 ? `+${pitchSemi} st` : `${pitchSemi} st`,
+                      deg: (pitchSemi / 12) * 135,
+                      min: -12,
+                      max: 12,
+                      step: 1,
+                      value: pitchSemi,
+                      onReset: () => {
+                        setPitchSemi(0);
+                        applyPitchRateToYouTube(0);
+                      },
+                      onChange: (v: number) => {
+                        setPitchSemi(v);
+                        applyPitchRateToYouTube(v);
+                        if (selectedCueId !== null) {
+                          const cue = cues.find((c) => c.id === selectedCueId);
+                          studioAudio.playPitchHarmonic(v, cue?.keyNote || trackInfo?.key);
+                        }
+                      },
+                      title: "Perilla PITCH (-12 a +12 st). Arrastra verticalmente o rueda del mouse; doble clic para centrar en 0 st.",
+                    },
+                    {
+                      label: "CONTROL",
+                      valText: `${chopGatePct}%`,
+                      deg: ((chopGatePct - 10) / 90) * 270 - 135,
+                      min: 10,
+                      max: 100,
+                      step: 5,
+                      value: chopGatePct,
+                      onReset: () => setChopGatePct(100),
+                      onChange: (v: number) => setChopGatePct(v),
+                      title: "CONTROL / GATE: Duración del golpe del pad (10% staccato a 100% completo). Arrastra arriba/abajo.",
+                    },
+                    {
+                      label: "FINE",
+                      valText: fineTuneCents > 0 ? `+${fineTuneCents}ct` : `${fineTuneCents}ct`,
+                      deg: (fineTuneCents / 50) * 135,
+                      min: -50,
+                      max: 50,
+                      step: 5,
+                      value: fineTuneCents,
+                      onReset: () => setFineTuneCents(0),
+                      onChange: (v: number) => setFineTuneCents(v),
+                      title: "FINE TUNE: Micro-afinación fina (-50 a +50 cents) para cuadrar samples. Arrastra arriba/abajo.",
+                    },
+                    {
+                      label: "OFFSET",
+                      valText: startOffsetMs > 0 ? `+${startOffsetMs}ms` : `${startOffsetMs}ms`,
+                      deg: (startOffsetMs / 200) * 135,
+                      min: -200,
+                      max: 200,
+                      step: 10,
+                      value: startOffsetMs,
+                      onReset: () => setStartOffsetMs(0),
+                      onChange: (v: number) => setStartOffsetMs(v),
+                      title: "START OFFSET: Micro-ajuste del punto de inicio del pad (-200ms a +200ms). Arrastra arriba/abajo.",
+                    },
+                  ] as const
+                ).map((knob) => (
+                  <div key={knob.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                    <span style={{ fontSize: "0.48rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "0.8px" }}>
+                      {knob.label}
+                    </span>
+                    <div
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        const startY = e.clientY;
+                        const startVal = knob.value;
+                        const range = knob.max - knob.min;
+                        const onMove = (ev: PointerEvent) => {
+                          const raw = startVal + ((startY - ev.clientY) / 100) * range;
+                          const snapped = Math.round(raw / knob.step) * knob.step;
+                          const next = Math.max(knob.min, Math.min(knob.max, snapped));
+                          knob.onChange(next);
+                        };
+                        const onUp = () => {
+                          window.removeEventListener("pointermove", onMove);
+                          window.removeEventListener("pointerup", onUp);
+                        };
+                        window.addEventListener("pointermove", onMove);
+                        window.addEventListener("pointerup", onUp);
+                      }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        const dir = e.deltaY < 0 ? 1 : -1;
+                        const next = Math.max(knob.min, Math.min(knob.max, knob.value + dir * knob.step));
+                        knob.onChange(next);
+                      }}
+                      onDoubleClick={knob.onReset}
+                      title={knob.title}
+                      style={{
+                        width: "34px",
+                        height: "34px",
+                        borderRadius: "50%",
+                        background: "radial-gradient(circle at 50% 45%, #2B2D33 0%, #191A1E 75%, #0D0E10 100%)",
+                        border: "1.5px dashed #FFD600",
+                        boxShadow: "0 0 10px rgba(255, 214, 0, 0.45), inset 0 0 6px rgba(255, 214, 0, 0.18), 0 2px 5px rgba(0,0,0,0.85)",
+                        position: "relative",
+                        cursor: "ns-resize",
+                        transform: `rotate(${knob.deg}deg)`,
+                        userSelect: "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "4px",
+                          left: "50%",
+                          transform: "translateX(-50%) rotate(45deg)",
+                          width: "4px",
+                          height: "4px",
+                          backgroundColor: "#FFD600",
+                          borderRadius: "1px",
+                        }}
+                      />
+                    </div>
+                    <span style={{ fontSize: "0.52rem", fontWeight: 900, color: "#E4E4E7", fontFamily: "monospace" }}>
+                      {knob.valText}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Trigger Mode estilo botones blancos/amarillos VU202 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px", textAlign: "center" }}>
+              <span style={{ fontSize: "0.52rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "0.8px" }}>
+                TRIGGER / MODE
+              </span>
+              <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                {(
+                  [
+                    { mode: "hold" as const, label: "HOLD (GATE)", title: "Corta el sonido en el momento al soltar el pad o la tecla" },
                     { mode: "one_shot" as const, label: "1-SHOT", title: "Disparo tradicional de chop (3.5s o hasta el siguiente golpe)" },
-                    { mode: "full_track" as const, label: "CONTINUO (TODO)", title: "Suena toda la canción completa desde este cue" },
+                    { mode: "full_track" as const, label: "LOOP / TODO", title: "Suena toda la canción completa desde este cue" },
                   ]
                 ).map(({ mode, label, title }) => (
                   <button
                     key={mode}
                     onClick={() => setTriggerMode(mode)}
                     style={{
-                      padding: "3px 7px",
-                      fontSize: "0.58rem",
+                      padding: "4px 8px",
+                      fontSize: "0.56rem",
                       fontWeight: 900,
-                      backgroundColor:
-                        triggerMode === mode
-                          ? mode === "hold"
-                            ? "#FF007A"
-                            : mode === "full_track"
-                            ? "#00E5FF"
-                            : "#CCFF00"
-                          : "#1A1D27",
-                      color: triggerMode === mode ? "#111111" : "#8E94A5",
-                      border: triggerMode === mode ? "1px solid #FFFFFF" : "1px solid #333848",
-                      borderRadius: "2px",
+                      fontFamily: "monospace",
+                      backgroundColor: triggerMode === mode ? "#FFD600" : "#E4E4E7",
+                      color: "#090A0D",
+                      border: "1px solid #090A0D",
+                      borderRadius: "3px",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 0 #07080A",
+                      transform: triggerMode === mode ? "translateY(1px)" : "translateY(0)",
                       cursor: "pointer",
-                      transition: "all 0.1s ease",
+                      transition: "all 0.08s ease",
                     }}
                     title={title}
                   >
@@ -3256,54 +3870,62 @@ export const CSamplerPluginModal = ({
               </div>
             </div>
 
-            {/* Bank Selectors */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "center" }}>
-              <span style={{ fontSize: "0.58rem", fontWeight: 800, color: "#8E94A5" }}>BANCO PADS</span>
-              <div style={{ display: "flex", gap: "2px", justifyContent: "center" }}>
+            {/* Bank Selectors estilo VU202 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px", textAlign: "center" }}>
+              <span style={{ fontSize: "0.52rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "0.8px" }}>
+                BANK
+              </span>
+              <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                 <button
                   onClick={() => setActiveBank("A")}
                   style={{
-                    padding: "3px 6px",
-                    fontSize: "0.58rem",
+                    padding: "4px 7px",
+                    fontSize: "0.56rem",
                     fontWeight: 900,
-                    backgroundColor: activeBank === "A" ? "#00E5FF" : "#1A1D27",
-                    color: activeBank === "A" ? "#111111" : "#8E94A5",
-                    border: "1px solid #333848",
-                    borderRadius: "2px",
+                    fontFamily: "monospace",
+                    backgroundColor: activeBank === "A" ? "#FFD600" : "#E4E4E7",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "3px",
+                    boxShadow: "0 2px 0 #07080A",
                     cursor: "pointer",
                   }}
                 >
-                  BANK A (1-8)
+                  A (1-8)
                 </button>
                 <button
                   onClick={() => setActiveBank("B")}
                   style={{
-                    padding: "3px 6px",
-                    fontSize: "0.58rem",
+                    padding: "4px 7px",
+                    fontSize: "0.56rem",
                     fontWeight: 900,
-                    backgroundColor: activeBank === "B" ? "#FF007A" : "#1A1D27",
-                    color: activeBank === "B" ? "#111111" : "#8E94A5",
-                    border: "1px solid #333848",
-                    borderRadius: "2px",
+                    fontFamily: "monospace",
+                    backgroundColor: activeBank === "B" ? "#FFD600" : "#E4E4E7",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "3px",
+                    boxShadow: "0 2px 0 #07080A",
                     cursor: "pointer",
                   }}
                 >
-                  BANK B (9-16)
+                  B (9-16)
                 </button>
                 <button
                   onClick={() => setActiveBank("ALL")}
                   style={{
-                    padding: "3px 6px",
-                    fontSize: "0.58rem",
+                    padding: "4px 7px",
+                    fontSize: "0.56rem",
                     fontWeight: 900,
-                    backgroundColor: activeBank === "ALL" ? "#CCFF00" : "#1A1D27",
-                    color: activeBank === "ALL" ? "#111111" : "#8E94A5",
-                    border: "1px solid #333848",
-                    borderRadius: "2px",
+                    fontFamily: "monospace",
+                    backgroundColor: activeBank === "ALL" ? "#FFD600" : "#E4E4E7",
+                    color: "#090A0D",
+                    border: "1px solid #090A0D",
+                    borderRadius: "3px",
+                    boxShadow: "0 2px 0 #07080A",
                     cursor: "pointer",
                   }}
                 >
-                  TODOS ({cues.length})
+                  ALL ({cues.length})
                 </button>
               </div>
             </div>
@@ -3312,23 +3934,28 @@ export const CSamplerPluginModal = ({
             <button
               onClick={() => {
                 setPitchSemi(0);
+                setFineTuneCents(0);
+                setChopGatePct(100);
+                setStartOffsetMs(0);
                 applyPitchRateToYouTube(0);
                 setCues(DEFAULT_CUES);
                 setSelectedCueId(1);
-                setActiveBank("A");
+                setActiveBank("ALL");
                 setIs16Levels(false);
                 setTriggerMode("one_shot");
                 setCustomAudioBuffer(null);
                 setSampleName("RADIO DOBLE C VAULT");
               }}
               style={{
-                padding: "4px 8px",
+                padding: "4px 9px",
                 fontSize: "0.62rem",
                 fontWeight: 900,
-                backgroundColor: "#1A1D27",
-                color: "#A0A0A0",
-                border: "1px solid #333848",
-                borderRadius: "3px",
+                fontFamily: "monospace",
+                backgroundColor: "#E4E4E7",
+                color: "#090A0D",
+                border: "1px solid #090A0D",
+                borderRadius: "4px",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85), 0 3px 0 #07080A",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -3348,7 +3975,7 @@ export const CSamplerPluginModal = ({
                 {/* Akai MPC 16 Levels Header & Mode Selector (Tune, Velocity, Filter, Decay) */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.70rem", fontWeight: 900, color: "#FF5500" }}>
+                    <span style={{ fontSize: "0.70rem", fontWeight: 900, color: "#EAB308" }}>
                       🎹 AKAI MPC 16 LEVELS:
                     </span>
                     {/* Selector de Tipo de 16 Levels */}
@@ -3368,9 +3995,9 @@ export const CSamplerPluginModal = ({
                             padding: "2px 7px",
                             fontSize: "0.56rem",
                             fontWeight: 900,
-                            backgroundColor: akai16Type === t.type ? "#FF5500" : "#1B1F2A",
-                            color: akai16Type === t.type ? "#FFFFFF" : "#8E94A5",
-                            border: akai16Type === t.type ? "1px solid #FFFFFF" : "1px solid #323A50",
+                            backgroundColor: akai16Type === t.type ? "#EAB308" : "#1B1F2A",
+                            color: akai16Type === t.type ? "#FFFFFF" : "#8E939E",
+                            border: akai16Type === t.type ? "1px solid #FFFFFF" : "1px solid #323540",
                             borderRadius: "2px",
                             cursor: "pointer",
                             transition: "all 0.1s ease",
@@ -3384,7 +4011,7 @@ export const CSamplerPluginModal = ({
                   </div>
 
                   <span style={{ fontSize: "0.58rem", color: "#A0A0A0" }}>
-                    Chop: <strong style={{ color: "#CCFF00" }}>{cues.find((c) => c.id === selectedCueId)?.name || cues[0]?.name || "CHOP 1"}</strong>
+                    Chop: <strong style={{ color: "#FFD600" }}>{cues.find((c) => c.id === selectedCueId)?.name || cues[0]?.name || "CHOP 1"}</strong>
                   </span>
                 </div>
 
@@ -3392,7 +4019,7 @@ export const CSamplerPluginModal = ({
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))",
+                    gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
                     gap: "6px",
                   }}
                 >
@@ -3404,7 +4031,7 @@ export const CSamplerPluginModal = ({
                     // Variables dinámicas según el tipo activo de Akai 16 Levels
                     let valueLabel = "";
                     let subLabel = "";
-                    let padColor = "#CCFF00";
+                    let padColor = "#FFD600";
                     let isRoot = false;
 
                     if (akai16Type === "tune") {
@@ -3412,22 +4039,22 @@ export const CSamplerPluginModal = ({
                       isRoot = semi === 0;
                       valueLabel = `${semi > 0 ? `+${semi}` : semi} st`;
                       subLabel = isRoot ? "ROOT (0 st)" : "";
-                      padColor = isRoot ? "#CCFF00" : semi < 0 ? "#00E5FF" : "#FF007A";
+                      padColor = isRoot ? "#FFD600" : semi < 0 ? "#FFD600" : "#D4D4D8";
                     } else if (akai16Type === "velocity") {
                       const vel = AKAI_16_LEVELS_VELOCITIES[idx];
                       valueLabel = `${Math.round(vel * 100)}%`;
                       subLabel = idx === 15 ? "MAX (100%)" : idx === 0 ? "GHOST (10%)" : `VEL ${idx + 1}`;
-                      padColor = idx === 15 ? "#FFD600" : idx >= 10 ? "#FF5500" : idx >= 5 ? "#00E676" : "#00E5FF";
+                      padColor = idx === 15 ? "#FFD600" : idx >= 10 ? "#EAB308" : idx >= 5 ? "#D4D4D8" : "#FFD600";
                     } else if (akai16Type === "filter") {
                       const freq = AKAI_16_LEVELS_FILTERS[idx];
                       valueLabel = freq >= 1000 ? `${(freq / 1000).toFixed(1)} kHz` : `${freq} Hz`;
                       subLabel = idx === 15 ? "OPEN (18kHz)" : idx === 0 ? "SUB (300Hz)" : "LPF";
-                      padColor = idx >= 12 ? "#CCFF00" : idx >= 6 ? "#00E5FF" : "#E040FB";
+                      padColor = idx >= 12 ? "#FFD600" : idx >= 6 ? "#FFD600" : "#A1A1AA";
                     } else if (akai16Type === "decay") {
                       const dec = AKAI_16_LEVELS_DECAYS[idx];
                       valueLabel = dec < 1.0 ? `${Math.round(dec * 1000)} ms` : `${dec.toFixed(1)} s`;
                       subLabel = idx === 15 ? "FULL (4s)" : idx === 0 ? "CLICK (80ms)" : "DECAY";
-                      padColor = idx >= 12 ? "#00E676" : idx >= 6 ? "#00E5FF" : "#FF007A";
+                      padColor = idx >= 12 ? "#D4D4D8" : idx >= 6 ? "#FFD600" : "#D4D4D8";
                     }
 
                     return (
@@ -3446,12 +4073,12 @@ export const CSamplerPluginModal = ({
                         }}
                         style={{
                           height: "56px",
-                          backgroundColor: isPlaying ? padColor : isRoot ? "#172314" : "#131620",
+                          backgroundColor: isPlaying ? padColor : isRoot ? "#172314" : "#121318",
                           color: isPlaying ? "#111111" : "#FFFFFF",
                           border: isRoot
                             ? isPlaying
                               ? "2px solid #FFFFFF"
-                              : "1.8px solid #CCFF00"
+                              : "1.8px solid #FFD600"
                             : isPlaying
                             ? "2px solid #FFFFFF"
                             : `1.2px solid ${padColor}77`,
@@ -3459,7 +4086,7 @@ export const CSamplerPluginModal = ({
                           boxShadow: isPlaying
                             ? `0 0 16px ${padColor}`
                             : isRoot
-                            ? "0 0 10px rgba(204, 255, 0, 0.4)"
+                            ? "0 0 10px rgba(255, 214, 0, 0.4)"
                             : "inset 0 1px 2px rgba(255,255,255,0.06), 0 2px 6px rgba(0,0,0,0.5)",
                           cursor: "pointer",
                           display: "flex",
@@ -3490,7 +4117,7 @@ export const CSamplerPluginModal = ({
                               fontSize: "0.58rem",
                               fontWeight: 900,
                               fontFamily: "monospace",
-                              backgroundColor: isPlaying ? "#FFFFFF" : "#0B0E14",
+                              backgroundColor: isPlaying ? "#FFFFFF" : "#090A0D",
                               color: isPlaying ? "#000000" : padColor,
                               border: `1px solid ${isPlaying ? "#FFFFFF" : padColor}`,
                               padding: "0 3px",
@@ -3507,7 +4134,7 @@ export const CSamplerPluginModal = ({
                             style={{
                               fontSize: "0.74rem",
                               fontWeight: 900,
-                              color: isPlaying ? "#111111" : isRoot ? "#CCFF00" : "#FFFFFF",
+                              color: isPlaying ? "#111111" : isRoot ? "#FFD600" : "#FFFFFF",
                               letterSpacing: "-0.3px",
                             }}
                           >
@@ -3550,14 +4177,18 @@ export const CSamplerPluginModal = ({
                     <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "#FFFFFF" }}>
                       SERATO CUE PADS:
                     </span>
-                    <span style={{ fontSize: "0.58rem", color: "#8E94A5" }}>
+                    <span style={{ fontSize: "0.58rem", color: "#8E939E" }}>
                       (Doble clic o ✏️ para renombrar)
                     </span>
                   </div>
-                  <span style={{ fontSize: "0.62rem", color: "#CCFF00", fontWeight: 800 }}>
+                  <span style={{ fontSize: "0.62rem", color: "#FFD600", fontWeight: 800 }}>
                     ⌨️ Teclado:{" "}
                     <strong style={{ color: "#FFFFFF", backgroundColor: "#1B202D", padding: "1px 5px", borderRadius: "2px", letterSpacing: "1px" }}>
-                      {activeBank === "B" ? "A S D F G H J K" : "Q W E R T Y U I"}
+                      {activeBank === "ALL"
+                        ? "Q W E R T Y U I · A S D F G H J K"
+                        : activeBank === "B"
+                        ? "A S D F G H J K"
+                        : "Q W E R T Y U I"}
                     </strong>
                   </span>
                 </div>
@@ -3565,7 +4196,7 @@ export const CSamplerPluginModal = ({
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))",
+                    gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
                     gap: "6px",
                   }}
                 >
@@ -3595,24 +4226,22 @@ export const CSamplerPluginModal = ({
                           }
                         }}
                         style={{
-                          height: "56px",
-                          backgroundColor: isPlaying ? cue.color : "#131620",
-                          color: isPlaying ? "#111111" : "#FFFFFF",
-                          border: isSelected
-                            ? "2px solid #FFFFFF"
-                            : `1.5px solid ${cue.color}`,
-                          borderRadius: "4px",
+                          height: "64px",
+                          backgroundColor: isPlaying || isSelected ? "#FFD600" : "#E4E4E7",
+                          color: "#090A0D",
+                          border: isPlaying ? "2px solid #FFFFFF" : "1.5px solid #090A0D",
+                          borderRadius: "5px",
                           boxShadow: isPlaying
-                            ? `0 0 16px ${cue.color}`
+                            ? "inset 0 2px 4px rgba(0,0,0,0.3), 0 0 18px rgba(255,214,0,0.85)"
                             : isSelected
-                            ? `0 0 10px ${cue.color}88`
-                            : "inset 0 1px 2px rgba(255,255,255,0.06), 0 2px 6px rgba(0,0,0,0.5)",
+                            ? "inset 0 1px 0 rgba(255,255,255,0.7), 0 3px 0 #07080A, 0 0 10px rgba(255,214,0,0.5)"
+                            : "inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -2px 0 rgba(0,0,0,0.12), 0 4px 0 #07080A",
                           cursor: "pointer",
                           display: "flex",
                           flexDirection: "column",
                           justifyContent: "space-between",
-                          padding: "4px 6px",
-                          transform: isPlaying ? "scale(0.96)" : "scale(1)",
+                          padding: "5px 7px",
+                          transform: isPlaying ? "translateY(3px)" : "translateY(0)",
                           transition: "all 0.05s ease",
                           position: "relative",
                           userSelect: "none",
@@ -3639,7 +4268,7 @@ export const CSamplerPluginModal = ({
                                 fontSize: "0.58rem",
                                 fontWeight: 900,
                                 fontFamily: "monospace",
-                                backgroundColor: isPlaying ? "#FFFFFF" : "#0B0E14",
+                                backgroundColor: isPlaying ? "#FFFFFF" : "#090A0D",
                                 color: isPlaying ? "#000000" : cue.color,
                                 border: `1px solid ${isPlaying ? "#FFFFFF" : cue.color}`,
                                 padding: "0 3px",
@@ -3656,7 +4285,7 @@ export const CSamplerPluginModal = ({
                                 style={{
                                   backgroundColor: "transparent",
                                   border: "none",
-                                  color: isPlaying ? "#111111" : "#FF3366",
+                                  color: isPlaying ? "#111111" : "#FFD600",
                                   cursor: "pointer",
                                   padding: 0,
                                   display: "flex",
@@ -3701,7 +4330,7 @@ export const CSamplerPluginModal = ({
                               style={{
                                 width: "98%",
                                 backgroundColor: "#07080B",
-                                border: "1px solid #CCFF00",
+                                border: "1px solid #FFD600",
                                 borderRadius: "2px",
                                 color: "#FFFFFF",
                                 fontSize: "0.64rem",
@@ -3741,7 +4370,7 @@ export const CSamplerPluginModal = ({
                                 style={{
                                   backgroundColor: "transparent",
                                   border: "none",
-                                  color: isPlaying ? "#111111" : "#8E94A5",
+                                  color: isPlaying ? "#111111" : "#8E939E",
                                   cursor: "pointer",
                                   padding: 0,
                                   display: "flex",
@@ -3761,7 +4390,7 @@ export const CSamplerPluginModal = ({
                           <span
                             style={{
                               fontSize: "0.52rem",
-                              color: isPlaying ? "#111111" : "#8E94A5",
+                              color: isPlaying ? "#111111" : "#8E939E",
                               fontFamily: "monospace",
                               fontWeight: 700,
                             }}
@@ -3791,37 +4420,6 @@ export const CSamplerPluginModal = ({
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div
-          style={{
-            padding: "6px 16px",
-            backgroundColor: "#141722",
-            borderTop: "1px solid #242938",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span style={{ fontSize: "0.62rem", color: "#8E94A5" }}>
-            Motor: <strong style={{ color: "#CCFF00" }}>Serato DSP Transient Slicer &amp; Cue Grid</strong>
-          </span>
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: "4px 12px",
-              backgroundColor: "#2B303C",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "3px",
-              fontSize: "0.68rem",
-              fontWeight: 900,
-              cursor: "pointer",
-            }}
-          >
-            CERRAR
-          </button>
-        </div>
         {/* MODAL CONFIGURACIÓN Y PRUEBA DE IA META DEMUCS V4 */}
         {showAiModal && (
           <div
@@ -3845,8 +4443,8 @@ export const CSamplerPluginModal = ({
               style={{
                 width: "100%",
                 maxWidth: "520px",
-                backgroundColor: "#0B0E17",
-                border: "1px solid #1E293B",
+                backgroundColor: "#090A0D",
+                border: "1px solid #262830",
                 borderRadius: "8px",
                 boxShadow: "0 12px 36px rgba(0,0,0,0.85)",
                 display: "flex",
@@ -3860,7 +4458,7 @@ export const CSamplerPluginModal = ({
                 style={{
                   padding: "10px 14px",
                   backgroundColor: "#131826",
-                  borderBottom: "1px solid #1E293B",
+                  borderBottom: "1px solid #262830",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -3872,7 +4470,7 @@ export const CSamplerPluginModal = ({
                     <div style={{ fontSize: "0.78rem", fontWeight: 900, color: "#FFFFFF" }}>
                       META DEMUCS v4 • SEPARADOR DE STEMS POR IA
                     </div>
-                    <div style={{ fontSize: "0.58rem", color: "#64748B" }}>
+                    <div style={{ fontSize: "0.58rem", color: "#71717A" }}>
                       Separación milimétrica en Batería, Bajo, Melodía y Vocales
                     </div>
                   </div>
@@ -3883,7 +4481,7 @@ export const CSamplerPluginModal = ({
                   style={{
                     backgroundColor: "transparent",
                     border: "none",
-                    color: "#94A3B8",
+                    color: "#A1A1AA",
                     cursor: "pointer",
                     padding: "4px",
                   }}
@@ -3899,7 +4497,7 @@ export const CSamplerPluginModal = ({
                   style={{
                     padding: "8px 12px",
                     backgroundColor: "#161E2E",
-                    border: "1.5px solid #00E5FF44",
+                    border: "1.5px solid #FFD60044",
                     borderRadius: "6px",
                     display: "flex",
                     alignItems: "center",
@@ -3910,13 +4508,13 @@ export const CSamplerPluginModal = ({
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{ fontSize: "1.2rem" }}>🎵</span>
                     <div>
-                      <div style={{ fontSize: "0.58rem", fontWeight: 900, color: "#00E5FF", letterSpacing: "0.5px" }}>
+                      <div style={{ fontSize: "0.58rem", fontWeight: 900, color: "#FFD600", letterSpacing: "0.5px" }}>
                         CANCIÓN DE C-DIGGER SELECCIONADA:
                       </div>
                       <div style={{ fontSize: "0.76rem", fontWeight: 900, color: "#FFFFFF" }}>
                         {trackInfo?.artist ? `${trackInfo.artist} — ${trackInfo.title}` : sampleName}
                       </div>
-                      <div style={{ fontSize: "0.58rem", color: "#94A3B8" }}>
+                      <div style={{ fontSize: "0.58rem", color: "#A1A1AA" }}>
                         {trackInfo?.bpm || 95} BPM · Tonalidad {trackInfo?.key || "Am"} · Género {trackInfo?.genre || "Crate"}
                         {trackInfo?.youtubeId ? ` (YouTube ID: ${trackInfo.youtubeId})` : ""}
                       </div>
@@ -3932,8 +4530,8 @@ export const CSamplerPluginModal = ({
                       style={{
                         padding: "4px 8px",
                         backgroundColor: "#1F293D",
-                        color: "#CCFF00",
-                        border: "1px solid #CCFF0044",
+                        color: "#FFD600",
+                        border: "1px solid #FFD60044",
                         borderRadius: "3px",
                         fontSize: "0.6rem",
                         fontWeight: 900,
@@ -3950,8 +4548,8 @@ export const CSamplerPluginModal = ({
                 <div
                   style={{
                     padding: "10px 12px",
-                    backgroundColor: "#0F1422",
-                    border: `1px solid ${aiServerStatus?.hasReplicate ? "#00E5FF44" : "#1E273A"}`,
+                    backgroundColor: "#0D0E12",
+                    border: `1px solid ${aiServerStatus?.hasReplicate ? "#FFD60044" : "#1A1C23"}`,
                     borderRadius: "6px",
                   }}
                 >
@@ -3968,18 +4566,18 @@ export const CSamplerPluginModal = ({
                         fontWeight: 900,
                         padding: "2px 6px",
                         borderRadius: "3px",
-                        backgroundColor: aiServerStatus?.hasReplicate ? "#00E5FF22" : "#242E42",
-                        color: aiServerStatus?.hasReplicate ? "#00E5FF" : "#94A3B8",
+                        backgroundColor: aiServerStatus?.hasReplicate ? "#FFD60022" : "#262830",
+                        color: aiServerStatus?.hasReplicate ? "#FFD600" : "#A1A1AA",
                       }}
                     >
                       {aiServerStatus?.hasReplicate ? "CONECTADO" : "PENDIENTE TOKEN"}
                     </span>
                   </div>
-                  <p style={{ fontSize: "0.62rem", color: "#94A3B8", margin: 0, lineHeight: 1.4 }}>
+                  <p style={{ fontSize: "0.62rem", color: "#A1A1AA", margin: 0, lineHeight: 1.4 }}>
                     Separa cualquier canción en 3-5 segundos sin consumir recursos de tu computadora.
                   </p>
-                  <div style={{ fontSize: "0.58rem", color: "#64748B", marginTop: "4px" }}>
-                    Configuración: Agrega <code style={{ color: "#CCFF00" }}>REPLICATE_API_TOKEN</code> en tu archivo <code style={{ color: "#CCFF00" }}>.env.local</code>
+                  <div style={{ fontSize: "0.58rem", color: "#71717A", marginTop: "4px" }}>
+                    Configuración: Agrega <code style={{ color: "#FFD600" }}>REPLICATE_API_TOKEN</code> en tu archivo <code style={{ color: "#FFD600" }}>.env.local</code>
                   </div>
                 </div>
 
@@ -3987,8 +4585,8 @@ export const CSamplerPluginModal = ({
                 <div
                   style={{
                     padding: "10px 12px",
-                    backgroundColor: "#0F1422",
-                    border: `1px solid ${aiServerStatus?.hasLocalWorker ? "#CCFF0044" : "#1E273A"}`,
+                    backgroundColor: "#0D0E12",
+                    border: `1px solid ${aiServerStatus?.hasLocalWorker ? "#FFD60044" : "#1A1C23"}`,
                     borderRadius: "6px",
                   }}
                 >
@@ -4005,18 +4603,18 @@ export const CSamplerPluginModal = ({
                         fontWeight: 900,
                         padding: "2px 6px",
                         borderRadius: "3px",
-                        backgroundColor: aiServerStatus?.hasLocalWorker ? "#CCFF0022" : "#242E42",
-                        color: aiServerStatus?.hasLocalWorker ? "#CCFF00" : "#94A3B8",
+                        backgroundColor: aiServerStatus?.hasLocalWorker ? "#FFD60022" : "#262830",
+                        color: aiServerStatus?.hasLocalWorker ? "#FFD600" : "#A1A1AA",
                       }}
                     >
                       {aiServerStatus?.hasLocalWorker ? "EN LÍNEA (8000)" : "NO DETECTADO"}
                     </span>
                   </div>
-                  <p style={{ fontSize: "0.62rem", color: "#94A3B8", margin: 0, lineHeight: 1.4 }}>
+                  <p style={{ fontSize: "0.62rem", color: "#A1A1AA", margin: 0, lineHeight: 1.4 }}>
                     Corre en tu propia máquina con Python sin depender de internet.
                   </p>
-                  <div style={{ fontSize: "0.58rem", color: "#64748B", marginTop: "4px" }}>
-                    Comando: <code style={{ color: "#CCFF00" }}>python scripts/stem_separator.py --server --port 8000</code>
+                  <div style={{ fontSize: "0.58rem", color: "#71717A", marginTop: "4px" }}>
+                    Comando: <code style={{ color: "#FFD600" }}>python scripts/stem_separator.py --server --port 8000</code>
                   </div>
                 </div>
 
@@ -4024,8 +4622,8 @@ export const CSamplerPluginModal = ({
                 <div
                   style={{
                     padding: "10px 12px",
-                    backgroundColor: "#0F1422",
-                    border: "1px solid #1E273A",
+                    backgroundColor: "#0D0E12",
+                    border: "1px solid #1A1C23",
                     borderRadius: "6px",
                   }}
                 >
@@ -4042,14 +4640,14 @@ export const CSamplerPluginModal = ({
                         fontWeight: 900,
                         padding: "2px 6px",
                         borderRadius: "3px",
-                        backgroundColor: "#FF007A22",
-                        color: "#FF007A",
+                        backgroundColor: "#D4D4D822",
+                        color: "#D4D4D8",
                       }}
                     >
                       ACTIVO (0ms)
                     </span>
                   </div>
-                  <p style={{ fontSize: "0.62rem", color: "#94A3B8", margin: 0, lineHeight: 1.4 }}>
+                  <p style={{ fontSize: "0.62rem", color: "#A1A1AA", margin: 0, lineHeight: 1.4 }}>
                     Filtra y sintetiza stems analógicos al vuelo sincronizados a la tonalidad y BPM.
                   </p>
                 </div>
@@ -4060,7 +4658,7 @@ export const CSamplerPluginModal = ({
                 style={{
                   padding: "10px 14px",
                   backgroundColor: "#0D111A",
-                  borderTop: "1px solid #1E293B",
+                  borderTop: "1px solid #262830",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -4075,9 +4673,9 @@ export const CSamplerPluginModal = ({
                     alignItems: "center",
                     gap: "4px",
                     padding: "5px 10px",
-                    backgroundColor: "#1A2234",
+                    backgroundColor: "#181920",
                     color: "#FFFFFF",
-                    border: "1px solid #2B3852",
+                    border: "1px solid #2E313B",
                     borderRadius: "4px",
                     fontSize: "0.64rem",
                     fontWeight: 900,
@@ -4100,14 +4698,14 @@ export const CSamplerPluginModal = ({
                       alignItems: "center",
                       gap: "5px",
                       padding: "5px 14px",
-                      backgroundColor: "#00E5FF",
+                      backgroundColor: "#FFD600",
                       color: "#07080B",
                       border: "none",
                       borderRadius: "4px",
                       fontSize: "0.66rem",
                       fontWeight: 900,
                       cursor: "pointer",
-                      boxShadow: "0 0 12px rgba(0, 229, 255, 0.4)",
+                      boxShadow: "0 0 12px rgba(255, 214, 0, 0.4)",
                     }}
                   >
                     <span>⚡ PROBAR SEPARACIÓN AHORA</span>
@@ -4116,6 +4714,99 @@ export const CSamplerPluginModal = ({
               </div>
             </div>
           </div>
+        )}
+
+        {cutPadModalData && (
+          <CSamplerCutPadModal
+            isOpen={Boolean(cutPadModalData)}
+            onClose={() => setCutPadModalData(null)}
+            padLabel={cutPadModalData.padLabel}
+            rangeLabel={cutPadModalData.rangeLabel}
+            sliceStartSec={cutPadModalData.sliceStartSec}
+            sliceEndSec={cutPadModalData.sliceEndSec}
+            isRealAudio={cutPadModalData.isRealAudio}
+            hasYoutubeFallback={Boolean((externalSample?.trackInfo || trackInfo)?.youtubeId)}
+            onCapturedPadAudio={(capturedBuffer) => {
+              const targetId = cutPadModalData.cueId;
+              setPadCustomBuffers((prev) => ({ ...prev, [targetId]: capturedBuffer }));
+            }}
+            onRequestLoadAudio={() => {
+              setCutPadModalData(null);
+              fileInputRef.current?.click();
+            }}
+            onPlayYoutubeSlice={(startSec, _endSec, pitch) => {
+              if (ytPlayerRef.current?.contentWindow) {
+                try {
+                  ytPlayerRef.current.contentWindow.postMessage(
+                    JSON.stringify({ event: "command", func: "unMute", args: [] }),
+                    "*"
+                  );
+                  ytPlayerRef.current.contentWindow.postMessage(
+                    JSON.stringify({ event: "command", func: "seekTo", args: [startSec, true] }),
+                    "*"
+                  );
+                  ytPlayerRef.current.contentWindow.postMessage(
+                    JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+                    "*"
+                  );
+                  setTimeout(() => applyPitchRateToYouTube(pitch), 80);
+                } catch {}
+              }
+            }}
+            onStopYoutubeSlice={() => {
+              if (ytPlayerRef.current?.contentWindow) {
+                try {
+                  ytPlayerRef.current.contentWindow.postMessage(
+                    JSON.stringify({ event: "command", func: "pauseVideo", args: [] }),
+                    "*"
+                  );
+                } catch {}
+              }
+            }}
+            bpm={cutPadModalData.bpm}
+            musicalKey={cutPadModalData.musicalKey}
+            genre={cutPadModalData.genre}
+            rawSliceBuffer={cutPadModalData.rawSliceBuffer}
+            onSeparatedToMaster={(channels) => {
+              const info = cutPadModalData;
+              setCutPadModalData(null);
+              setMasterModalData({
+                padLabel: info.padLabel,
+                rangeLabel: info.rangeLabel,
+                initialBpm: info.bpm,
+                channels,
+              });
+            }}
+            onApplyRealCut={({ newStartSec, processedBuffer }) => {
+              const targetId = cutPadModalData.cueId;
+              if (processedBuffer) {
+                setPadCustomBuffers((prev) => ({ ...prev, [targetId]: processedBuffer }));
+              }
+              setCues((prev) =>
+                prev.map((c) =>
+                  c.id === targetId
+                    ? {
+                        ...c,
+                        startSec: newStartSec,
+                        name: `CHOP ${c.id} (${formatSeconds(newStartSec)})`,
+                      }
+                    : c
+                )
+              );
+              setCutPadModalData(null);
+            }}
+          />
+        )}
+
+        {masterModalData && (
+          <CSamplerMasterModal
+            isOpen={Boolean(masterModalData)}
+            onClose={() => setMasterModalData(null)}
+            padLabel={masterModalData.padLabel}
+            rangeLabel={masterModalData.rangeLabel}
+            initialBpm={masterModalData.initialBpm}
+            channels={masterModalData.channels}
+          />
         )}
       </div>
     </div>

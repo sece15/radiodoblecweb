@@ -76,7 +76,7 @@ export const StreamerNoticeCard = ({ canUploadPrograms }: StreamerNoticeCardProp
             gap: "8px",
             boxShadow: "3px 3px 0px var(--primary)",
             textDecoration: "none",
-            color: "var(--primary)",
+            color: "var(--on-primary-container)",
           }}
         >
           <ExternalLink size={16} /> ABRIR GOOGLE DRIVE

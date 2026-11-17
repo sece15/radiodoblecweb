@@ -60,7 +60,7 @@ export const ChatInputBar = ({
             backgroundColor: "var(--primary-container)",
             padding: "8px",
             textAlign: "center",
-            color: "var(--primary)",
+            color: "var(--on-primary-container)",
             fontWeight: 900,
             fontSize: "0.68rem",
             boxShadow: "2px 2px 0px var(--primary)",

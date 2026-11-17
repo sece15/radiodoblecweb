@@ -1,21 +1,128 @@
 import { NextRequest, NextResponse } from "next/server";
+import { spawn } from "node:child_process";
+import { access } from "node:fs/promises";
+import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
+type SeparatedStemsMap = {
+  drums: string;
+  bass: string;
+  melody: string;
+  vocals: string;
+};
+
+// Deduplicación en vuelo por youtubeId para evitar lanzar Demucs dos veces sobre la misma canción
+const inFlightSeparations = new Map<string, Promise<SeparatedStemsMap | null>>();
+
+function isValidYouTubeId(id: unknown): id is string {
+  return typeof id === "string" && /^[a-zA-Z0-9_-]{6,20}$/.test(id);
+}
+
+async function getCachedStemsFromDisk(youtubeId: string): Promise<SeparatedStemsMap | null> {
+  const baseDir = path.join(process.cwd(), "public", "stems_cache", `yt_${youtubeId}`, "htdemucs", "input");
+  const files = ["drums.wav", "bass.wav", "other.wav", "vocals.wav"];
+  try {
+    await Promise.all(files.map((f) => access(path.join(baseDir, f))));
+    const prefix = `/stems_cache/yt_${youtubeId}/htdemucs/input`;
+    return {
+      drums: `${prefix}/drums.wav`,
+      bass: `${prefix}/bass.wav`,
+      melody: `${prefix}/other.wav`,
+      vocals: `${prefix}/vocals.wav`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function runLocalPythonDemucs(youtubeId: string): Promise<SeparatedStemsMap | null> {
+  const existing = inFlightSeparations.get(youtubeId);
+  if (existing) return existing;
+
+  const task = new Promise<SeparatedStemsMap | null>((resolve) => {
+    const scriptPath = path.join(process.cwd(), "scripts", "stem_separator.py");
+    const child = spawn("python", [scriptPath, "--youtube-id", youtubeId, "--json"], {
+      cwd: process.cwd(),
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdoutData = "";
+    let stderrData = "";
+    const timer = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {}
+      resolve(null);
+    }, 300000); // 5 minutos máximo para descarga + separación IA en CPU
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdoutData += chunk.toString();
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderrData += chunk.toString();
+    });
+
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve(null);
+    });
+
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        if (stderrData) {
+          console.warn("[separate-stems] Python Demucs stderr:", stderrData.slice(-500));
+        }
+        resolve(null);
+        return;
+      }
+
+      try {
+        const lines = stdoutData.trim().split(/\r?\n/).filter(Boolean);
+        const lastLine = lines[lines.length - 1];
+        const parsed = JSON.parse(lastLine);
+        if (parsed?.success && parsed?.stems) {
+          resolve(parsed.stems as SeparatedStemsMap);
+          return;
+        }
+      } catch {}
+      resolve(null);
+    });
+  }).finally(() => {
+    inFlightSeparations.delete(youtubeId);
+  });
+
+  inFlightSeparations.set(youtubeId, task);
+  return task;
+}
+
 /**
  * Endpoint de estado de proveedores de IA para separación de Stems.
+ * En producción (VPS de AzuraCast) el procesamiento pesado en servidor está desactivado
+ * por defecto para proteger la transmisión en vivo y delegar el cómputo a la PC del usuario.
  */
 export async function GET() {
+  const allowServerDemucs =
+    process.env.NODE_ENV !== "production" || process.env.ENABLE_SERVER_DEMUCS === "true";
   const hasReplicate = Boolean(process.env.REPLICATE_API_TOKEN);
   let hasLocalWorker = false;
 
-  try {
-    const healthCheck = await fetch("http://127.0.0.1:8000/health", {
-      signal: AbortSignal.timeout(1000),
-    });
-    hasLocalWorker = healthCheck.ok;
-  } catch {
-    hasLocalWorker = false;
+  if (allowServerDemucs) {
+    try {
+      const healthCheck = await fetch("http://127.0.0.1:8010/health", {
+        signal: AbortSignal.timeout(1000),
+      });
+      hasLocalWorker = healthCheck.ok;
+    } catch {
+      try {
+        await access(path.join(process.cwd(), "scripts", "stem_separator.py"));
+        hasLocalWorker = true;
+      } catch {
+        hasLocalWorker = false;
+      }
+    }
   }
 
   const activeProvider = hasLocalWorker
@@ -26,26 +133,29 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    allowServerDemucs,
     hasLocalWorker,
     hasReplicate,
     activeProvider,
     instructions: {
+      clientPc:
+        "Para usar Meta Demucs v4 en tu propia PC sin cargar el servidor: ejecuta 'python scripts/stem_separator.py --server --port 8010'",
       cloud: "Para usar Meta Demucs v4 en GPU Cloud: añade REPLICATE_API_TOKEN en tu archivo .env.local",
-      local: "Para usar Meta Demucs v4 en tu PC: ejecuta 'python scripts/stem_separator.py --server --port 8000'",
-      memory: "Motor DSP en memoria activo: filtra y sintetiza stems con latencia cero",
+      memory: "Motor DSP en navegador activo: separa los 4 stems en la PC del usuario sin carga al VPS",
     },
   });
 }
 
 /**
- * Procesa la separación de stems con Meta Demucs v4 (Cloud o Local) o Fallback DSP.
+ * Procesa la separación de stems en 4 canales (Bajo, Batería, Melodía, Voz)
+ * descargando de YouTube con yt-dlp + separando con Meta Demucs v4.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const { youtubeId, audioUrl, trackTitle, genre, isTest } = body;
 
-    // 0. MODO TEST / PRUEBA RÁPIDA (para validación de integración o mocks)
+    // 0. MODO TEST / PRUEBA RÁPIDA
     if (Boolean(isTest)) {
       return NextResponse.json({
         status: "success",
@@ -61,34 +171,70 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 1. PRIORIDAD 1: Daemon Local de Meta Demucs v4 (scripts/stem_separator.py)
-    try {
-      const healthCheck = await fetch("http://127.0.0.1:8000/health", {
-        signal: AbortSignal.timeout(1200),
-      });
-      if (healthCheck.ok) {
-        if (youtubeId || audioUrl) {
-          const sepRes = await fetch("http://127.0.0.1:8000/separate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ audioUrl, youtubeId, trackTitle, genre: genre || "funk" }),
-            signal: AbortSignal.timeout(180000),
+    const allowServerDemucs =
+      process.env.NODE_ENV !== "production" || process.env.ENABLE_SERVER_DEMUCS === "true";
+
+    if (allowServerDemucs) {
+      // 0.5 CACHÉ EN DISCO INSTANTÁNEA (si ya se separó antes este YouTube ID)
+      if (isValidYouTubeId(youtubeId)) {
+        const diskStems = await getCachedStemsFromDisk(youtubeId);
+        if (diskStems) {
+          return NextResponse.json({
+            status: "success",
+            provider: "meta_demucs_v4_local",
+            cached: true,
+            stems: diskStems,
+            message: "4 canales cargados desde caché local de Meta Demucs v4",
           });
-          if (sepRes.ok) {
-            const sepData = await sepRes.json();
-            if (sepData.success && sepData.stems) {
-              return NextResponse.json({
-                status: "success",
-                provider: "meta_demucs_v4_local",
-                stems: sepData.stems,
-                message: "Separado con éxito usando Meta Demucs v4 (Worker Local GPU/CPU)",
-              });
-            }
-          }
         }
       }
-    } catch {
-      // Worker local no disponible o en reposo
+
+      // 1. PRIORIDAD 1: Worker FastAPI de Meta Demucs v4 (configurado vía DEMUCS_WORKER_URL)
+      const demucsWorkerUrl = (process.env.DEMUCS_WORKER_URL || "").trim().replace(/\/+$/, "");
+      if (demucsWorkerUrl) {
+        try {
+          const healthCheck = await fetch(`${demucsWorkerUrl}/health`, {
+            signal: AbortSignal.timeout(1200),
+          });
+          if (healthCheck.ok) {
+            if (youtubeId || audioUrl) {
+              const sepRes = await fetch(`${demucsWorkerUrl}/separate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audioUrl, youtubeId, trackTitle, genre: genre || "funk" }),
+                signal: AbortSignal.timeout(300000),
+              });
+              if (sepRes.ok) {
+                const sepData = await sepRes.json();
+                if (sepData.success && sepData.stems) {
+                  return NextResponse.json({
+                    status: "success",
+                    provider: "meta_demucs_v4_local",
+                    stems: sepData.stems,
+                    message: "Separado en 4 canales con Meta Demucs v4 (Worker)",
+                  });
+                }
+              }
+            }
+          }
+        } catch {
+          // Worker remoto/local no disponible; continuamos a ejecución directa bajo demanda
+        }
+      }
+
+      // 1.5 EJECUCIÓN DIRECTA BAJO DEMANDA: yt-dlp + Meta Demucs v4 (htdemucs)
+      if (isValidYouTubeId(youtubeId)) {
+        const localStems = await runLocalPythonDemucs(youtubeId);
+        if (localStems) {
+          return NextResponse.json({
+            status: "success",
+            provider: "meta_demucs_v4_local",
+            cached: false,
+            stems: localStems,
+            message: "Descargado con yt-dlp y separado en 4 canales (Bajo, Batería, Melodía, Voz) con Meta Demucs v4",
+          });
+        }
+      }
     }
 
     // 2. PRIORIDAD 2: Replicate API Cloud con Meta HTDemucs v4

@@ -196,7 +196,7 @@ export const VinylSpinModal = ({
               fontSize: "0.85rem",
               fontWeight: 900,
               backgroundColor: canSpinToday && !isSpinning ? "var(--primary-container)" : "#ccc",
-              color: "var(--primary)",
+              color: canSpinToday && !isSpinning ? "var(--on-primary-container)" : "#333333",
               boxShadow: "4px 4px 0px var(--primary)",
               border: "2.5px solid var(--primary)",
               cursor: canSpinToday && !isSpinning ? "pointer" : "not-allowed",

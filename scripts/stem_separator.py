@@ -39,6 +39,8 @@ def download_youtube_audio(youtube_id: str, output_wav: Path) -> bool:
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": str(temp_template),
+        "noplaylist": True,
+        "geo_bypass": True,
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -51,7 +53,7 @@ def download_youtube_audio(youtube_id: str, output_wav: Path) -> bool:
     }
 
     try:
-        print(f"📥 Descargando audio real de YouTube (ID: {youtube_id})...")
+        print(f"📥 Descargando audio real de YouTube (ID: {youtube_id})...", file=sys.stderr)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([f"https://www.youtube.com/watch?v={youtube_id}"])
 
@@ -61,7 +63,7 @@ def download_youtube_audio(youtube_id: str, output_wav: Path) -> bool:
             if output_wav.exists():
                 output_wav.unlink()
             extracted.rename(output_wav)
-            print(f"✅ Audio de YouTube extraído correctamente en: {output_wav}")
+            print(f"✅ Audio de YouTube extraído correctamente en: {output_wav}", file=sys.stderr)
             return True
         return False
     except Exception as e:
@@ -71,14 +73,23 @@ def download_youtube_audio(youtube_id: str, output_wav: Path) -> bool:
 
 def separate_audio(input_wav: Path, output_dir: Path, model_name: str = "htdemucs") -> bool:
     """
-    Ejecuta Meta Demucs v4 para separar el audio en 4 stems.
+    Ejecuta Meta Demucs v4 para separar el audio en 4 canales reales:
+    drums (batería), bass (bajo), other (melodía), vocals (voz).
     """
-    print(f"\n============================================================")
-    print(f"🎛️ INICIANDO SEPARACIÓN NEURONAL DE STEMS")
-    print(f"Modelo: {model_name} (Meta AI Hybrid Transformer)")
-    print(f"Entrada: {input_wav}")
-    print(f"Salida: {output_dir}")
-    print(f"============================================================\n")
+    device = "cpu"
+    try:
+        import torch
+        if torch.cuda.is_available():
+            device = "cuda"
+    except Exception:
+        pass
+
+    print(f"\n============================================================", file=sys.stderr)
+    print(f"🎛️ INICIANDO SEPARACIÓN NEURONAL DE STEMS (4 CANALES)", file=sys.stderr)
+    print(f"Modelo: {model_name} (Meta AI Hybrid Transformer) | Dispositivo: {device}", file=sys.stderr)
+    print(f"Entrada: {input_wav}", file=sys.stderr)
+    print(f"Salida: {output_dir}", file=sys.stderr)
+    print(f"============================================================\n", file=sys.stderr)
 
     cmd = [
         sys.executable,
@@ -86,30 +97,29 @@ def separate_audio(input_wav: Path, output_dir: Path, model_name: str = "htdemuc
         "demucs.separate",
         "-n",
         model_name,
-        "--two-stems",
-        "none",
+        "-d",
+        device,
         "-o",
         str(output_dir),
         str(input_wav),
     ]
 
     try:
-        subprocess.run(cmd, check=True)
-        print(f"\n✅ Separación completada con éxito.")
+        subprocess.run(cmd, check=True, stdout=sys.stderr, stderr=sys.stderr)
+        print(f"\n✅ Separación en 4 canales completada con éxito.", file=sys.stderr)
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Error al ejecutar Demucs: {e}", file=sys.stderr)
         return False
 
 
-def get_stems_for_item(item_dir: Path, base_url: str):
+def get_stems_for_item(item_dir: Path, base_url: str = "", model_name: str = "htdemucs"):
     """
-    Encuentra los stems generados en el directorio y genera sus URLs públicas HTTP.
+    Encuentra los 4 stems generados en el directorio y genera sus URLs HTTP o rutas públicas Next.js.
     """
-    track_folder = item_dir / "htdemucs" / "input"
+    track_folder = item_dir / model_name / "input"
     if not track_folder.exists():
-        # Búsqueda alternativa por si el nombre de archivo difiere
-        candidates = list(item_dir.glob("htdemucs/*"))
+        candidates = list(item_dir.glob(f"{model_name}/*"))
         if candidates:
             track_folder = candidates[0]
 
@@ -124,16 +134,17 @@ def get_stems_for_item(item_dir: Path, base_url: str):
         rel_other = other.relative_to(CACHE_DIR).as_posix()
         rel_vocals = vocals.relative_to(CACHE_DIR).as_posix()
 
+        prefix = f"{base_url}/stems" if base_url else "/stems_cache"
         return {
-            "drums": f"{base_url}/stems/{rel_drums}",
-            "bass": f"{base_url}/stems/{rel_bass}",
-            "melody": f"{base_url}/stems/{rel_other}",
-            "vocals": f"{base_url}/stems/{rel_vocals}",
+            "drums": f"{prefix}/{rel_drums}",
+            "bass": f"{prefix}/{rel_bass}",
+            "melody": f"{prefix}/{rel_other}",
+            "vocals": f"{prefix}/{rel_vocals}",
         }
     return None
 
 
-def run_server(port: int = 8000):
+def run_server(port: int = 8010):
     """
     Inicia el servidor FastAPI con soporte para descarga de YouTube, separación y streaming estático.
     """
@@ -251,17 +262,58 @@ def run_server(port: int = 8000):
 
 
 def main():
+    import json
+
     parser = argparse.ArgumentParser(description="Radio Doble C - C-Stems AI Model Separator")
     parser.add_argument("--input", type=str, help="Ruta del archivo de audio a separar")
+    parser.add_argument("--youtube-id", type=str, help="ID de YouTube a descargar con yt-dlp y separar en 4 canales")
     parser.add_argument("--output", type=str, default="./stems_output", help="Carpeta de salida")
     parser.add_argument("--model", type=str, default="htdemucs", help="Nombre del modelo (htdemucs, htdemucs_ft)")
     parser.add_argument("--server", action="store_true", help="Iniciar servidor FastAPI local para C-Sampler")
-    parser.add_argument("--port", type=int, default=8000, help="Puerto del servidor")
+    parser.add_argument("--port", type=int, default=8010, help="Puerto del servidor")
+    parser.add_argument("--json", action="store_true", help="Imprimir resultado en formato JSON por stdout")
 
     args = parser.parse_args()
 
     if args.server:
         run_server(args.port)
+    elif args.youtube_id:
+        yt_id = args.youtube_id.strip()
+        item_dir = CACHE_DIR / f"yt_{yt_id}"
+        item_dir.mkdir(parents=True, exist_ok=True)
+
+        cached = get_stems_for_item(item_dir, base_url="", model_name=args.model)
+        if cached:
+            if args.json:
+                print(json.dumps({"success": True, "cached": True, "stems": cached}))
+            else:
+                print(f"⚡ Stems en caché: {cached}")
+            return
+
+        input_wav = item_dir / "input.wav"
+        if not input_wav.exists():
+            ok_dl = download_youtube_audio(yt_id, input_wav)
+            if not ok_dl or not input_wav.exists():
+                if args.json:
+                    print(json.dumps({"success": False, "error": "No se pudo descargar el audio de YouTube"}))
+                sys.exit(1)
+
+        ok_sep = separate_audio(input_wav, item_dir, args.model)
+        if not ok_sep:
+            if args.json:
+                print(json.dumps({"success": False, "error": "Error durante la separación con Demucs"}))
+            sys.exit(1)
+
+        stems = get_stems_for_item(item_dir, base_url="", model_name=args.model)
+        if not stems:
+            if args.json:
+                print(json.dumps({"success": False, "error": "No se encontraron los 4 stems generados"}))
+            sys.exit(1)
+
+        if args.json:
+            print(json.dumps({"success": True, "cached": False, "stems": stems}))
+        else:
+            print(f"✅ 4 canales generados: {stems}")
     elif args.input:
         out = Path(args.output)
         out.mkdir(parents=True, exist_ok=True)

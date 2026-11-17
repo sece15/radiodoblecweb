@@ -49,7 +49,8 @@ export const AdminRoleManager = ({
       <div
         className="neo-card"
         style={{
-          backgroundColor: "white",
+          backgroundColor: "var(--card-bg)",
+          color: "var(--on-background)",
           padding: "14px",
           boxShadow: "5px 5px 0px var(--primary)",
           border: "3px solid var(--primary)",

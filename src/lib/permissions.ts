@@ -25,6 +25,11 @@ export function isModerator(role?: string): boolean {
   return ["ADMIN", "MODERADOR"].includes(r);
 }
 
+export function canAccessStudio(role?: string): boolean {
+  const r = normalizeRole(role);
+  return r.includes("ADMIN") || r.includes("STREAMER");
+}
+
 export interface RoleBadgeInfo {
   label: string;
   badge: string;

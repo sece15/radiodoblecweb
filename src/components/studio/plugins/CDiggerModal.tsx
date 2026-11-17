@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useModalIsolation } from "@/hooks/useModalIsolation";
 import {
   X,
   Scissors,
@@ -245,6 +246,11 @@ export const CDiggerModal = ({
 }: CDiggerModalProps) => {
   // Autenticación Supabase / Google OAuth para cuotas ampliadas y crate persistente
   const isAuthenticated = useAudio((s) => s.isAuthenticated);
+  const modalContainerRef = useRef<HTMLDivElement | null>(null);
+  const { isTopModal } = useModalIsolation(isOpen && !isStandalone, modalContainerRef, {
+    onEscape: onClose,
+    captureSpace: false,
+  });
   const userProfile = useAudio((s) => s.userProfile);
   const signInWithGoogle = useAudio((s) => s.signInWithGoogle);
   const signOut = useAudio((s) => s.signOut);
@@ -1175,18 +1181,22 @@ export const CDiggerModal = ({
   useEffect(() => {
     if (!isStandalone && !isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isStandalone && !isTopModal()) return;
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") {
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable) {
         return;
       }
       if (e.code === "ArrowRight") {
         e.preventDefault();
+        e.stopPropagation();
         handleNextTrack();
       } else if (e.code === "ArrowLeft") {
         e.preventDefault();
+        e.stopPropagation();
         handlePrevTrack();
       } else if (e.code === "Space") {
         e.preventDefault();
+        e.stopPropagation();
         if (ytPlayerRef.current && typeof ytPlayerRef.current.getPlayerState === "function") {
           try {
             const state = ytPlayerRef.current.getPlayerState();
@@ -1199,9 +1209,9 @@ export const CDiggerModal = ({
         }
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isStandalone, handleNextTrack, handlePrevTrack]);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [isOpen, isStandalone, isTopModal, handleNextTrack, handlePrevTrack]);
 
   // 2. TOGGLE FAVORITE
   const handleToggleFavorite = (trackId: string) => {
@@ -1299,6 +1309,10 @@ export const CDiggerModal = ({
 
   return (
     <div
+      ref={modalContainerRef}
+      tabIndex={-1}
+      role={isStandalone ? undefined : "dialog"}
+      aria-modal={isStandalone ? undefined : true}
       suppressHydrationWarning
       style={
         isStandalone

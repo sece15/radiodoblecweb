@@ -20,17 +20,17 @@
 [data-theme="COSMIC_DARK"] {
   --primary: #00FFCC;
   --on-primary: #12141C;
-  --primary-container: #00FFCC;
-  --on-primary-container: #12141C;
+  --primary-container: #0F766E;
+  --on-primary-container: #F0FDFA;
   --secondary: #262A3B;
   --secondary-container: #1A1D2B;
   --surface-container: #1A1D2B;
-  --on-surface-variant: #8B92AC;
+  --on-surface-variant: #94A3B8;
   --background: #12141C;
   --on-background: #FFFFFF;
   --error: #BA1A1A;
   --card-bg: #262A3B;
-  --bubble-bg: #00FFCC;
+  --bubble-bg: #0F766E;
 }
 
 [data-theme="CYBER_RED"] {
@@ -68,12 +68,12 @@
 [data-theme="TROPICAL"] {
   --primary: #EC008C;
   --on-primary: #F2EFE9;
-  --primary-container: #FF6C00;
+  --primary-container: #FF4DA6;
   --on-primary-container: #FFFFFF;
   --secondary: #F2EFE9;
   --secondary-container: #FFD300;
   --surface-container: #F2EFE9;
-  --on-surface-variant: #FF6C00;
+  --on-surface-variant: #B8006B;
   --background: #FFB6D9;
   --on-background: #EC008C;
   --error: #BA1A1A;
@@ -153,6 +153,7 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
   border: 4px solid var(--primary);
   background-color: var(--card-bg);
+  color: var(--on-background);
   box-shadow: 6px 6px 0px 0px var(--primary);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -163,6 +164,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   border: 4px solid var(--primary);
   background-color: var(--card-bg);
+  color: var(--on-background);
   box-shadow: 6px 6px 0px 0px var(--primary);
   font-weight: 900;
   text-transform: uppercase;
@@ -342,6 +344,7 @@ button {
 }
 
 .spotify-player-bar {
+  position: relative;
   width: 100%;
   height: 96px;
   background-color: var(--background);
@@ -1194,8 +1197,8 @@ button {
   justify-content: center;
   width: 100%;
   position: relative;
-  /* Espaciado superior compacto para subir personaje y card */
-  margin: 0 auto;
+  /* Sube toda la composición (Murce + card) ligeramente hacia arriba */
+  margin: -18px auto 0 auto;
   padding: 0 16px;
 }
 
@@ -1209,14 +1212,15 @@ button {
   align-items: flex-end;
   min-height: 350px;
   height: auto;
-  z-index: 5;
-  margin-bottom: -90px; /* Sube la cabeza para mostrar nariz y borde de la boca con colmillos, menos misterioso */
+  z-index: auto;
+  margin-bottom: -66px; /* Sube el card un poco más detrás de la barba/lengua */
   pointer-events: none;
 }
 
 /* Wrapper del personaje con estados interactivos */
 .mascot-character-wrapper {
   position: relative;
+  z-index: 15;
   cursor: pointer;
   pointer-events: auto;
   display: flex;
@@ -1267,10 +1271,10 @@ button {
 
 .mascot-wings-layer {
   position: absolute;
-  top: 84px; /* Bajadas ligeramente para que nazcan a la altura de los hombros/mejillas */
+  top: 66px; /* Alas bajadas y más separadas hacia los lados */
   left: 50%;
   transform: translateX(-50%);
-  width: clamp(430px, 62vw, 530px); /* Envergadura más amplia e imponente */
+  width: clamp(445px, 64vw, 540px);
   height: 210px;
   display: flex;
   justify-content: space-between;
@@ -1632,7 +1636,7 @@ button {
   right: 0;
   display: flex;
   justify-content: space-between;
-  padding: 0 16%;
+  padding: 0 12%;
   pointer-events: none;
   z-index: 25;
   transition: transform 0.6s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.45s ease;
@@ -2026,7 +2030,7 @@ button {
   .mascot-stage-container {
     min-height: 290px;
     height: auto;
-    margin-bottom: -64px; /* Sube la cabeza en móviles mostrando nariz y expresión amigable */
+    margin-bottom: -52px; /* Sube el card un poco más en móviles */
   }
 
   .mascot-speech-bubble {
@@ -2036,8 +2040,8 @@ button {
   }
 
   .mascot-wings-layer {
-    width: clamp(320px, 94vw, 420px);
-    top: 58px;
+    width: clamp(330px, 96vw, 435px);
+    top: 48px;
   }
 
   .mascot-wing-graphic {
@@ -2052,7 +2056,7 @@ button {
 
   .mascot-paws-anchor {
     top: -18px;
-    padding: 0 12%;
+    padding: 0 9%;
   }
 
   .mascot-paw-wrapper {
@@ -2065,6 +2069,71 @@ button {
     overflow: visible;
   }
 }
+
+/* ========================================================================= */
+/* 🎄 ADORNOS NAVIDEÑOS RADIO DOBLE C                                        */
+/* ========================================================================= */
+@keyframes christmas-snowfall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  90% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(24px, 108vh, 0) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes christmas-twinkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1.15);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.88);
+    filter: brightness(0.75);
+  }
+}
+
+@keyframes snow-mounds-cycle {
+  0%, 8% {
+    transform: translateY(0px) scaleY(0);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(0px) scaleY(0.32);
+    opacity: 0.95;
+  }
+  45% {
+    transform: translateY(0px) scaleY(0.72);
+    opacity: 1;
+  }
+  66% {
+    transform: translateY(0px) scaleY(1);
+    opacity: 1;
+  }
+  71% {
+    transform: translateY(2px) scaleY(1.03);
+    opacity: 1;
+  }
+  88% {
+    transform: translateY(135px) scaleY(0.95);
+    opacity: 0.85;
+  }
+  94%, 100% {
+    transform: translateY(165px) scaleY(0.85);
+    opacity: 0;
+  }
+}
+
 
 
 

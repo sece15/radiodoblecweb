@@ -63,7 +63,7 @@ export const LiveDropNotification = ({
           className="neo-button fun-hover-wobble"
           style={{
             backgroundColor: "var(--primary-container)",
-            color: "var(--primary)",
+            color: "var(--on-primary-container)",
             padding: "6px 12px",
             fontSize: "0.7rem",
             fontWeight: 900,

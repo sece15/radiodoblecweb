@@ -428,6 +428,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               onClick={() => setModPanelVisible(!isModPanelVisible)}
               style={{
                 backgroundColor: "var(--primary-container)",
+                color: "var(--on-primary-container)",
                 border: "1.5px solid var(--primary)",
                 padding: "4px 8px",
                 fontSize: "0.6rem",
@@ -473,7 +474,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
           <div
             className="neo-card"
             style={{
-              backgroundColor: "#FFFBE5",
+              backgroundColor: "var(--card-bg)",
+              color: "var(--on-background)",
               padding: "10px",
               display: "flex",
               flexDirection: "column",
@@ -503,7 +505,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                     <div
                       key={greeting.id}
                       style={{
-                        backgroundColor: "white",
+                        backgroundColor: "var(--surface-container)",
+                        color: "var(--on-background)",
                         border: "1.5px solid var(--primary)",
                         padding: "6px 8px",
                         display: "flex",
@@ -727,7 +730,8 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
           className="neo-card"
           style={{
             flex: 1,
-            backgroundColor: "white",
+            backgroundColor: "var(--background)",
+            color: "var(--on-background)",
             border: "2px solid var(--primary)",
             boxShadow: "3px 3px 0px var(--primary)",
             padding: "8px",
@@ -779,10 +783,11 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                       padding: "8px",
                       transform: `rotate(${isMyMsg ? 0.5 : -0.8}deg)`,
                       backgroundColor: isMyMsg
-                        ? "#E8FCDF"
+                        ? "var(--primary-container)"
                         : isBanned || isDeleted
-                          ? "#FFFFEEEE"
-                          : "#F7F7F7",
+                          ? "rgba(186,26,26,0.14)"
+                          : "var(--card-bg)",
+                      color: isMyMsg ? "var(--on-primary-container)" : "var(--on-background)",
                     }}
                   >
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -796,7 +801,13 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span style={{ fontSize: "0.6rem", fontWeight: 900, color: "var(--primary)" }}>
+                          <span
+                            style={{
+                              fontSize: "0.6rem",
+                              fontWeight: 900,
+                              color: isMyMsg ? "var(--on-primary-container)" : "var(--primary)",
+                            }}
+                          >
                             {msg.senderName.toUpperCase()}
                           </span>
 
@@ -832,7 +843,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                                   cursor: "pointer",
                                 }}
                               >
-                                <Ban size={8} style={{ color: "var(--primary-container)" }} />
+                                <Ban size={8} style={{ color: "var(--on-primary)" }} />
                               </button>
                             </div>
                           )}
@@ -860,7 +871,11 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                           lineHeight: "1.1rem",
                           wordBreak: "break-word",
                           margin: 0,
-                          color: isBanned || isDeleted ? "#BA1A1A" : "var(--primary)",
+                          color: isBanned || isDeleted
+                            ? "#F87171"
+                            : isMyMsg
+                              ? "var(--on-primary-container)"
+                              : "var(--on-background)",
                           fontStyle: isBanned || isDeleted ? "italic" : "normal",
                         }}
                       >
@@ -933,7 +948,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               backgroundColor: "var(--primary-container)",
               padding: "10px",
               textAlign: "center",
-              color: "var(--primary)",
+              color: "var(--on-primary-container)",
               fontWeight: 900,
               fontSize: "0.75rem",
               boxShadow: "3px 3px 0px var(--primary)",
@@ -1046,7 +1061,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
               className="neo-button fun-hover-wobble"
               style={{
                 backgroundColor: "var(--primary-container)",
-                color: "var(--primary)",
+                color: "var(--on-primary-container)",
                 padding: "6px",
                 fontSize: "0.68rem",
                 fontWeight: 900,
@@ -1240,7 +1255,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                 style={{
                   height: "32px",
                   padding: "0 8px",
-                  backgroundColor: "white",
+                  backgroundColor: "var(--card-bg)",
                   border: "2px solid var(--primary)",
                   boxShadow: "2px 2px 0px var(--primary)",
                   display: "flex",
@@ -1268,6 +1283,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
                   height: "32px",
                   padding: "0 10px",
                   backgroundColor: "var(--primary-container)",
+                  color: "var(--on-primary-container)",
                   border: "2px solid var(--primary)",
                   boxShadow: "2px 2px 0px var(--primary)",
                   display: "flex",

@@ -61,7 +61,9 @@ export const StoreProductCard = ({
                 backgroundColor: product.isFeatured
                   ? "var(--primary-container)"
                   : "var(--card-bg)",
-                color: "var(--primary)",
+                color: product.isFeatured
+                  ? "var(--on-primary-container)"
+                  : "var(--on-background)",
                 border: "2px solid var(--primary)",
                 padding: "2px 6px",
                 fontSize: "0.55rem",
@@ -189,6 +191,7 @@ export const StoreProductCard = ({
           padding: "6px 10px",
           fontSize: "0.65rem",
           backgroundColor: "var(--primary-container)",
+          color: "var(--on-primary-container)",
           boxShadow: "3px 3px 0px var(--primary)",
           cursor: "pointer",
           display: "flex",

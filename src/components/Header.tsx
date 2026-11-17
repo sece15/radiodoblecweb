@@ -4,12 +4,11 @@ import { CSSProperties, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Search, ShoppingCart, Calendar, Menu, X, Radio, ShoppingBag, User, Newspaper, Crown } from "lucide-react";
-import { RadioLogo } from "@/components/RadioLogo";
 import { HeaderNewsTicker } from "@/components/HeaderNewsTicker";
 import { NewsModal } from "@/components/NewsModal";
 import { useAudio } from "@/hooks/useAudio";
 import { useNews } from "@/hooks/useNews";
-import { isVip } from "@/lib/permissions";
+import { isVip, canAccessStudio } from "@/lib/permissions";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
@@ -56,6 +55,7 @@ export const Header = ({
   } = useNews();
 
   const isVipUser = isVip(userProfile.role);
+  const hasStudioAccess = canAccessStudio(userProfile.role);
 
   // Active status checks
   const isHorarios = pathname === "/horarios";
@@ -118,28 +118,29 @@ export const Header = ({
             transition: "background-color 0.25s ease, border-color 0.25s ease",
           }}
         >
-          {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", height: "100%", pointerEvents: "auto" }}>
+          {/* 1. LEFT SIDE: BUSCAR & FX BUTTONS (Solo iconos cuando el chat está abierto) */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", height: "100%", pointerEvents: "auto" }}>
             <button
               onClick={() => setSearchActive(true)}
               className="neo-button fun-hover-wobble"
               style={{
-                padding: "7px 14px",
-                fontSize: "0.75rem",
+                padding: isChatOpen ? "7px 9px" : "6px 10px",
+                fontSize: "0.68rem",
                 fontWeight: 900,
                 backgroundColor: "var(--card-bg)",
                 boxShadow: "3px 3px 0px var(--primary)",
                 display: "flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "5px",
                 cursor: "pointer",
                 transform: "rotate(-1.5deg)",
                 "--rest-rot": "-1.5deg",
               } as CSSProperties}
               title="Buscar estaciones, canciones y programas"
+              aria-label="Buscar"
             >
               <Search size={14} />
-              <span>BUSCAR</span>
+              {!isChatOpen && <span>BUSCAR</span>}
             </button>
 
             {onOpenSpin && (
@@ -147,8 +148,8 @@ export const Header = ({
                 onClick={onOpenSpin}
                 className="neo-button fun-hover-wobble desktop-only-flex"
                 style={{
-                  padding: "7px 12px",
-                  fontSize: "0.72rem",
+                  padding: isChatOpen ? "7px 9px" : "6px 10px",
+                  fontSize: isChatOpen ? "0.9rem" : "0.68rem",
                   fontWeight: 900,
                   backgroundColor: "#CCFF00",
                   color: "#111111",
@@ -156,66 +157,48 @@ export const Header = ({
                   border: "2px solid var(--primary)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "5px",
+                  gap: "4px",
                   cursor: "pointer",
                   transform: "rotate(-1deg)",
                   "--rest-rot": "-1deg",
                 } as CSSProperties}
                 title="Gira la Tornamesa Doble C gratis cada día para ganar premios y C-Coins"
+                aria-label="Tornamesa C"
               >
-                <span>🎰 TORNAMESA C</span>
+                <span>{isChatOpen ? "🎰" : "🎰 TORNAMESA C"}</span>
               </button>
             )}
 
-            {/* C-Station Studio (C-Digger & C-Sampler) */}
-            <Link
-              href="/studio"
-              className="neo-button fun-hover-wobble desktop-only-flex"
-              style={{
-                padding: "7px 12px",
-                fontSize: "0.72rem",
-                fontWeight: 900,
-                backgroundColor: "#161922",
-                color: "#CCFF00",
-                boxShadow: "2.5px 2.5px 0px var(--primary)",
-                border: "2px solid var(--primary)",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                cursor: "pointer",
-                textDecoration: "none",
-                transform: "rotate(1deg)",
-                "--rest-rot": "1deg",
-              } as CSSProperties}
-              title="Entrar a C-Station Studio (C-Digger & C-Sampler)"
-            >
-              <span>🎛️ C-STATION</span>
-            </Link>
+            {/* C-Station Studio (C-Digger & C-Sampler) - Solo Streamer y Admin */}
+            {hasStudioAccess && (
+              <Link
+                href="/studio"
+                className="neo-button fun-hover-wobble desktop-only-flex"
+                style={{
+                  padding: isChatOpen ? "7px 9px" : "6px 10px",
+                  fontSize: isChatOpen ? "0.9rem" : "0.68rem",
+                  fontWeight: 900,
+                  backgroundColor: "#161922",
+                  color: "#CCFF00",
+                  boxShadow: "2.5px 2.5px 0px var(--primary)",
+                  border: "2px solid var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  transform: "rotate(1deg)",
+                  "--rest-rot": "1deg",
+                } as CSSProperties}
+                title="Entrar a C-Station Studio (C-Digger & C-Sampler)"
+                aria-label="C-Station Studio"
+              >
+                <span>{isChatOpen ? "🎛️" : "🎛️ C-STATION"}</span>
+              </Link>
+            )}
           </div>
 
-          {/* 2. CENTER: LOGO (CENTERED & CLEAN) */}
-          <div
-            onClick={() => handleNavClick("explore")}
-            className="header-logo-container"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-              height: "72px",
-              width: "72px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              pointerEvents: "auto",
-            }}
-            title="Radio Doble C - Inicio"
-          >
-            <RadioLogo />
-          </div>
-
-          {/* 3. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
+          {/* 2. RIGHT SIDE: VIP + CART + BURGER MENU BUTTON */}
           <div
             className={isChatOpen ? "header-chat-dock-open" : ""}
             style={{ display: "flex", alignItems: "center", gap: "10px", height: "100%", pointerEvents: "auto" }}
@@ -399,7 +382,7 @@ export const Header = ({
               <span
                 style={{
                   backgroundColor: "var(--primary)",
-                  color: "#CCFF00",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
@@ -439,7 +422,7 @@ export const Header = ({
               <span
                 style={{
                   backgroundColor: "var(--primary)",
-                  color: "#CCFF00",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
@@ -452,43 +435,45 @@ export const Header = ({
             )}
           </Link>
 
-          {/* C-Station Studio */}
-          <Link
-            href="/studio"
-            onClick={() => setIsMenuOpen(false)}
-            className="mobile-nav-link fun-hover-wobble"
-            style={{
-              backgroundColor: pathname === "/studio" ? "#CCFF00" : "#161922",
-              color: pathname === "/studio" ? "#111111" : "#CCFF00",
-              border: "2.5px solid var(--primary)",
-              boxShadow: "3.5px 3.5px 0px var(--primary)",
-              transform: "rotate(-1deg)",
-              textDecoration: "none",
-              "--rest-rot": "-1deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
-            } as CSSProperties}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "1rem" }}>🎛️</span>
-              <span style={{ fontWeight: 900 }}>C-STATION</span>
-            </div>
-            <span
+          {/* C-Station Studio - Solo Streamer y Admin */}
+          {hasStudioAccess && (
+            <Link
+              href="/studio"
+              onClick={() => setIsMenuOpen(false)}
+              className="mobile-nav-link fun-hover-wobble"
               style={{
-                backgroundColor: "#CCFF00",
-                color: "#111111",
-                fontSize: "0.55rem",
-                fontWeight: 900,
-                padding: "2px 6px",
-                letterSpacing: "0.8px",
-                border: "1px solid #000000",
-              }}
+                backgroundColor: pathname === "/studio" ? "#CCFF00" : "#161922",
+                color: pathname === "/studio" ? "#111111" : "#CCFF00",
+                border: "2.5px solid var(--primary)",
+                boxShadow: "3.5px 3.5px 0px var(--primary)",
+                transform: "rotate(-1deg)",
+                textDecoration: "none",
+                "--rest-rot": "-1deg",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "9px 14px",
+              } as CSSProperties}
             >
-              ✨ NUEVO
-            </span>
-          </Link>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "1rem" }}>🎛️</span>
+                <span style={{ fontWeight: 900 }}>C-STATION</span>
+              </div>
+              <span
+                style={{
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
+                  fontSize: "0.55rem",
+                  fontWeight: 900,
+                  padding: "2px 6px",
+                  letterSpacing: "0.8px",
+                  border: "1px solid #000000",
+                }}
+              >
+                ✨ NUEVO
+              </span>
+            </Link>
+          )}
 
           {/* 3. Tienda */}
           <button
@@ -515,7 +500,7 @@ export const Header = ({
               <span
                 style={{
                   backgroundColor: "var(--primary)",
-                  color: "#CCFF00",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
@@ -553,7 +538,7 @@ export const Header = ({
               <span
                 style={{
                   backgroundColor: "var(--primary)",
-                  color: "#CCFF00",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
@@ -591,7 +576,7 @@ export const Header = ({
               <span
                 style={{
                   backgroundColor: "var(--primary)",
-                  color: "#CCFF00",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",

@@ -48,6 +48,7 @@ export const ProgramsListSection = ({
                 cursor: "pointer",
                 boxShadow: isCurrent ? "1px 1px 0px var(--primary)" : "6px 6px 0px var(--primary)",
                 backgroundColor: isCurrent ? "var(--primary-container)" : "var(--card-bg)",
+                color: isCurrent ? "var(--on-primary-container)" : "var(--on-background)",
               }}
               onClick={() => {
                 const matchingProg = programs.find(
@@ -83,6 +84,7 @@ export const ProgramsListSection = ({
                     top: "10px",
                     left: "10px",
                     backgroundColor: "var(--primary-container)",
+                    color: "var(--on-primary-container)",
                     border: "2px solid var(--primary)",
                     padding: "2px 8px",
                     fontSize: "0.7rem",

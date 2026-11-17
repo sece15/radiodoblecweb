@@ -59,7 +59,7 @@ export const EmojiPicker = ({ onSelectEmoji, buttonSize = 24, dropDirection = "u
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: isOpen ? "var(--primary-container)" : "white",
+          backgroundColor: isOpen ? "var(--primary-container)" : "var(--card-bg)",
           cursor: "pointer",
         }}
       >

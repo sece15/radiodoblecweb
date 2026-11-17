@@ -1,22 +1,16 @@
 "use client";
 
-import { Clock, Star, Flame } from "lucide-react";
+import { Clock, Flame } from "lucide-react";
 import { LISTENER_LEVELS } from "@/hooks/useGamification";
 
 interface ProfileStatsCardsProps {
   listenedSeconds: number;
-  totalFavoritesCount: number;
-  favoriteSongsCount: number;
-  savedStationsCount: number;
   cCoins?: number;
   streakDays?: number;
 }
 
 export const ProfileStatsCards = ({
   listenedSeconds,
-  totalFavoritesCount,
-  favoriteSongsCount,
-  savedStationsCount,
   cCoins = 2,
   streakDays = 1,
 }: ProfileStatsCardsProps) => {
@@ -71,7 +65,7 @@ export const ProfileStatsCards = ({
         <div
           style={{
             backgroundColor: "var(--primary)",
-            color: "white",
+            color: "var(--on-primary)",
             padding: "3px 8px",
             fontSize: "0.62rem",
             fontWeight: 900,
@@ -132,7 +126,7 @@ export const ProfileStatsCards = ({
           <div
             style={{
               backgroundColor: "var(--primary)",
-              color: "white",
+              color: "var(--on-primary)",
               padding: "2px 8px",
               fontSize: "0.62rem",
               fontWeight: 900,
@@ -140,47 +134,6 @@ export const ProfileStatsCards = ({
           >
             CANJEABLE POR MERCH & SALUDOS
           </div>
-        </div>
-      </div>
-
-      {/* 3. Real Favorites Stats Card */}
-      <div
-        className="neo-card fun-hover-wobble"
-        style={{
-          flex: "1 1 220px",
-          padding: "16px",
-          transform: "rotate(0.5deg)",
-          boxShadow: "5px 5px 0px var(--primary)",
-          backgroundColor: "var(--surface-container)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.72rem", fontWeight: 900, textTransform: "uppercase" }}>
-            FAVORITOS
-          </span>
-          <Star size={18} style={{ color: "#FFCC00", fill: "#FFCC00" }} />
-        </div>
-
-        <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "10px 0" }}>
-          <span style={{ fontSize: "2rem", fontWeight: 900, fontFamily: "Space Grotesk, sans-serif" }}>
-            {totalFavoritesCount}
-          </span>
-          <span style={{ fontSize: "0.75rem", fontWeight: 900, opacity: 0.8 }}>
-            GUARDADOS
-          </span>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: "var(--primary-container)",
-            border: "1.5px solid var(--primary)",
-            padding: "3px 8px",
-            fontSize: "0.62rem",
-            fontWeight: 900,
-            width: "fit-content",
-          }}
-        >
-          {favoriteSongsCount} TEMAS • {savedStationsCount} RADIOS
         </div>
       </div>
     </div>

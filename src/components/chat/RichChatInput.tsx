@@ -464,9 +464,9 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
             fontSize: "0.72rem",
             lineHeight: "1.25rem",
             fontFamily: "inherit",
-            backgroundColor: "#FFFFFF",
-            color: "#111111",
-            caretColor: "#111111",
+            backgroundColor: "var(--card-bg)",
+            color: "var(--on-background)",
+            caretColor: "var(--primary)",
             cursor: "text",
             boxShadow: isFocused
               ? "0 0 0 2px var(--primary-container), 2px 2px 0px var(--primary)"
@@ -486,7 +486,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
               left: 10,
               top: 8,
               right: 48,
-              color: "#888888",
+              color: "var(--on-surface-variant)",
               fontSize: "0.72rem",
               pointerEvents: "none",
               userSelect: "none",

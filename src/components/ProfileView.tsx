@@ -8,8 +8,7 @@ import { isAdmin } from "@/lib/permissions";
 import { ProfileHeaderBlock } from "./profile/ProfileHeaderBlock";
 import { ProfileStatsCards } from "./profile/ProfileStatsCards";
 import { StreamerNoticeCard } from "./profile/StreamerNoticeCard";
-import { CurrentlyPlayingCard } from "./profile/CurrentlyPlayingCard";
-import { FavoriteSongsSection } from "./profile/FavoriteSongsSection";
+import { RankAndSettingsCard } from "./profile/RankAndSettingsCard";
 import { SavedStationsSection } from "./profile/SavedStationsSection";
 import { VisualThemesSection } from "./profile/VisualThemesSection";
 import { AdminRoleManager } from "./profile/AdminRoleManager";
@@ -29,16 +28,9 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
     signOut,
     signInWithGoogle,
     stations,
-    songs,
-    toggleSongFavorite,
-    playSong,
     playStation,
     activeTheme,
     selectTheme,
-    currentTrack,
-    isPlaying,
-    togglePlayPause,
-    liveStatusText,
     listenedSeconds,
     punkPoints,
   } = useAudio(
@@ -49,22 +41,23 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       signOut: s.signOut,
       signInWithGoogle: s.signInWithGoogle,
       stations: s.stations,
-      songs: s.songs,
-      toggleSongFavorite: s.toggleSongFavorite,
-      playSong: s.playSong,
       playStation: s.playStation,
       activeTheme: s.activeTheme,
       selectTheme: s.selectTheme,
-      currentTrack: s.currentTrack,
-      isPlaying: s.isPlaying,
-      togglePlayPause: s.togglePlayPause,
-      liveStatusText: s.liveStatusText,
       listenedSeconds: s.listenedSeconds,
       punkPoints: s.punkPoints,
     }))
   );
 
-  const { cCoins, streakDays } = useGamification();
+  const {
+    cCoins,
+    setCCoins,
+    streakDays,
+    currentLevelInfo,
+    nextLevelInfo,
+    levelProgress,
+    canSpinToday,
+  } = useGamification();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
@@ -76,7 +69,6 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
 
   // Real Database Favorites
   const savedStations = stations.filter((s) => s.isLiked);
-  const favoriteSongs = songs.filter((s) => s.isFavorite);
 
   // Admin User List
   const [usersList, setUsersList] = useState<
@@ -192,9 +184,6 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       {/* 2. STATS METERS */}
       <ProfileStatsCards
         listenedSeconds={listenedSeconds}
-        totalFavoritesCount={favoriteSongs.length + savedStations.length}
-        favoriteSongsCount={favoriteSongs.length}
-        savedStationsCount={savedStations.length}
         cCoins={cCoins || punkPoints}
         streakDays={streakDays}
       />
@@ -203,30 +192,24 @@ export const ProfileView = ({ onNavigateToPlayer }: ProfileViewProps) => {
       <BadgesAlbumSection
         listenedSeconds={listenedSeconds}
         streakDays={streakDays}
-        favoriteSongsCount={favoriteSongs.length}
+        savedStationsCount={savedStations.length}
         cCoins={cCoins || punkPoints}
+        onClaimCoins={(amount) => setCCoins((prev) => (prev || 0) + amount)}
       />
 
       {/* 3. STREAMER / ADMIN NOTICE */}
       <StreamerNoticeCard canUploadPrograms={canUploadPrograms} />
 
-      {/* 4. CURRENTLY PLAYING */}
-      <CurrentlyPlayingCard
-        currentTrack={currentTrack}
-        isPlaying={isPlaying}
-        liveStatusText={liveStatusText}
-        onTogglePlayPause={togglePlayPause}
+      {/* 4. PROGRESS & QUICK RADIO SETTINGS */}
+      <RankAndSettingsCard
+        listenedSeconds={listenedSeconds}
+        currentLevelInfo={currentLevelInfo}
+        nextLevelInfo={nextLevelInfo}
+        levelProgress={levelProgress}
+        canSpinToday={canSpinToday}
       />
 
-      {/* 5. FAVORITE SONGS */}
-      <FavoriteSongsSection
-        favoriteSongs={favoriteSongs}
-        onToggleFavorite={toggleSongFavorite}
-        onPlaySong={playSong}
-        onNavigateToPlayer={onNavigateToPlayer}
-      />
-
-      {/* 6. SAVED STATIONS */}
+      {/* 5. SAVED STATIONS */}
       <SavedStationsSection
         savedStations={savedStations}
         onPlayStation={playStation}

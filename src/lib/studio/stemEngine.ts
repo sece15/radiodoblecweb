@@ -402,6 +402,8 @@ export class RealtimeStemMixer {
   private ctx: AudioContext | null = null;
   private sources: Map<StemType, AudioBufferSourceNode> = new Map();
   private gains: Map<StemType, GainNode> = new Map();
+  private filterNode: BiquadFilterNode | null = null;
+  private driveNode: WaveShaperNode | null = null;
   private masterGain: GainNode | null = null;
 
   private buffers: Map<StemType, AudioBuffer> = new Map();
@@ -428,23 +430,81 @@ export class RealtimeStemMixer {
     this.initAudioContext();
   }
 
+  private makeDriveCurve(amount: number): Float32Array<ArrayBuffer> {
+    const n = 256;
+    const curve = new Float32Array(new ArrayBuffer(n * 4));
+    const k = Math.max(0, amount) * 1.4;
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = k === 0 ? x : ((1 + k) * x) / (1 + k * Math.abs(x));
+    }
+    return curve;
+  }
+
   private initAudioContext() {
     if (typeof window === "undefined") return;
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new AudioCtx();
+    this.filterNode = this.ctx.createBiquadFilter();
+    this.filterNode.type = "lowpass";
+    this.filterNode.frequency.value = 20000;
+    this.filterNode.Q.value = 1.1;
+
+    this.driveNode = this.ctx.createWaveShaper();
+    this.driveNode.curve = this.makeDriveCurve(0);
+    this.driveNode.oversample = "2x";
+
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = 0.9;
+
+    this.filterNode.connect(this.driveNode);
+    this.driveNode.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
     // Inicializar nodos de ganancia individuales
     (["drums", "bass", "melody", "vocals"] as StemType[]).forEach((stem) => {
-      if (this.ctx && this.masterGain) {
+      if (this.ctx && this.filterNode) {
         const gain = this.ctx.createGain();
         gain.gain.value = 1.0;
-        gain.connect(this.masterGain);
+        gain.connect(this.filterNode);
         this.gains.set(stem, gain);
       }
     });
+  }
+
+  /** Filtro DJ Sweep (-100 = LowPass cerrado, 0 = bypass, +100 = HighPass) */
+  public setFilterSweep(value: number) {
+    if (!this.filterNode || !this.ctx) return;
+    const clamped = Math.max(-100, Math.min(100, value));
+    if (Math.abs(clamped) < 4) {
+      this.filterNode.type = "lowpass";
+      this.filterNode.frequency.setTargetAtTime(20000, this.ctx.currentTime, 0.02);
+      this.filterNode.Q.setTargetAtTime(0.7, this.ctx.currentTime, 0.02);
+    } else if (clamped < 0) {
+      this.filterNode.type = "lowpass";
+      const norm = 1 + clamped / 100; // 0..1
+      const freq = 180 * Math.pow(20000 / 180, norm);
+      this.filterNode.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.02);
+      this.filterNode.Q.setTargetAtTime(2.2, this.ctx.currentTime, 0.02);
+    } else {
+      this.filterNode.type = "highpass";
+      const norm = clamped / 100; // 0..1
+      const freq = 25 * Math.pow(4500 / 25, norm);
+      this.filterNode.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.02);
+      this.filterNode.Q.setTargetAtTime(2.2, this.ctx.currentTime, 0.02);
+    }
+  }
+
+  /** Saturación / Crunch estilo 12-Bit SP-404 (0 a 100) */
+  public setCrunchDrive(amount: number) {
+    if (!this.driveNode) return;
+    this.driveNode.curve = this.makeDriveCurve(Math.max(0, Math.min(100, amount)));
+  }
+
+  /** Volumen maestro (0 a 1.2) */
+  public setMasterVolume(vol: number) {
+    if (!this.masterGain || !this.ctx) return;
+    this.masterGain.gain.setTargetAtTime(Math.max(0, Math.min(1.2, vol)), this.ctx.currentTime, 0.02);
   }
 
   public loadStems(result: StemsSeparationResult) {

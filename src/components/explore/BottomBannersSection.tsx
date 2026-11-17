@@ -30,8 +30,8 @@ export const BottomBannersSection = ({
           onNavigateToPlayer();
         }}
         style={{
-          backgroundColor: "var(--primary)",
-          color: "white",
+          backgroundColor: "#11141C",
+          color: "#FFFFFF",
           cursor: "pointer",
           boxShadow: "10px 10px 0px var(--primary-container)",
           transform: "rotate(1.5deg)",
@@ -144,7 +144,7 @@ export const BottomBannersSection = ({
               flexDirection: "column",
               alignItems: "center",
               gap: "12px",
-              color: "var(--primary)",
+              color: "var(--on-primary-container)",
             }}
           >
             <Megaphone style={{ width: "56px", height: "56px" }} />
@@ -163,7 +163,8 @@ export const BottomBannersSection = ({
                 fontWeight: "bold",
                 fontSize: "0.75rem",
                 textAlign: "center",
-                color: "#BA1A1A",
+                color: "var(--on-primary-container)",
+                opacity: 0.9,
               }}
             >
               ¡HAZ CLICK AQUÍ PARA POSTULAR! 📡

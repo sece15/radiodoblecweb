@@ -457,7 +457,7 @@ export const RadioVideosSection = () => {
                 <div
                   style={{
                     backgroundColor: "var(--primary-container)",
-                    color: "var(--primary)",
+                    color: "var(--on-primary-container)",
                     padding: "4px 10px",
                     fontWeight: 900,
                     fontSize: "0.75rem",

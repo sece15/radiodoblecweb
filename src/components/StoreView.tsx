@@ -124,7 +124,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
             top: "-12px",
             left: "14px",
             backgroundColor: "var(--primary-container)",
-            color: "var(--primary)",
+            color: "var(--on-primary-container)",
             border: "2px solid var(--primary)",
             padding: "2px 8px",
             fontSize: "0.6rem",
@@ -194,7 +194,7 @@ export const StoreView = ({ addToCart, onModalToggle }: StoreViewProps) => {
             className="neo-button fun-hover-wobble"
             style={{
               backgroundColor: "var(--primary-container)",
-              color: "var(--primary)",
+              color: "var(--on-primary-container)",
               padding: "8px 16px",
               fontSize: "0.75rem",
               fontWeight: 900,

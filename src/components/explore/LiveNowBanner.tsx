@@ -12,14 +12,15 @@ interface LiveNowBannerProps {
   onNavigateToPlayer: (tab?: "player" | "chat") => void;
 }
 
+const ASSET_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "1";
+
 const MASCOT_QUOTES = [
-  "¡FUCKING GOOD SHIT!",
-  "¡Radio Doble C en el aire!",
-  "¡Súbele a ese bajo, DJ!",
-  "¡Pura música sin filtro!",
-  "¡Doble C no duerme nunca!",
-  "¡Puro vinilo y buena vibra!",
-  "¡Directo desde el underground!",
+  "¡Ugh! ¡Odio la Navidad y tus clics! 🤢",
+  "¿Otro clic? ¡Me das alergia navideña! 🎄💢",
+  "¡Ja! ¿Creías que era Papá Noel? ¡Estúpido! 😈",
+  "¡Deja de picarme o me robo la radio! 📻💚",
+  "¡Bah! Demasiados villancicos por hoy... 🙄",
+  "¡Te pillé! No hay regalos para ti 🎁❌",
 ];
 
 export const LiveNowBanner = ({
@@ -33,9 +34,17 @@ export const LiveNowBanner = ({
   const [hasEntered, setHasEntered] = useState(false);
   const [speechBubble, setSpeechBubble] = useState<string | null>(null);
   const [isClicked, setIsClicked] = useState(false);
+  const [animPhase, setAnimPhase] = useState<"idle" | "anticipation" | "ducking" | "emerging">("idle");
+  const [mascotForm, setMascotForm] = useState<"santa" | "grinch">("santa");
   const [showPaws] = useState(true);
 
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const duckStartTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const duckInTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const emergeDoneTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const duckOutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const settleOutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const returnTimerRef = useRef<NodeJS.Timeout | null>(null);
   const bubbleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastQuoteIndexRef = useRef<number>(-1);
 
@@ -48,10 +57,20 @@ export const LiveNowBanner = ({
     return () => clearTimeout(timer);
   }, []);
 
+  const clearMascotTimers = useCallback(() => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    if (duckStartTimerRef.current) clearTimeout(duckStartTimerRef.current);
+    if (duckInTimerRef.current) clearTimeout(duckInTimerRef.current);
+    if (emergeDoneTimerRef.current) clearTimeout(emergeDoneTimerRef.current);
+    if (duckOutTimerRef.current) clearTimeout(duckOutTimerRef.current);
+    if (settleOutTimerRef.current) clearTimeout(settleOutTimerRef.current);
+    if (returnTimerRef.current) clearTimeout(returnTimerRef.current);
+    if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+  }, []);
+
   const handleMascotClick = useCallback(() => {
     // 1. Limpiar temporizadores activos anteriores para evitar colisiones
-    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-    if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+    clearMascotTimers();
 
     // 2. Elegir frase diferente a la mostrada inmediatamente antes
     let nextIndex = Math.floor(Math.random() * MASCOT_QUOTES.length);
@@ -61,32 +80,54 @@ export const LiveNowBanner = ({
     lastQuoteIndexRef.current = nextIndex;
     const randomQuote = MASCOT_QUOTES[nextIndex];
 
-    // 3. Forzar reinicio de estado para que la animación CSS se reproduzca en cada clic
-    setIsClicked(false);
+    // 3. Paso 1 (0ms -> 220ms): Sube un poco junto con las garritas (anticipación)
     setSpeechBubble(null);
+    setMascotForm("santa");
+    setIsClicked(true);
+    setAnimPhase("anticipation");
 
-    requestAnimationFrame(() => {
-      setIsClicked(true);
+    // 4. Paso 2 (220ms -> 620ms): Baja y se oculta detrás del card (zIndex: 5 < 10)
+    duckStartTimerRef.current = setTimeout(() => {
+      setAnimPhase("ducking");
+    }, 220);
+
+    // 5. Paso 3 (620ms -> 980ms): Cambia a Grinch detrás del card y sube por encima del borde (zIndex: 5)
+    duckInTimerRef.current = setTimeout(() => {
+      setMascotForm("grinch");
+      setAnimPhase("emerging");
+    }, 620);
+
+    // 6. Paso 4 (980ms): Pasa al frente (zIndex: 15) y se asienta tapando el card + muestra frase
+    emergeDoneTimerRef.current = setTimeout(() => {
+      setAnimPhase("idle");
       setSpeechBubble(randomQuote);
-    });
+    }, 980);
 
-    // 4. Temporizadores coordinados
-    clickTimerRef.current = setTimeout(() => {
-      setIsClicked(false);
-    }, 1200);
-
-    bubbleTimerRef.current = setTimeout(() => {
+    // 7. Paso 5 (3.6s -> 4.0s): Se vuelve a ocultar detrás del card para regresar a Papá Noel
+    returnTimerRef.current = setTimeout(() => {
+      setAnimPhase("ducking");
       setSpeechBubble(null);
-    }, 2800);
-  }, []);
+    }, 3600);
+
+    // 8. Paso 6 (4.0s -> 4.36s): Cambia a Papá Noel y sube por detrás del card
+    duckOutTimerRef.current = setTimeout(() => {
+      setMascotForm("santa");
+      setAnimPhase("emerging");
+    }, 4000);
+
+    // 9. Paso 7 (4.36s): Pasa al frente (zIndex: 15) y se asienta tapando el borde del card
+    settleOutTimerRef.current = setTimeout(() => {
+      setAnimPhase("idle");
+      setIsClicked(false);
+    }, 4360);
+  }, [clearMascotTimers]);
 
   // Limpieza al desmontar
   useEffect(() => {
     return () => {
-      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-      if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+      clearMascotTimers();
     };
-  }, []);
+  }, [clearMascotTimers]);
 
   return (
     <div
@@ -96,13 +137,80 @@ export const LiveNowBanner = ({
     >
       {/* 1. LAYER TRASERO: MASCOTA CON ALAS DESPLEGABLES QUE SE MUEVEN */}
       <div className="mascot-stage-container">
-        {/* Personaje de la mascota con alas articuladas */}
+        {/* ALAS DETRÁS DE TODO AL FONDO (z-index: 1 < card z-index: 10 < rostro z-index: 15) */}
+        <div
+          className="mascot-wings-layer"
+          style={{
+            zIndex: 1,
+            transform:
+              animPhase === "anticipation"
+                ? "translateX(-50%) translateY(-18px) scale(1.04)"
+                : animPhase === "ducking"
+                ? "translateX(-50%) translateY(65px) scale(0.75)"
+                : animPhase === "emerging"
+                ? "translateX(-50%) translateY(-18px) scale(1.02)"
+                : "translateX(-50%) translateY(0px) scale(1)",
+            opacity: animPhase === "ducking" ? 0 : 1,
+            transition:
+              animPhase === "ducking"
+                ? "transform 0.38s cubic-bezier(0.55, 0.05, 0.68, 0.53), opacity 0.2s ease 0.14s"
+                : "transform 0.42s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.22s ease",
+          }}
+          aria-hidden="true"
+        >
+          {/* Ala Izquierda */}
+          <div
+            className={`mascot-wing-socket mascot-wing-left-socket ${
+              hasEntered ? "wing-deployed" : "wing-folded"
+            } ${isClicked ? "wing-socket-clicked" : ""}`}
+          >
+            <Image
+              src="/mascot/wing_left_vector_clean.png"
+              alt="Ala izquierda del murciélago"
+              width={260}
+              height={268}
+              className={`mascot-wing-graphic mascot-wing-left ${
+                isPlaying || mascotForm === "grinch"
+                  ? "wing-beating-left"
+                  : "wing-flapping-left"
+              }`}
+              draggable={false}
+              priority
+            />
+          </div>
+
+          {/* Ala Derecha */}
+          <div
+            className={`mascot-wing-socket mascot-wing-right-socket ${
+              hasEntered ? "wing-deployed" : "wing-folded"
+            } ${isClicked ? "wing-socket-clicked" : ""}`}
+          >
+            <Image
+              src="/mascot/wing_right_vector_clean.png"
+              alt="Ala derecha del murciélago"
+              width={260}
+              height={268}
+              className={`mascot-wing-graphic mascot-wing-right ${
+                isPlaying || mascotForm === "grinch"
+                  ? "wing-beating-right"
+                  : "wing-flapping-right"
+              }`}
+              draggable={false}
+              priority
+            />
+          </div>
+        </div>
+
+        {/* Personaje de la mascota (delante del card en reposo, detrás del card al agacharse) */}
         <div
           className={`mascot-character-wrapper ${
             hasEntered ? "mascot-revealed" : "mascot-peeking"
           } ${isPlaying ? "mascot-beating" : "mascot-hovering"} ${
             isClicked ? "mascot-clicked-jump" : ""
           }`}
+          style={{
+            zIndex: animPhase === "ducking" || animPhase === "emerging" ? 5 : 15,
+          }}
           onClick={(e) => {
             e.stopPropagation();
             handleMascotClick();
@@ -128,54 +236,6 @@ export const LiveNowBanner = ({
               <div className="mascot-speech-arrow" />
             </div>
           )}
-          {/* ALAS QUE SALEN Y ALETEAN CONTINUAMENTE */}
-          <div className="mascot-wings-layer" aria-hidden="true">
-            {/* Ala Izquierda */}
-            <div
-              className={`mascot-wing-socket mascot-wing-left-socket ${
-                hasEntered ? "wing-deployed" : "wing-folded"
-              } ${isClicked ? "wing-socket-clicked" : ""}`}
-            >
-              <Image
-                src="/mascot/wing_left_vector_clean.png"
-                alt="Ala izquierda del murciélago"
-                width={260}
-                height={268}
-                className={`mascot-wing-graphic mascot-wing-left ${
-                  isClicked
-                    ? "wing-burst-left"
-                    : isPlaying
-                    ? "wing-beating-left"
-                    : "wing-flapping-left"
-                }`}
-                draggable={false}
-                priority
-              />
-            </div>
-
-            {/* Ala Derecha */}
-            <div
-              className={`mascot-wing-socket mascot-wing-right-socket ${
-                hasEntered ? "wing-deployed" : "wing-folded"
-              } ${isClicked ? "wing-socket-clicked" : ""}`}
-            >
-              <Image
-                src="/mascot/wing_right_vector_clean.png"
-                alt="Ala derecha del murciélago"
-                width={260}
-                height={268}
-                className={`mascot-wing-graphic mascot-wing-right ${
-                  isClicked
-                    ? "wing-burst-right"
-                    : isPlaying
-                    ? "wing-beating-right"
-                    : "wing-flapping-right"
-                }`}
-                draggable={false}
-                priority
-              />
-            </div>
-          </div>
 
           {/* Ondas sonoras de los audífonos DJ cuando hay música */}
           {isPlaying && (
@@ -186,18 +246,75 @@ export const LiveNowBanner = ({
             </div>
           )}
 
-          {/* Imagen central de la cabeza del murciélago */}
-          <div className="mascot-body-box">
-            <Image
-              src="/mascot/mascot_character_v2.png"
-              alt="Mascota oficial murciélago Radio Doble C"
-              width={380}
-              height={392}
-              priority
-              unoptimized
-              className="mascot-image-asset"
-              draggable={false}
-            />
+          {/* Imagen central de la cabeza del murciélago (Se oculta detrás del card sin sobresalir por abajo) */}
+          <div
+            className="mascot-body-box"
+            style={{
+              clipPath: "inset(-140px -80px -28px -80px)",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                opacity: animPhase === "ducking" ? 0 : 1,
+                transform:
+                  animPhase === "anticipation"
+                    ? "translateY(-22px) scale(1.03)"
+                    : animPhase === "ducking"
+                    ? "translateY(115%) scale(0.88)"
+                    : animPhase === "emerging"
+                    ? "translateY(-24px) scale(0.95)"
+                    : mascotForm === "grinch"
+                    ? "translateY(0%) scale(0.92)"
+                    : "translateY(0%) scale(1)",
+                transformOrigin: "center bottom",
+                transition:
+                  animPhase === "anticipation"
+                    ? "transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s ease"
+                    : animPhase === "ducking"
+                    ? "transform 0.38s cubic-bezier(0.55, 0.05, 0.68, 0.53), opacity 0.16s ease 0.2s"
+                    : animPhase === "emerging"
+                    ? "transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease"
+                    : "transform 0.28s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.18s ease",
+              }}
+            >
+              <Image
+                src={
+                  mascotForm === "grinch"
+                    ? `/mascot/mascot_character_grinch.png?v=${ASSET_VERSION}`
+                    : `/mascot/mascot_character_santa_beard.png?v=${ASSET_VERSION}`
+                }
+                alt={
+                  mascotForm === "grinch"
+                    ? "Mascota oficial murciélago Radio Doble C modo Grinch"
+                    : "Mascota oficial murciélago Radio Doble C Papá Noel"
+                }
+                width={380}
+                height={392}
+                priority
+                unoptimized
+                className="mascot-image-asset"
+                style={{
+                  filter:
+                    mascotForm === "grinch"
+                      ? "drop-shadow(0 0 18px rgba(163, 230, 53, 0.85)) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45))"
+                      : "drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45))",
+                }}
+                draggable={false}
+              />
+              {/* Precarga oculta de la imagen Grinch para que el cambio bajo el card sea instantáneo */}
+              <Image
+                src={`/mascot/mascot_character_grinch.png?v=${ASSET_VERSION}`}
+                alt=""
+                aria-hidden="true"
+                width={380}
+                height={392}
+                priority
+                unoptimized
+                style={{ display: "none" }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -282,7 +399,7 @@ export const LiveNowBanner = ({
               unoptimized
               className="mascot-paw-img"
               draggable={false}
-              style={{ width: "auto", height: "auto" }}
+              style={{ width: "100%", height: "auto" }}
             />
           </div>
 
@@ -300,7 +417,7 @@ export const LiveNowBanner = ({
               unoptimized
               className="mascot-paw-img"
               draggable={false}
-              style={{ width: "auto", height: "auto" }}
+              style={{ width: "100%", height: "auto" }}
             />
           </div>
         </div>
@@ -312,7 +429,7 @@ export const LiveNowBanner = ({
             <div
               style={{
                 backgroundColor: "var(--primary)",
-                color: "var(--primary-container)",
+                color: "var(--on-primary)",
                 padding: "4px 10px",
                 display: "flex",
                 alignItems: "center",
@@ -335,7 +452,7 @@ export const LiveNowBanner = ({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.7rem", fontWeight: "bold", color: "var(--primary)" }}>
+              <span style={{ fontSize: "0.7rem", fontWeight: "bold", color: "var(--on-primary-container)" }}>
                 {liveStatusText}
               </span>
             </div>
@@ -346,7 +463,7 @@ export const LiveNowBanner = ({
               fontSize: "1.4rem",
               fontWeight: 900,
               textTransform: "uppercase",
-              color: "var(--primary)",
+              color: "var(--on-primary-container)",
               lineHeight: "1.6rem",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -359,8 +476,8 @@ export const LiveNowBanner = ({
             style={{
               fontSize: "0.8rem",
               fontWeight: "bold",
-              opacity: 0.8,
-              color: "var(--primary)",
+              opacity: 0.85,
+              color: "var(--on-primary-container)",
               margin: 0,
               overflow: "hidden",
               textOverflow: "ellipsis",

@@ -334,7 +334,8 @@ export default function HorariosPage() {
             <section
               className="neo-card scanlines"
               style={{
-                backgroundColor: "#FFFBEA",
+                backgroundColor: "var(--card-bg)",
+                color: "var(--on-background)",
                 border: "4px solid var(--primary)",
                 boxShadow: "6px 6px 0px var(--primary)",
                 padding: "20px",
@@ -423,7 +424,7 @@ export default function HorariosPage() {
                   lineHeight: "1.3rem",
                   fontWeight: 700,
                   margin: 0,
-                  color: "var(--primary)",
+                  color: "var(--on-background)",
                   opacity: 0.9,
                 }}
               >
@@ -442,7 +443,7 @@ export default function HorariosPage() {
                   <span style={{ fontSize: "0.72rem", fontWeight: 900, letterSpacing: "1px", color: "var(--primary)" }}>
                     🏆 RANKING EN VIVO • QUIÉN MANDA EN LA RADIO
                   </span>
-                  <span style={{ fontSize: "0.62rem", fontWeight: 900, opacity: 0.75 }}>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 900, color: "var(--on-background)", opacity: 0.75 }}>
                     ACTUALIZADO AL SEGUNDO
                   </span>
                 </div>
