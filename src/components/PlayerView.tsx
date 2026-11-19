@@ -28,6 +28,7 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
     chatMessages,
     sendChatMessage,
     listenersCount,
+    isStreamerLive,
     isChatConnected,
     onlineChatUsers,
     isAuthenticated,
@@ -51,6 +52,7 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
       chatMessages: s.chatMessages,
       sendChatMessage: s.sendChatMessage,
       listenersCount: s.listenersCount,
+      isStreamerLive: s.isStreamerLive,
       isChatConnected: s.isChatConnected,
       onlineChatUsers: s.onlineChatUsers,
       isAuthenticated: s.isAuthenticated,
@@ -506,9 +508,11 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                   <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#FF0D43" }} className="pulse-dot" />
                   SALA EN DIRECTO
                 </div>
-                <div style={{ fontSize: "0.6rem", fontWeight: 900, color: "var(--primary)" }}>
-                  👥 {activeAudienceCount} OYENTES
-                </div>
+                {isStreamerLive && (
+                  <div style={{ fontSize: "0.6rem", fontWeight: 900, color: "var(--primary)" }}>
+                    👥 {activeAudienceCount} OYENTES
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginTop: "2px" }}>
@@ -612,28 +616,30 @@ export const PlayerView = ({ onClose, initialTab = "player" }: PlayerViewProps) 
                 </div>
               </div>
 
-              <div
-                title={
-                  isChatConnected
-                    ? `${activeAudienceCount} en vivo en la sala`
-                    : `${activeAudienceCount} oyentes en vivo`
-                }
-                style={{
-                  backgroundColor: "var(--primary)",
-                  padding: "3px 8px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  fontSize: "0.6rem",
-                  color: "var(--on-primary)",
-                  fontWeight: 900,
-                  boxShadow: "1.5px 1.5px 0px var(--primary-container)",
-                  transition: "transform 0.2s ease",
-                }}
-              >
-                <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-                <span>{activeAudienceCount} OYENTES</span>
-              </div>
+              {isStreamerLive && (
+                <div
+                  title={
+                    isChatConnected
+                      ? `${activeAudienceCount} en vivo en la sala`
+                      : `${activeAudienceCount} oyentes en vivo`
+                  }
+                  style={{
+                    backgroundColor: "var(--primary)",
+                    padding: "3px 8px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    fontSize: "0.6rem",
+                    color: "var(--on-primary)",
+                    fontWeight: 900,
+                    boxShadow: "1.5px 1.5px 0px var(--primary-container)",
+                    transition: "transform 0.2s ease",
+                  }}
+                >
+                  <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
+                  <span>{activeAudienceCount} OYENTES</span>
+                </div>
+              )}
             </div>
 
             {/* Mobile Mini Now Playing Bar */}

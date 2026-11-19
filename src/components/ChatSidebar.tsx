@@ -68,6 +68,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
     clearChat,
     userProfile,
     listenersCount,
+    isStreamerLive,
     isChatConnected,
     onlineChatUsers,
     isAuthenticated,
@@ -105,6 +106,7 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
       clearChat: s.clearChat,
       userProfile: s.userProfile,
       listenersCount: s.listenersCount,
+      isStreamerLive: s.isStreamerLive,
       isChatConnected: s.isChatConnected,
       onlineChatUsers: s.onlineChatUsers,
       isAuthenticated: s.isAuthenticated,
@@ -398,28 +400,30 @@ export const ChatSidebar = ({ onClose }: ChatSidebarProps) => {
           <span style={{ fontSize: "0.8rem", fontWeight: 900, textTransform: "uppercase" }}>
             CHAT EN VIVO
           </span>
-          <div
-            title={
-              isChatConnected
-                ? `${activeChatUsers} usuario${activeChatUsers === 1 ? "" : "s"} en línea`
-                : "Chat desconectado"
-            }
-            style={{
-              backgroundColor: "var(--primary)",
-              padding: "2px 7px",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              fontSize: "0.62rem",
-              color: "var(--on-primary)",
-              fontWeight: 900,
-              borderRadius: "2px",
-              transition: "transform 0.2s ease",
-            }}
-          >
-            <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
-            <span>{activeChatUsers}</span>
-          </div>
+          {isStreamerLive && (
+            <div
+              title={
+                isChatConnected
+                  ? `${activeChatUsers} usuario${activeChatUsers === 1 ? "" : "s"} en línea`
+                  : "Chat desconectado"
+              }
+              style={{
+                backgroundColor: "var(--primary)",
+                padding: "2px 7px",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "0.62rem",
+                color: "var(--on-primary)",
+                fontWeight: 900,
+                borderRadius: "2px",
+                transition: "transform 0.2s ease",
+              }}
+            >
+              <User size={10} style={{ color: "var(--on-primary)", fill: "var(--on-primary)" }} />
+              <span>{activeChatUsers}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>

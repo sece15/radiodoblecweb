@@ -51,24 +51,32 @@ export const useSchedule = () => {
     );
   }, [searchQuery]);
 
-  // Special programs schedule mapping for Friday, Saturday & Sunday
-  // Special programs schedule mapping for Friday, Saturday, Sunday & Daily Rocola VIP
+  // Special programs schedule mapping for Luna (Mon-Fri) & weekend live shows
   const getSpecialProgramsForSlot = (timeSlotId: string, dayId: string): SpecialProgramSchedule[] | null => {
-    // 🌟 LA HORA ROCOLA VIP - Todos los días de 22:00 a 23:00 (10 PM a 11 PM)
-    if (timeSlotId === "block_chill_night") {
-      const isRocolaLive = currentHour >= 22 && currentHour < 23;
-      const rocolaProgram: SpecialProgramSchedule = {
-        id: "hora_rocola_vip",
-        title: "🔥 La Hora Rocola VIP",
-        host: "Batalla de C-Coins • Rey del Dial",
-        timeText: "22:00 - 23:00 (10 PM)",
-        genre: "👑 Peticiones en Vivo • Sube tu Canción",
-        isLiveRightNow: isRocolaLive,
-      };
-
+    if (timeSlotId === "block_luna_night") {
       if (dayId === "vie") {
+        const isCodigoOcultoLive = currentDayIndex === 5 && currentHour === 20 && currentMinute < 35;
+        const isHistoriasLive =
+          currentDayIndex === 5 &&
+          ((currentHour === 20 && currentMinute >= 35) || (currentHour >= 21 && currentHour < 23));
+
         return [
-          rocolaProgram,
+          {
+            id: "especial_luna_codigo_oculto",
+            title: "Código Oculto",
+            host: "Luna",
+            timeText: "20:00 - 20:35",
+            genre: "Código Oculto",
+            isLiveRightNow: isCodigoOcultoLive,
+          },
+          {
+            id: "especial_luna_historias_podcasts",
+            title: "Historias bajo la Luna",
+            host: "Luna",
+            timeText: "20:35 - 23:00",
+            genre: "Podcasts & Historias Paranormales",
+            isLiveRightNow: isHistoriasLive,
+          },
           {
             id: "subterraneo",
             title: "Hits and Beats",
@@ -80,26 +88,7 @@ export const useSchedule = () => {
         ];
       }
 
-      return [rocolaProgram];
-    }
-
-    if (dayId === "vie") {
-      if (timeSlotId === "block_primetime") {
-        return [
-          {
-            id: "l_mental",
-            title: "L-Mental",
-            host: "Gerardo “La Seka” B. Gallardo",
-            timeText: "21:00 - 22:00",
-            genre: "Misterio / Rock, Reggae & Ska",
-            isLiveRightNow: currentDayIndex === 5 && currentHour >= 21 && currentHour < 22,
-          },
-        ];
-      }
-    }
-
-    if (dayId === "sab") {
-      if (timeSlotId === "block_primetime") {
+      if (dayId === "sab") {
         return [
           {
             id: "inpopular",
@@ -109,37 +98,81 @@ export const useSchedule = () => {
             genre: "Independencia creativa",
             isLiveRightNow: currentDayIndex === 6 && currentHour >= 20 && currentHour < 21,
           },
-        ];
-      }
-      if (timeSlotId === "block_afternoon") {
-        return [
           {
-            id: "lado_c",
-            title: "Lado C",
-            host: "Marx y Anthony",
-            timeText: "17:00 - 18:30",
-            genre: "Discos / Concursos",
-            isLiveRightNow:
-              currentDayIndex === 6 &&
-              (currentHour === 17 || (currentHour === 18 && currentMinute <= 30)),
+            id: "pedidos_musicales_sab",
+            title: "Pedidos Musicales",
+            host: "Oyentes & Comunidad",
+            timeText: "21:00 - 00:00",
+            genre: "Peticiones en Vivo",
+            isLiveRightNow: currentDayIndex === 6 && currentHour >= 21 && currentHour <= 23,
           },
         ];
       }
+
+      if (dayId === "dom") {
+        return [
+          {
+            id: "pedidos_musicales_dom",
+            title: "Pedidos Musicales",
+            host: "Oyentes & Comunidad",
+            timeText: "20:00 - 00:00",
+            genre: "Peticiones en Vivo",
+            isLiveRightNow: currentDayIndex === 0 && currentHour >= 20 && currentHour <= 23,
+          },
+        ];
+      }
+
+      const isWeekday = currentDayIndex >= 1 && currentDayIndex <= 4;
+      const isCodigoOcultoLive = isWeekday && currentHour === 20 && currentMinute < 35;
+      const isHistoriasLive =
+        isWeekday && ((currentHour === 20 && currentMinute >= 35) || (currentHour >= 21 && currentHour <= 23));
+
+      return [
+        {
+          id: "especial_luna_codigo_oculto",
+          title: "Código Oculto",
+          host: "Luna",
+          timeText: "20:00 - 20:35",
+          genre: "Código Oculto",
+          isLiveRightNow: isCodigoOcultoLive,
+        },
+        {
+          id: "especial_luna_historias_podcasts",
+          title: "Historias bajo la Luna",
+          host: "Luna",
+          timeText: "20:35 - 23:59",
+          genre: "Podcasts & Historias Paranormales",
+          isLiveRightNow: isHistoriasLive,
+        },
+      ];
     }
 
-    if (dayId === "dom") {
-      if (timeSlotId === "block_primetime" || timeSlotId === "block_afternoon") {
-        return [
-          {
-            id: "zona_anime",
-            title: "Zona Anime & J-Music",
-            host: "Especial Otaku",
-            timeText: "16:00 - 20:00",
-            genre: "Anime Openings, J-Rock, Vocaloid, J-Pop & OSTs",
-            isLiveRightNow: currentDayIndex === 0 && currentHour >= 16 && currentHour < 20,
-          },
-        ];
-      }
+    if (dayId === "sab" && timeSlotId === "block_afternoon") {
+      return [
+        {
+          id: "lado_c",
+          title: "Lado C",
+          host: "Marx y Anthony",
+          timeText: "17:00 - 18:30",
+          genre: "Discos / Concursos",
+          isLiveRightNow:
+            currentDayIndex === 6 &&
+            (currentHour === 17 || (currentHour === 18 && currentMinute <= 30)),
+        },
+      ];
+    }
+
+    if (dayId === "dom" && (timeSlotId === "block_primetime" || timeSlotId === "block_afternoon")) {
+      return [
+        {
+          id: "zona_anime",
+          title: "Zona Anime & J-Music",
+          host: "Especial Otaku",
+          timeText: "16:00 - 20:00",
+          genre: "Anime Openings, J-Rock, Vocaloid, J-Pop & OSTs",
+          isLiveRightNow: currentDayIndex === 0 && currentHour >= 16 && currentHour < 20,
+        },
+      ];
     }
 
     return null;
@@ -292,56 +325,146 @@ export const useSchedule = () => {
         } else {
           items.push({
             timeText: "18:00 - 20:00",
-            title: "EDM, Dance & Rock/Pop en Español",
+            title: "Reggaetón Dance & Prime Time",
             daysText: "Lunes a Sábado",
-            genres: "EDM, Dancefloor, Rock en Español (124-135 BPM)",
-            description: "El peak de energía al terminar la jornada con las mejores mezclas radiales.",
-            badgeText: "🔥 PRIME TIME",
+            genres: "Reggaetón, Dance, EDM, Rock/Pop en Español (124-135 BPM)",
+            description: "Recortada de 18:00–22:00 a 18:00–20:00; termina justo al entrar Especial Luna.",
+            badgeText: "🔥 REGGAETÓN DANCE",
           });
         }
 
-        if (dayId === "sab" || dayId === "all") {
+        return items;
+      }
+
+      case "block_luna_night": {
+        if (dayId === "vie") {
+          return [
+            {
+              timeText: "20:00 - 20:35",
+              title: "Código Oculto",
+              daysText: "Viernes",
+              genres: "Especial de Luna • Prioridad Máxima",
+              description: "Bloque estelar de Luna con prioridad máxima al aire.",
+              host: "Luna",
+              isSpecialShow: true,
+              badgeText: "ESPECIAL LUNA",
+            },
+            {
+              timeText: "20:35 - 23:00",
+              title: "Historias bajo la Luna",
+              daysText: "Viernes",
+              genres: "Podcasts & Historias Paranormales",
+              description: "Los viernes Luna emite hasta las 23:00, cuando inicia Hits and Beats.",
+              host: "Luna",
+              isSpecialShow: true,
+              badgeText: "PODCAST LUNA",
+            },
+            {
+              timeText: "23:00 - 00:00",
+              title: "Hits and Beats",
+              daysText: "Todos los Viernes",
+              genres: "All Music, Baterías & Grooves Legendarios",
+              description: "Análisis y viaje sonoro por bateristas y grooves históricos con JS.",
+              host: "JS",
+              isSpecialShow: true,
+              badgeText: "🎙️ EN VIVO VIE",
+            },
+          ];
+        }
+
+        if (dayId === "sab") {
+          return [
+            {
+              timeText: "20:00 - 21:00",
+              title: "INPOPULAR",
+              daysText: "Todos los Sábados",
+              genres: "Independencia creativa / Música / Arte",
+              description: "Ep. 001: Independencia creativa. Ideas, estilo propio y proyectos con identidad junto a Bony.",
+              host: "Bony",
+              isSpecialShow: true,
+              badgeText: "🎙️ EN VIVO SÁB",
+            },
+            {
+              timeText: "21:00 - 00:00",
+              title: "Pedidos Musicales",
+              daysText: "Todos los Sábados",
+              genres: "Peticiones en Vivo / Todos los Géneros",
+              description: "Espacio interactivo para pedir tus canciones favoritas al aire hasta medianoche.",
+              host: "Oyentes & Comunidad",
+              isSpecialShow: true,
+              badgeText: "PEDIDOS SÁB",
+            },
+          ];
+        }
+
+        if (dayId === "dom") {
+          return [
+            {
+              timeText: "20:00 - 00:00",
+              title: "Pedidos Musicales",
+              daysText: "Todos los Domingos",
+              genres: "Peticiones en Vivo / Todos los Géneros",
+              description: "Espacio interactivo para pedir tus canciones favoritas al aire hasta medianoche.",
+              host: "Oyentes & Comunidad",
+              isSpecialShow: true,
+              badgeText: "PEDIDOS DOM",
+            },
+          ];
+        }
+
+        const items: HourlyMusicItem[] = [
+          {
+            timeText: "20:00 - 20:35",
+            title: "Código Oculto",
+            daysText: dayId === "all" ? "Lunes a Viernes" : "Lunes a Jueves",
+            genres: "Especial de Luna • Prioridad Máxima",
+            description: "Bloque estelar de Luna con prioridad máxima al aire (sin emisión sábados ni domingos).",
+            host: "Luna",
+            isSpecialShow: true,
+            badgeText: "ESPECIAL LUNA",
+          },
+          {
+            timeText: "20:35 - 23:59",
+            title: "Historias bajo la Luna",
+            daysText: dayId === "all" ? "Lun-Jue (Vie hasta 23:00)" : "Lunes a Jueves",
+            genres: "Podcasts & Historias Paranormales",
+            description: "Espacio nocturno de Luna con podcasts e historias paranormales hasta la medianoche.",
+            host: "Luna",
+            isSpecialShow: true,
+            badgeText: "PODCAST LUNA",
+          },
+        ];
+
+        if (dayId === "all") {
           items.push({
             timeText: "20:00 - 21:00",
             title: "INPOPULAR",
             daysText: "Todos los Sábados",
             genres: "Independencia creativa / Música / Arte",
-            description: "Ep. 001: Independencia creativa. Ideas, estilo propio y proyectos con identidad junto a Bony.",
+            description: "Ep. 001: Independencia creativa junto a Bony.",
             host: "Bony",
             isSpecialShow: true,
             badgeText: "🎙️ EN VIVO SÁB",
           });
-        }
-
-        if (dayId === "vie" || dayId === "all") {
-          if (dayId === "vie") {
-            items.push({
-              timeText: "20:00 - 21:00",
-              title: "Reggaetón, Trap & Tendencias Urbanas",
-              daysText: "Viernes",
-              genres: "Reggaetón, Trap, Hip-Hop, Dance Remixes (120-130 BPM)",
-              description: "Sesión caliente de ritmos urbanos y remixes exclusivos de DJ.",
-              badgeText: "🎉 FIESTA",
-            });
-          }
           items.push({
-            timeText: "21:00 - 22:00",
-            title: "L-Mental: La Mente Detrás de la Historia",
+            timeText: "21:00 - 00:00 (Sáb) / 20:00 - 00:00 (Dom)",
+            title: "Pedidos Musicales",
+            daysText: "Sábados y Domingos",
+            genres: "Peticiones en Vivo / Todos los Géneros",
+            description: "Espacio interactivo para pedir tus canciones favoritas al aire hasta medianoche.",
+            host: "Oyentes & Comunidad",
+            isSpecialShow: true,
+            badgeText: "PEDIDOS FINDE",
+          });
+          items.push({
+            timeText: "23:00 - 00:00",
+            title: "Hits and Beats",
             daysText: "Todos los Viernes",
-            genres: "Misterio, Psicología, Xona Esotérica, Rock, Reggae & Ska",
-            description: "Enigmas oscuros, psicología, personajes controversiales y la Xona Esotérica con Gerardo “La Seka” B. Gallardo.",
-            host: "Gerardo “La Seka” B. Gallardo",
+            genres: "All Music, Baterías & Grooves Legendarios",
+            description: "Análisis y viaje sonoro por bateristas y grooves históricos con JS (Luna cierra a las 23:00 los viernes).",
+            host: "JS",
             isSpecialShow: true,
             badgeText: "🎙️ EN VIVO VIE",
-          });
-        } else {
-          items.push({
-            timeText: dayId === "sab" ? "21:00 - 22:00" : "20:00 - 22:00",
-            title: "Reggaetón, Trap & Tendencias Urbanas",
-            daysText: dayId === "sab" ? "Todos los Sábados" : "Lunes a Jueves / Domingos",
-            genres: "Reggaetón, Trap, Hip-Hop, Dance Remixes (120-130 BPM)",
-            description: "Sesión caliente de ritmos urbanos y remixes exclusivos de DJ.",
-            badgeText: "🎉 FIESTA",
           });
         }
 
@@ -349,49 +472,16 @@ export const useSchedule = () => {
       }
 
       case "block_chill_night": {
-        const items: HourlyMusicItem[] = [
+        return [
           {
-            timeText: "22:00 - 23:00",
-            title: "Lo-Fi Hip Hop & R&B de Medianoche",
+            timeText: "00:00 - 01:00",
+            title: "Lofi Nocturno",
             daysText: "Lunes a Domingo (7 Días)",
-            genres: "Lo-Fi Hip Hop, R&B, Neo-Soul (75-90 BPM)",
-            description: "Descenso de pulsaciones para relajar el cuerpo y la mente.",
-            badgeText: "🌙 NOCHE",
+            genres: "Lo-Fi Hip Hop, Chill Beats, Ambient Soft (70-90 BPM)",
+            description: "Movida de 23:30–01:00 a 00:00–01:00; arranca al terminar el bloque de Luna.",
+            badgeText: "🎧 LOFI",
           },
         ];
-
-        if (dayId === "vie" || dayId === "all") {
-          items.push({
-            timeText: "23:00 - 00:00",
-            title: "Hits and Beats",
-            daysText: "Todos los Viernes",
-            genres: "All Music, Baterías & Grooves Legendarios",
-            description: "Análisis y viaje sonoro por bateristas y grooves históricos con JS.",
-            host: "JS",
-            isSpecialShow: true,
-            badgeText: "🎙️ EN VIVO VIE",
-          });
-        } else {
-          items.push({
-            timeText: "23:00 - 00:00",
-            title: "Acoustic Pop & Synth-Pop Nocturno",
-            daysText: "Lunes a Jueves / Sábados / Domingos",
-            genres: "Acoustic Pop, Synth-Pop, Dream Pop (70-85 BPM)",
-            description: "Baladas acústicas y sintetizadores atmosféricos de medianoche.",
-            badgeText: "✨ SUAVE",
-          });
-        }
-
-        items.push({
-          timeText: "00:00 - 01:00",
-          title: "Smooth Jazz & Baladas de Desconexión",
-          daysText: "Lunes a Domingo (7 Días)",
-          genres: "Smooth Jazz, Baladas, Ambient Soft (70-80 BPM)",
-          description: "La hora más tranquila del dial para conciliar el descanso.",
-          badgeText: "🛌 DESCANSO",
-        });
-
-        return items;
       }
 
       case "block_autodj":
