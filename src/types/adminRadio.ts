@@ -83,7 +83,8 @@ export interface AdminVoiceNoteResponse {
 }
 
 export interface AdminQueueItem {
-  id: string | number;
+  id?: string | number | null;
+  queue_id?: string | number | null;
   cued_at?: number;
   played_at?: number;
   duration?: number;

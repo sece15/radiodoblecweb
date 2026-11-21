@@ -10,11 +10,18 @@ interface AdminLiveQueuePanelProps {
   onFeedback: (fb: { type: "success" | "error"; text: string } | null) => void;
 }
 
+function getQueueItemId(item: AdminQueueItem): string | number | null {
+  if (item.id !== undefined && item.id !== null && item.id !== "") return item.id;
+  if (item.queue_id !== undefined && item.queue_id !== null && item.queue_id !== "") return item.queue_id;
+  if (typeof item.cued_at === "number" && Number.isFinite(item.cued_at)) return item.cued_at;
+  return null;
+}
+
 function getQueueItemLabel(item: AdminQueueItem): string {
   const artist = item.song?.artist || item.artist || "";
   const title = item.song?.title || item.title || "";
   if (artist && title) return `${artist} - ${title}`;
-  return item.song?.text || item.text || title || `Item #${item.id}`;
+  return item.song?.text || item.text || title || `Item #${getQueueItemId(item) ?? ""}`;
 }
 
 export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanelProps) => {
@@ -24,11 +31,11 @@ export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanel
 
   const items = queueQuery.data ?? [];
 
-  const handleDelete = async (item: AdminQueueItem) => {
+  const handleDelete = async (itemId: string | number) => {
     onFeedback(null);
-    setDeletingId(item.id);
+    setDeletingId(itemId);
     try {
-      await deleteMutation.mutateAsync(item.id);
+      await deleteMutation.mutateAsync(itemId);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "No se pudo eliminar el elemento de la cola.";
@@ -135,11 +142,12 @@ export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanel
           </div>
         ) : (
           items.map((item, idx) => {
+            const itemId = getQueueItemId(item);
             const label = getQueueItemLabel(item);
-            const isDeleting = deletingId === item.id;
+            const isDeleting = deletingId !== null && itemId !== null && deletingId === itemId;
             return (
               <div
-                key={String(item.id)}
+                key={`${String(itemId ?? "row")}-${idx}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -196,28 +204,30 @@ export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanel
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={isDeleting}
-                  onClick={() => handleDelete(item)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    padding: "5px 10px",
-                    backgroundColor: "#FEE2E2",
-                    color: "#991B1B",
-                    border: "1.5px solid var(--primary)",
-                    fontSize: "0.64rem",
-                    fontWeight: 900,
-                    cursor: isDeleting ? "wait" : "pointer",
-                    flexShrink: 0,
-                  }}
-                  title="Eliminar de la cola"
-                >
-                  {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                  <span>{isDeleting ? "..." : "ELIMINAR"}</span>
-                </button>
+                {itemId !== null && (
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={() => handleDelete(itemId)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "5px 10px",
+                      backgroundColor: "#FEE2E2",
+                      color: "#991B1B",
+                      border: "1.5px solid var(--primary)",
+                      fontSize: "0.64rem",
+                      fontWeight: 900,
+                      cursor: isDeleting ? "wait" : "pointer",
+                      flexShrink: 0,
+                    }}
+                    title="Eliminar de la cola"
+                  >
+                    {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    <span>{isDeleting ? "..." : "ELIMINAR"}</span>
+                  </button>
+                )}
               </div>
             );
           })
