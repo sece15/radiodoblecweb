@@ -6,7 +6,7 @@ import { Upload, Download, X, Disc, RefreshCw, Scissors, Square, Plus, Trash2, P
 import { CSamplerMasterModal } from "./CSamplerMasterModal";
 import { CSamplerCutPadModal } from "./CSamplerCutPadModal";
 import { useModalIsolation } from "@/hooks/useModalIsolation";
-import type { SamplerCuePoint, SamplerTriggerMode, Akai16LevelsType, LoadedSampleData, DiggerTrack, StemType, StemsSeparationResult } from "@/types/studio";
+import type { SamplerCuePoint, SamplerTriggerMode, Akai16LevelsType, LoadedSampleData, DiggerTrack, StemType, StemsSeparationResult, BeatBreakdownSamplePayload } from "@/types/studio";
 import { studioAudio } from "@/lib/studio/audioEngine";
 import {
   RealtimeStemMixer,
@@ -32,6 +32,7 @@ interface CSamplerPluginModalProps {
   onClose: () => void;
   externalSample?: LoadedSampleData | null;
   onOpenDigger?: () => void;
+  onSendToSequencer?: (payload: BeatBreakdownSamplePayload) => void;
   isStandalone?: boolean;
 }
 
@@ -136,6 +137,7 @@ export const CSamplerPluginModal = ({
   onClose,
   externalSample,
   onOpenDigger,
+  onSendToSequencer,
   isStandalone = false,
 }: CSamplerPluginModalProps) => {
   const [cues, setCues] = useState<SamplerCuePoint[]>(DEFAULT_CUES);
@@ -195,6 +197,9 @@ export const CSamplerPluginModal = ({
   const [padCustomBuffers, setPadCustomBuffers] = useState<Record<number, AudioBuffer>>({});
   const padCustomBuffersRef = useRef<Record<number, AudioBuffer>>({});
   padCustomBuffersRef.current = padCustomBuffers;
+  const [padOriginalSources, setPadOriginalSources] = useState<
+    Record<number, { buffer: AudioBuffer; startSec: number; endSec: number; trimStartPct: number; trimEndPct: number }>
+  >({});
 
   const [isRecordingPads, setIsRecordingPads] = useState<boolean>(false);
   const isRecordingPadsRef = useRef<boolean>(false);
@@ -204,10 +209,12 @@ export const CSamplerPluginModal = ({
   const quantizeOnRef = useRef<boolean>(true);
   quantizeOnRef.current = quantizeOn;
   const [recordedPadEvents, setRecordedPadEvents] = useState<{ cueId: number; timeSec: number }[]>([]);
+  const [recordBars, setRecordBars] = useState<1 | 2 | 4>(4);
   const [isPlayingRecording, setIsPlayingRecording] = useState<boolean>(false);
   const [isRenderingRecording, setIsRenderingRecording] = useState<boolean>(false);
   const recordingStartPerfRef = useRef<number>(0);
   const recordingTimersRef = useRef<number[]>([]);
+  const recordAutoStopTimerRef = useRef<number | null>(null);
 
   const [isCuttingPad, setIsCuttingPad] = useState<boolean>(false);
   const [isRescuingAudio, setIsRescuingAudio] = useState<boolean>(false);
@@ -228,6 +235,9 @@ export const CSamplerPluginModal = ({
     musicalKey: string;
     genre: string;
     rawSliceBuffer: AudioBuffer;
+    originalSliceBuffer?: AudioBuffer;
+    initialTrimStartPct?: number;
+    initialTrimEndPct?: number;
   } | null>(null);
   const [masterModalData, setMasterModalData] = useState<{
     padLabel: string;
@@ -1878,13 +1888,42 @@ export const CSamplerPluginModal = ({
       }
 
       let rawSliceBuffer: AudioBuffer;
+      let originalSliceBuffer: AudioBuffer;
+      let effectiveStartSec = startSec;
+      let effectiveEndSec = safeEnd;
+      let initialTrimStartPct = 0;
+      let initialTrimEndPct = 100;
       let isRealAudio = false;
+
+      const savedOriginal = padOriginalSources[targetCue.id];
       const existingPadBuffer = padCustomBuffers[targetCue.id];
-      if (existingPadBuffer) {
-        rawSliceBuffer = existingPadBuffer;
+
+      if (savedOriginal) {
+        originalSliceBuffer = savedOriginal.buffer;
+        rawSliceBuffer = existingPadBuffer || savedOriginal.buffer;
+        effectiveStartSec = savedOriginal.startSec;
+        effectiveEndSec = savedOriginal.endSec;
+        initialTrimStartPct = savedOriginal.trimStartPct;
+        initialTrimEndPct = savedOriginal.trimEndPct;
         isRealAudio = true;
       } else if (sourceBuf) {
-        rawSliceBuffer = sliceAudioBufferToWindow(ctx, sourceBuf, startSec, safeEnd);
+        const sliced = sliceAudioBufferToWindow(ctx, sourceBuf, startSec, safeEnd);
+        originalSliceBuffer = sliced;
+        rawSliceBuffer = existingPadBuffer || sliced;
+        isRealAudio = true;
+        setPadOriginalSources((prev) => ({
+          ...prev,
+          [targetCue.id]: {
+            buffer: sliced,
+            startSec,
+            endSec: safeEnd,
+            trimStartPct: 0,
+            trimEndPct: 100,
+          },
+        }));
+      } else if (existingPadBuffer) {
+        originalSliceBuffer = existingPadBuffer;
+        rawSliceBuffer = existingPadBuffer;
         isRealAudio = true;
       } else {
         const synth = createStemsFromTrack(
@@ -1893,20 +1932,26 @@ export const CSamplerPluginModal = ({
           activeTrack?.key || "Am",
           activeTrack?.genre || "funk"
         );
-        rawSliceBuffer = synth.melody || synth.drums || ctx.createBuffer(2, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
+        const fallbackBuf =
+          synth.melody || synth.drums || ctx.createBuffer(2, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
+        originalSliceBuffer = fallbackBuf;
+        rawSliceBuffer = fallbackBuf;
       }
 
       setCutPadModalData({
         cueId: targetCue.id,
         padLabel: `CUE ${targetCue.id} · ${targetCue.name}`,
-        rangeLabel: `${formatSeconds(startSec)} ➔ ${formatSeconds(safeEnd)} (${naturalDurationSec.toFixed(1)}s)`,
-        sliceStartSec: startSec,
-        sliceEndSec: safeEnd,
+        rangeLabel: `${formatSeconds(effectiveStartSec)} ➔ ${formatSeconds(effectiveEndSec)} (${Math.max(0.1, effectiveEndSec - effectiveStartSec).toFixed(1)}s)`,
+        sliceStartSec: effectiveStartSec,
+        sliceEndSec: effectiveEndSec,
         isRealAudio,
         bpm: activeTrack?.bpm || 95,
         musicalKey: activeTrack?.key || "Am",
         genre: activeTrack?.genre || "funk",
         rawSliceBuffer,
+        originalSliceBuffer,
+        initialTrimStartPct,
+        initialTrimEndPct,
       });
     } finally {
       setIsCuttingPad(false);
@@ -1960,6 +2005,10 @@ export const CSamplerPluginModal = ({
   }, [isRecordingPads, metronomeOn, externalSample?.trackInfo, trackInfo]);
 
   const handleToggleRecordPads = () => {
+    if (recordAutoStopTimerRef.current !== null) {
+      window.clearTimeout(recordAutoStopTimerRef.current);
+      recordAutoStopTimerRef.current = null;
+    }
     if (isRecordingPads) {
       setIsRecordingPads(false);
     } else {
@@ -1967,6 +2016,13 @@ export const CSamplerPluginModal = ({
       setRecordedPadEvents([]);
       recordingStartPerfRef.current = performance.now();
       setIsRecordingPads(true);
+      // Auto-detener al completar los compases elegidos (1, 2 o 4 compases)
+      const activeBpm = (externalSample?.trackInfo || trackInfo)?.bpm || 90;
+      const targetMs = Math.round(((60 / activeBpm) * 4 * recordBars) * 1000);
+      recordAutoStopTimerRef.current = window.setTimeout(() => {
+        setIsRecordingPads(false);
+        recordAutoStopTimerRef.current = null;
+      }, targetMs);
     }
   };
 
@@ -2000,8 +2056,13 @@ export const CSamplerPluginModal = ({
     setIsRenderingRecording(true);
     try {
       const sr = customAudioBuffer?.sampleRate || 44100;
+      const activeTrack = externalSample?.trackInfo || trackInfo;
+      const bpm = activeTrack?.bpm || 87;
+      const key = activeTrack?.key || "Am";
+      const genre = activeTrack?.genre || "boombap";
+      const exactBarsSec = (60 / bpm) * 4 * recordBars;
       const lastEv = recordedPadEvents[recordedPadEvents.length - 1];
-      const totalRenderSec = Math.max(2.0, lastEv.timeSec + 2.5);
+      const totalRenderSec = Math.max(exactBarsSec, lastEv.timeSec + 0.5);
       const offline = new OfflineAudioContext(2, Math.ceil(totalRenderSec * sr), sr);
 
       for (let i = 0; i < recordedPadEvents.length; i++) {
@@ -2012,21 +2073,24 @@ export const CSamplerPluginModal = ({
 
         const padBuf = padCustomBuffersRef.current[cue.id];
         const { startSec, naturalDurationSec } = getCueSliceLimits(cue.id, cues, totalDuration);
-        const maxPlayDur = nextEv ? Math.max(0.12, nextEv.timeSec - ev.timeSec) : naturalDurationSec;
+        const maxPlayDur = nextEv
+          ? Math.max(0.12, nextEv.timeSec - ev.timeSec)
+          : Math.max(0.25, exactBarsSec - ev.timeSec);
 
         let hitBuf: AudioBuffer | null = null;
         if (padBuf) {
           hitBuf = padBuf;
         } else if (customAudioBuffer) {
+          const sliceLen = Math.min(naturalDurationSec, maxPlayDur);
           const hitCtx = new OfflineAudioContext(
             customAudioBuffer.numberOfChannels,
-            Math.max(1, Math.floor(Math.min(naturalDurationSec, maxPlayDur) * sr)),
+            Math.max(1, Math.floor(sliceLen * sr)),
             sr
           );
           const s = hitCtx.createBufferSource();
           s.buffer = customAudioBuffer;
           s.connect(hitCtx.destination);
-          s.start(0, startSec, Math.min(naturalDurationSec, maxPlayDur));
+          s.start(0, startSec, sliceLen);
           hitBuf = await hitCtx.startRendering();
         }
 
@@ -2039,10 +2103,24 @@ export const CSamplerPluginModal = ({
       }
 
       const rendered = await offline.startRendering();
-      const activeTrack = externalSample?.trackInfo || trackInfo;
-      const bpm = activeTrack?.bpm || 95;
-      const key = activeTrack?.key || "Am";
-      const genre = activeTrack?.genre || "funk";
+
+      // Si estamos conectados al nuevo Beat Breakdown Sequencer, enviar la melodía grabada directamente allí
+      if (onSendToSequencer) {
+        studioAudio.stopSamplerAudio();
+        onSendToSequencer({
+          title: sampleName || activeTrack?.title || "BOOMBAP OLD SCHOOL TYPE BEAT",
+          bpm,
+          musicalKey: key,
+          genre,
+          sampleBuffer: rendered,
+          bassBuffer: stemsResult?.bass ?? null,
+          cues,
+          padCustomBuffers: padCustomBuffersRef.current,
+          selectedCueId: null,
+          recordedBars: recordBars,
+        });
+        return;
+      }
 
       const dspBase = await separateAudioIntoStems(rendered, bpm, key, genre);
       const browserAi = await separateAudioInBrowserWorker(rendered, {
@@ -2399,8 +2477,47 @@ export const CSamplerPluginModal = ({
             </span>
           </div>
 
-          {/* Derecha: IR A C-DIGGER + Emoji Calavera + LED */}
+          {/* Derecha: IR A BEAT BREAKDOWN + IR A C-DIGGER + Emoji Calavera + LED */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
+            {onSendToSequencer && (
+              <button
+                type="button"
+                onClick={() => {
+                  studioAudio.stopSamplerAudio();
+                  onSendToSequencer({
+                    title: sampleName || trackInfo?.title || "BOOMBAP OLD SCHOOL TYPE BEAT",
+                    bpm: trackInfo?.bpm || 87,
+                    musicalKey: trackInfo?.key,
+                    genre: trackInfo?.genre,
+                    sampleBuffer: customAudioBuffer,
+                    bassBuffer: stemsResult?.bass ?? null,
+                    cues,
+                    padCustomBuffers,
+                    selectedCueId,
+                  });
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  backgroundColor: "var(--primary-container)",
+                  color: "var(--on-primary-container)",
+                  fontWeight: 900,
+                  fontFamily: "monospace",
+                  fontSize: "0.68rem",
+                  padding: "3px 10px",
+                  borderRadius: "3px",
+                  border: "1.5px solid var(--primary)",
+                  boxShadow: "0 2px 0 #07080A",
+                  letterSpacing: "1px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+                title="Enviar sample cortado al Secuenciador Beat Breakdown"
+              >
+                <span>BEAT BREAKDOWN →</span>
+              </button>
+            )}
             {onOpenDigger && (
               <button
                 type="button"
@@ -2967,8 +3084,33 @@ export const CSamplerPluginModal = ({
                   title="Graba tu melodía tocando los pads en vivo con el teclado o mouse"
                 >
                   <span>{isRecordingPads ? "■" : "●"}</span>
-                  <span>{isRecordingPads ? `PARAR (${recordedPadEvents.length})` : "GRABAR"}</span>
+                  <span>{isRecordingPads ? `PARAR (${recordedPadEvents.length})` : `GRABAR ${recordBars}B`}</span>
                 </button>
+
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                  {([1, 2, 4] as const).map((bars) => (
+                    <button
+                      key={bars}
+                      type="button"
+                      disabled={isRecordingPads}
+                      onClick={() => setRecordBars(bars)}
+                      style={{
+                        padding: "4px 6px",
+                        backgroundColor: recordBars === bars ? "#FFD600" : "#1F222A",
+                        color: recordBars === bars ? "#090A0D" : "#D4D4D8",
+                        border: "1px solid #090A0D",
+                        borderRadius: "3px",
+                        fontSize: "0.56rem",
+                        fontWeight: 900,
+                        fontFamily: "monospace",
+                        cursor: isRecordingPads ? "not-allowed" : "pointer",
+                      }}
+                      title={`Grabar melodía de ${bars} ${bars === 1 ? "compás" : "compases"}`}
+                    >
+                      {bars}B
+                    </button>
+                  ))}
+                </div>
 
                 {recordedPadEvents.length > 0 && !isRecordingPads && (
                   <>
@@ -3006,7 +3148,7 @@ export const CSamplerPluginModal = ({
                         display: "flex",
                         alignItems: "center",
                         gap: "4px",
-                        padding: "5px 9px",
+                        padding: "5px 10px",
                         background: "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)",
                         color: "#090A0D",
                         border: "1px solid #FFE866",
@@ -3017,9 +3159,9 @@ export const CSamplerPluginModal = ({
                         fontFamily: "monospace",
                         cursor: isRenderingRecording ? "wait" : "pointer",
                       }}
-                      title="Exporta tu melodía grabada a C-Master para agregar batería, bajo 808 y exportar WAV"
+                      title="Lleva tu melodía grabada de 1, 2 o 4 compases al Beat Breakdown Sequencer"
                     >
-                      <span>{isRenderingRecording ? "EXPORTANDO..." : "A C-MASTER"}</span>
+                      <span>{isRenderingRecording ? "RENDERIZANDO..." : onSendToSequencer ? "A SECUENCIADOR →" : "A C-MASTER"}</span>
                     </button>
                   </>
                 )}
@@ -4718,6 +4860,7 @@ export const CSamplerPluginModal = ({
 
         {cutPadModalData && (
           <CSamplerCutPadModal
+            key={cutPadModalData.cueId}
             isOpen={Boolean(cutPadModalData)}
             onClose={() => setCutPadModalData(null)}
             padLabel={cutPadModalData.padLabel}
@@ -4767,6 +4910,9 @@ export const CSamplerPluginModal = ({
             musicalKey={cutPadModalData.musicalKey}
             genre={cutPadModalData.genre}
             rawSliceBuffer={cutPadModalData.rawSliceBuffer}
+            originalSliceBuffer={cutPadModalData.originalSliceBuffer}
+            initialTrimStartPct={cutPadModalData.initialTrimStartPct}
+            initialTrimEndPct={cutPadModalData.initialTrimEndPct}
             onSeparatedToMaster={(channels) => {
               const info = cutPadModalData;
               setCutPadModalData(null);
@@ -4777,18 +4923,32 @@ export const CSamplerPluginModal = ({
                 channels,
               });
             }}
-            onApplyRealCut={({ newStartSec, processedBuffer }) => {
+            onApplyRealCut={({ newStartSec, processedBuffer, stemLabel, trimStartPct, trimEndPct }) => {
               const targetId = cutPadModalData.cueId;
               if (processedBuffer) {
                 setPadCustomBuffers((prev) => ({ ...prev, [targetId]: processedBuffer }));
               }
+              setPadOriginalSources((prev) => {
+                const existing = prev[targetId];
+                if (!existing) return prev;
+                return {
+                  ...prev,
+                  [targetId]: {
+                    ...existing,
+                    trimStartPct,
+                    trimEndPct,
+                  },
+                };
+              });
               setCues((prev) =>
                 prev.map((c) =>
                   c.id === targetId
                     ? {
                         ...c,
                         startSec: newStartSec,
-                        name: `CHOP ${c.id} (${formatSeconds(newStartSec)})`,
+                        name: stemLabel
+                          ? `CHOP ${c.id} · ${stemLabel}`
+                          : `CHOP ${c.id} (${formatSeconds(newStartSec)})`,
                       }
                     : c
                 )

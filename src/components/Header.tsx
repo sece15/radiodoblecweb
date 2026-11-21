@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Search, ShoppingCart, Calendar, Menu, X, Radio, ShoppingBag, User, Newspaper, Crown } from "lucide-react";
 import { HeaderNewsTicker } from "@/components/HeaderNewsTicker";
 import { NewsModal } from "@/components/NewsModal";
+import { AdminPersonalPlayerModal } from "@/components/admin/AdminPersonalPlayerModal";
 import { useAudio } from "@/hooks/useAudio";
 import { useNews } from "@/hooks/useNews";
 import { isVip, canAccessStudio } from "@/lib/permissions";
@@ -38,6 +39,7 @@ export const Header = ({
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdminPlayerOpen, setIsAdminPlayerOpen] = useState(false);
   const userProfile = useAudio((s) => s.userProfile);
 
   // News hook integration
@@ -56,6 +58,7 @@ export const Header = ({
 
   const isVipUser = isVip(userProfile.role);
   const hasStudioAccess = canAccessStudio(userProfile.role);
+  const isExactAdmin = (userProfile?.role || "").toUpperCase() === "ADMIN";
 
   // Active status checks
   const isHorarios = pathname === "/horarios";
@@ -195,6 +198,34 @@ export const Header = ({
               >
                 <span>{isChatOpen ? "🎛️" : "🎛️ C-STATION"}</span>
               </Link>
+            )}
+
+            {/* Reproductor Personal Admin - Solo role === ADMIN */}
+            {isExactAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsAdminPlayerOpen(true)}
+                className="neo-button fun-hover-wobble desktop-only-flex"
+                style={{
+                  padding: isChatOpen ? "7px 9px" : "6px 10px",
+                  fontSize: isChatOpen ? "0.9rem" : "0.68rem",
+                  fontWeight: 900,
+                  backgroundColor: "var(--primary-container)",
+                  color: "var(--on-primary-container)",
+                  boxShadow: "2.5px 2.5px 0px var(--primary)",
+                  border: "2px solid var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  cursor: "pointer",
+                  transform: "rotate(-1deg)",
+                  "--rest-rot": "-1deg",
+                } as CSSProperties}
+                title="Abrir Reproductor Personal Admin (Next, Buscar/Encolar, Subir MP3)"
+                aria-label="Reproductor Personal Admin"
+              >
+                <span>{isChatOpen ? "🎚️" : "🎚️ ADMIN PLAYER"}</span>
+              </button>
             )}
           </div>
 
@@ -435,6 +466,49 @@ export const Header = ({
             )}
           </Link>
 
+          {/* Reproductor Personal Admin - Solo role === ADMIN (Móvil) */}
+          {isExactAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsAdminPlayerOpen(true);
+              }}
+              className="mobile-nav-link fun-hover-wobble"
+              style={{
+                backgroundColor: "var(--primary-container)",
+                color: "var(--on-primary-container)",
+                border: "2.5px solid var(--primary)",
+                boxShadow: "3.5px 3.5px 0px var(--primary)",
+                transform: "rotate(1deg)",
+                "--rest-rot": "1deg",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "9px 14px",
+                width: "100%",
+                cursor: "pointer",
+              } as CSSProperties}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "1rem" }}>🎚️</span>
+                <span style={{ fontWeight: 900 }}>ADMIN PLAYER</span>
+              </div>
+              <span
+                style={{
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
+                  fontSize: "0.55rem",
+                  fontWeight: 900,
+                  padding: "2px 6px",
+                  letterSpacing: "0.8px",
+                }}
+              >
+                ADMIN
+              </span>
+            </button>
+          )}
+
           {/* C-Station Studio - Solo Streamer y Admin */}
           {hasStudioAccess && (
             <Link
@@ -667,6 +741,14 @@ export const Header = ({
         refreshNews={refreshNews}
         lastUpdated={lastUpdated}
       />
+
+      {/* 7. MODAL REPRODUCTOR PERSONAL ADMIN (SOLO ROLE === ADMIN) */}
+      {isExactAdmin && (
+        <AdminPersonalPlayerModal
+          isOpen={isAdminPlayerOpen}
+          onClose={() => setIsAdminPlayerOpen(false)}
+        />
+      )}
     </>
   );
 };

@@ -34,6 +34,8 @@ export const LiveNowBanner = ({
   const [hasEntered, setHasEntered] = useState(false);
   const [speechBubble, setSpeechBubble] = useState<string | null>(null);
   const [isClicked, setIsClicked] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const isAnimatingRef = useRef(false);
   const [animPhase, setAnimPhase] = useState<"idle" | "anticipation" | "ducking" | "emerging">("idle");
   const [mascotForm, setMascotForm] = useState<"santa" | "grinch">("santa");
   const [showPaws] = useState(true);
@@ -69,7 +71,12 @@ export const LiveNowBanner = ({
   }, []);
 
   const handleMascotClick = useCallback(() => {
-    // 1. Limpiar temporizadores activos anteriores para evitar colisiones
+    // Bloquear nuevos clics hasta que termine completamente la animación actual
+    if (isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
+    setIsAnimating(true);
+
+    // 1. Limpiar temporizadores previos por seguridad
     clearMascotTimers();
 
     // 2. Elegir frase diferente a la mostrada inmediatamente antes
@@ -119,12 +126,15 @@ export const LiveNowBanner = ({
     settleOutTimerRef.current = setTimeout(() => {
       setAnimPhase("idle");
       setIsClicked(false);
+      isAnimatingRef.current = false;
+      setIsAnimating(false);
     }, 4360);
   }, [clearMascotTimers]);
 
   // Limpieza al desmontar
   useEffect(() => {
     return () => {
+      isAnimatingRef.current = false;
       clearMascotTimers();
     };
   }, [clearMascotTimers]);
@@ -165,10 +175,11 @@ export const LiveNowBanner = ({
             } ${isClicked ? "wing-socket-clicked" : ""}`}
           >
             <Image
-              src="/mascot/wing_left_vector_clean.png"
+              src={`/mascot/wing_left_vector_clean.png?v=${ASSET_VERSION}`}
               alt="Ala izquierda del murciélago"
               width={260}
               height={268}
+              unoptimized
               className={`mascot-wing-graphic mascot-wing-left ${
                 isPlaying || mascotForm === "grinch"
                   ? "wing-beating-left"
@@ -186,10 +197,11 @@ export const LiveNowBanner = ({
             } ${isClicked ? "wing-socket-clicked" : ""}`}
           >
             <Image
-              src="/mascot/wing_right_vector_clean.png"
+              src={`/mascot/wing_right_vector_clean.png?v=${ASSET_VERSION}`}
               alt="Ala derecha del murciélago"
               width={260}
               height={268}
+              unoptimized
               className={`mascot-wing-graphic mascot-wing-right ${
                 isPlaying || mascotForm === "grinch"
                   ? "wing-beating-right"
@@ -210,6 +222,7 @@ export const LiveNowBanner = ({
           }`}
           style={{
             zIndex: animPhase === "ducking" || animPhase === "emerging" ? 5 : 15,
+            cursor: isAnimating ? "default" : "pointer",
           }}
           onClick={(e) => {
             e.stopPropagation();
@@ -303,7 +316,7 @@ export const LiveNowBanner = ({
                 }}
                 draggable={false}
               />
-              {/* Precarga oculta de la imagen Grinch para que el cambio bajo el card sea instantáneo */}
+              {/* Precarga real de la imagen Grinch (sin display:none para que producción la descargue antes del 1er clic) */}
               <Image
                 src={`/mascot/mascot_character_grinch.png?v=${ASSET_VERSION}`}
                 alt=""
@@ -312,7 +325,14 @@ export const LiveNowBanner = ({
                 height={392}
                 priority
                 unoptimized
-                style={{ display: "none" }}
+                style={{
+                  position: "absolute",
+                  width: "1px",
+                  height: "1px",
+                  opacity: 0,
+                  pointerEvents: "none",
+                  overflow: "hidden",
+                }}
               />
             </div>
           </div>

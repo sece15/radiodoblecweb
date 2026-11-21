@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent, FormEvent } from "react";
-import { Upload, Sparkles, Check, Play, Pause, Loader2, Video, FileAudio, Link2, Zap, Flame, Crown } from "lucide-react";
+import { Upload, Sparkles, Check, Play, Pause, Loader2, FileAudio, Flame, Crown } from "lucide-react";
 import { NeoModal } from "../common/NeoModal";
 import { CoinRechargeModal } from "./CoinRechargeModal";
 import { useAudio } from "@/hooks/useAudio";
@@ -15,7 +15,7 @@ interface VipJukeboxModalProps {
   defaultCoins?: number;
 }
 
-export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJukeboxModalProps) => {
+export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 1000 }: VipJukeboxModalProps) => {
   const {
     userProfile,
     vipQueue,
@@ -41,8 +41,6 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
   const isStaff = normRole.includes("ADMIN") || normRole.includes("STREAMER") || normRole.includes("MOD");
 
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"youtube" | "file">("file");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [dedication, setDedication] = useState("");
@@ -57,7 +55,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
   const [uploadStepText, setUploadStepText] = useState("");
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [selectedBid, setSelectedBid] = useState<number>(defaultCoins);
+  const baseCost = Math.max(1000, defaultCoins === 2000 ? 1000 : defaultCoins);
   const [customBidInput, setCustomBidInput] = useState<string>("");
 
   if (!isOpen) return null;
@@ -120,21 +118,14 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (activeTab === "youtube") {
-      if (!youtubeUrl.trim()) {
-        alert("Por favor pega el enlace de YouTube o SoundCloud.");
-        return;
-      }
-    } else {
-      if (!audioUrl || !audioFile || !title.trim() || !artist.trim()) {
-        alert("Por favor sube tu archivo de audio e ingresa el título y artista de la canción.");
-        return;
-      }
+    if (!audioUrl || !audioFile || !title.trim() || !artist.trim()) {
+      alert("Por favor sube tu archivo de audio MP3 e ingresa el título y artista de la canción.");
+      return;
     }
 
     const parsedCustom = customBidInput ? parseInt(customBidInput, 10) : 0;
-    const effectiveCost = parsedCustom >= 1000 ? parsedCustom : selectedBid;
-    const isInterrupt = effectiveCost >= 2000;
+    const effectiveCost = parsedCustom >= 1000 ? parsedCustom : baseCost;
+    const isRankingBid = effectiveCost > 1000;
 
     // Coins Verification (Only Admin has free pass, other users including streamers pay effectiveCost)
     if (!userIsAdmin) {
@@ -158,11 +149,11 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev < 40) {
-          setUploadStepText(isInterrupt ? "Cortando en vivo..." : "Enviando a la radio...");
+          setUploadStepText("Enviando MP3 a la radio...");
           return prev + 6;
         }
         if (prev < 80) {
-          setUploadStepText(isInterrupt ? "Transmitiendo al aire..." : "Encolando canción...");
+          setUploadStepText("Encolando canción al aire...");
           return prev + 4;
         }
         if (prev < 92) {
@@ -174,92 +165,53 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
     }, 180);
 
     try {
-      if (activeTab === "youtube") {
-        const effectiveTitle = title.trim() || "Tema YouTube";
-        const effectiveArtist = artist.trim() || "YouTube / Web";
+      const res = await injectVipSongToAzuraCast({
+        file: audioFile,
+        title: title.trim(),
+        artist: artist.trim(),
+        requester: userProfile.name,
+        dedication: dedication.trim() || undefined,
+        userRole: userProfile.role,
+        userId: userProfile.id,
+        forceSkip: false,
+        coinsPaid: effectiveCost,
+      });
 
-        const res = await injectVipSongToAzuraCast({
-          url: youtubeUrl.trim(),
-          title: effectiveTitle,
-          artist: effectiveArtist,
-          requester: userProfile.name,
-          dedication: dedication.trim() || undefined,
-          userRole: userProfile.role,
-          userId: userProfile.id,
-          forceSkip: isInterrupt,
-          coinsPaid: effectiveCost,
-        });
+      console.log("[VIP MODAL SUBMIT RESULT]:", res);
 
-        requestVipSong({
-          title: effectiveTitle,
-          artist: effectiveArtist,
-          requestedBy: userProfile.name,
-          userAvatar: userProfile.avatarUrl,
-          dedication: dedication.trim() || undefined,
-          audioUrl: res.url || "https://stream.andrealvarado.dev/radio.mp3",
-          coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
-        });
+      requestVipSong({
+        title: title.trim(),
+        artist: artist.trim(),
+        requestedBy: userProfile.name,
+        userAvatar: userProfile.avatarUrl,
+        dedication: dedication.trim() || undefined,
+        audioUrl: res.url || audioUrl!,
+        coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
+        durationSeconds: audioDuration,
+      });
 
-        // Broadcast de Destronamiento en vivo al Chat
+      // Anuncio destacado en Chat solo cuando se puja por encima del precio base (> 1,000 C-Coins)
+      if (isRankingBid) {
         try {
           if (sendChatMessage) {
-            const crownEmoji = effectiveCost >= 3500 ? "👑" : "⚡";
-            sendChatMessage(`${crownEmoji} ¡BATALLA DE ROCOLA! @${userProfile.name} aportó ${effectiveCost.toLocaleString()} C-Coins y coronó su tema al aire: "${effectiveTitle} - ${effectiveArtist}"!`);
+            sendChatMessage(
+              `👑 ¡PUJA EN LA ROCOLA! @${userProfile.name} aportó ${effectiveCost.toLocaleString()} C-Coins y puso al aire: "${title.trim()} - ${artist.trim()}"!`
+            );
           }
         } catch (chatErr) {
           console.warn("Notice chat broadcast:", chatErr);
         }
-
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        setUploadStepText("¡Listo! Canción enviada a la radio ⭐");
-      } else {
-        const res = await injectVipSongToAzuraCast({
-          file: audioFile,
-          title: title.trim(),
-          artist: artist.trim(),
-          requester: userProfile.name,
-          dedication: dedication.trim() || undefined,
-          userRole: userProfile.role,
-          userId: userProfile.id,
-          forceSkip: isInterrupt,
-          coinsPaid: effectiveCost,
-        });
-
-        console.log("[VIP MODAL SUBMIT RESULT]:", res);
-
-        requestVipSong({
-          title: title.trim(),
-          artist: artist.trim(),
-          requestedBy: userProfile.name,
-          userAvatar: userProfile.avatarUrl,
-          dedication: dedication.trim() || undefined,
-          audioUrl: res.url || audioUrl!,
-          coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop",
-          durationSeconds: audioDuration,
-        });
-
-        // Broadcast de Destronamiento en vivo al Chat
-        try {
-          if (sendChatMessage) {
-            const crownEmoji = effectiveCost >= 3500 ? "👑" : "⚡";
-            sendChatMessage(`${crownEmoji} ¡BATALLA DE ROCOLA! @${userProfile.name} aportó ${effectiveCost.toLocaleString()} C-Coins y coronó su tema al aire: "${title.trim()} - ${artist.trim()}"!`);
-          }
-        } catch (chatErr) {
-          console.warn("Notice chat broadcast:", chatErr);
-        }
-
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        setUploadStepText("¡Listo! Canción enviada a la radio ⭐");
       }
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setUploadStepText("¡Listo! Canción enviada a la cola global de la radio ⭐");
 
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
         setUploadProgress(0);
         setUploadStepText("");
-        setYoutubeUrl("");
         setTitle("");
         setArtist("");
         setDedication("");
@@ -320,12 +272,10 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
             <Check size={36} color="black" />
           </div>
           <h3 style={{ fontSize: "1.3rem", fontWeight: 900, textTransform: "uppercase", margin: 0 }}>
-            {selectedBid >= 2000 ? "⚡ ¡CORTE EN VIVO EJECUTADO!" : "¡TEMA ENCOLADO CON ÉXITO! 📻"}
+            ¡TEMA ENCOLADO CON ÉXITO! 📻
           </h3>
           <p style={{ fontSize: "0.8rem", opacity: 0.9, margin: 0, maxWidth: "420px" }}>
-            {selectedBid >= 2000
-              ? "Tu canción ha cortado la transmisión en vivo y ya está sonando para todos los oyentes de Radio Doble C."
-              : "Tu pedido está en la fila de AzuraCast y sonará en la transmisión al terminar la canción en curso."}
+            Tu pedido entró en la cola global de Radio Doble C y sonará para todos al terminar la canción en curso.
           </p>
         </div>
       ) : (
@@ -370,9 +320,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* ⚔️ BATALLA DE PUJAS / EL REY DEL DIAL (TIER SELECTOR)                     */}
-          {/* ========================================================================= */}
+          {/* PRECIO BASE + PUJA OPCIONAL PARA RANKING #1 */}
           <div
             style={{
               backgroundColor: "#FFF8E1",
@@ -385,114 +333,44 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
               gap: "8px",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.74rem", fontWeight: 900, display: "flex", alignItems: "center", gap: "5px" }}>
                 <Crown size={15} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
-                BATALLA DE C-COINS • ELIGE TU POSICIÓN AL AIRE
+                COSTO BASE: 1,000 C-COINS
               </span>
-              <span style={{ fontSize: "0.6rem", fontWeight: 900, opacity: 0.8 }}>
-                QUIEN PAGA MÁS QUEDA #1
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 900,
+                  backgroundColor: "#111",
+                  color: "#CCFF00",
+                  padding: "2px 6px",
+                }}
+              >
+                PUJA OPCIONAL PARA #1 + CHAT
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-              {/* Opción 1: 1,000 Coins */}
-              <div
-                onClick={() => { setSelectedBid(1000); setCustomBidInput(""); }}
-                style={{
-                  backgroundColor: selectedBid === 1000 && !customBidInput ? "#CCFF00" : "white",
-                  border: selectedBid === 1000 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>📻 Encolar</span>
-                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#111", color: "#CCFF00", padding: "1px 4px" }}>1,000</span>
-                </div>
-                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>Espera su turno en cola.</span>
-              </div>
+            <p style={{ margin: 0, fontSize: "0.66rem", lineHeight: 1.35, opacity: 0.9 }}>
+              Con <strong>1,000 C-Coins</strong> tu tema entra en la cola global de la radio. Si quieres liderar el{" "}
+              <strong>Puesto #1 del ranking</strong> y activar un <strong>anuncio destacado en el chat</strong>, ingresa una puja mayor abajo.
+            </p>
 
-              {/* Opción 2: 2,000 Coins */}
-              <div
-                onClick={() => { setSelectedBid(2000); setCustomBidInput(""); }}
-                style={{
-                  backgroundColor: selectedBid === 2000 && !customBidInput ? "#CCFF00" : "white",
-                  border: selectedBid === 2000 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>⚡ Corte en Vivo</span>
-                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#BA1A1A", color: "white", padding: "1px 4px" }}>2,000</span>
-                </div>
-                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>Corta y entra al instante.</span>
-              </div>
-
-              {/* Opción 3: 3,500 Coins */}
-              <div
-                onClick={() => { setSelectedBid(3500); setCustomBidInput(""); }}
-                style={{
-                  backgroundColor: selectedBid === 3500 && !customBidInput ? "#FFDE82" : "white",
-                  border: selectedBid === 3500 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>👑 Conquistar #1</span>
-                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#B8860B", color: "white", padding: "1px 4px" }}>3,500</span>
-                </div>
-                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>Destrona y lidera primera fila.</span>
-              </div>
-
-              {/* Opción 4: 5,000 Coins */}
-              <div
-                onClick={() => { setSelectedBid(5000); setCustomBidInput(""); }}
-                style={{
-                  backgroundColor: selectedBid === 5000 && !customBidInput ? "#FFD700" : "white",
-                  border: selectedBid === 5000 && !customBidInput ? "2.5px solid var(--primary)" : "1.5px solid #ccc",
-                  padding: "6px 8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "2px",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 900 }}>🔥 Corona Suprema</span>
-                  <span style={{ fontSize: "0.6rem", fontWeight: 900, backgroundColor: "#111", color: "#FFD700", padding: "1px 4px" }}>5,000</span>
-                </div>
-                <span style={{ fontSize: "0.55rem", opacity: 0.8 }}>#1 Indiscutible + Anuncio Chat.</span>
-              </div>
-            </div>
-
-            {/* Custom Coins Bid */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <label style={{ fontSize: "0.62rem", fontWeight: 900, whiteSpace: "nowrap" }}>
-                O PUJA PERSONALIZADA:
+                PUJA OPCIONAL (MÍN. 1,000):
               </label>
               <input
                 type="number"
                 min="1000"
                 step="500"
-                placeholder="Ej. 6000"
+                placeholder="1000 (Base) o más para #1"
                 value={customBidInput}
                 onChange={(e) => setCustomBidInput(e.target.value)}
                 style={{
                   width: "100%",
-                  padding: "4px 8px",
-                  fontSize: "0.7rem",
+                  padding: "5px 8px",
+                  fontSize: "0.72rem",
                   border: "1.5px solid var(--primary)",
                   fontWeight: 900,
                   backgroundColor: customBidInput ? "#FFDE82" : "white",
@@ -501,140 +379,31 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
             </div>
           </div>
 
-          {/* TAB SELECTOR */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab("youtube")}
-              style={{
-                padding: "8px 10px",
-                fontSize: "0.72rem",
-                fontWeight: 900,
-                backgroundColor: activeTab === "youtube" ? "var(--primary-container)" : "white",
-                border: "2px solid var(--primary)",
-                boxShadow: activeTab === "youtube" ? "2.5px 2.5px 0px var(--primary)" : "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <Video size={15} color="#BA1A1A" />
-              <span>LINK DE YOUTUBE</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("file")}
-              style={{
-                padding: "8px 10px",
-                fontSize: "0.72rem",
-                fontWeight: 900,
-                backgroundColor: activeTab === "file" ? "var(--primary-container)" : "white",
-                border: "2px solid var(--primary)",
-                boxShadow: activeTab === "file" ? "2.5px 2.5px 0px var(--primary)" : "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <FileAudio size={15} color="var(--primary)" />
-              <span>SUBIR ARCHIVO MP3</span>
-            </button>
+          {/* AVISO CLARO DE COLA GLOBAL EN VIVO (SOLO SUBIDA MP3) */}
+          <div
+            style={{
+              backgroundColor: "var(--surface-container)",
+              border: "2px solid var(--primary)",
+              padding: "9px 11px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "8px",
+            }}
+          >
+            <FileAudio size={18} style={{ color: "var(--primary)", flexShrink: 0, marginTop: "1px" }} />
+            <div style={{ fontSize: "0.68rem", lineHeight: 1.4 }}>
+              <strong style={{ display: "block", textTransform: "uppercase" }}>
+                📻 COLA GLOBAL EN VIVO · SUBIDA DIRECTA EN MP3
+              </strong>
+              <span>
+                Tu canción MP3 entra en la <strong>cola global de la radio</strong> y sonará para{" "}
+                <strong>todos los oyentes al terminar la pista actual</strong>.
+              </span>
+            </div>
           </div>
 
-          {/* TAB 1: YOUTUBE LINK */}
-          {activeTab === "youtube" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div>
-                <label style={{ fontSize: "0.7rem", fontWeight: 900, display: "block", marginBottom: "4px" }}>
-                  ENLACE DEL VIDEO DE YOUTUBE O SOUNDCLOUD *
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    key="input-youtube-url"
-                    type="url"
-                    required
-                    value={youtubeUrl || ""}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="neo-input"
-                    style={{
-                      width: "100%",
-                      padding: "8px 10px 8px 32px",
-                      fontSize: "0.75rem",
-                      border: "2px solid var(--primary)",
-                      fontWeight: "bold",
-                      backgroundColor: "white",
-                    }}
-                  />
-                  <Link2
-                    size={16}
-                    style={{
-                      position: "absolute",
-                      left: "8px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "var(--primary)",
-                    }}
-                  />
-                </div>
-                <span style={{ fontSize: "0.6rem", opacity: 0.75, marginTop: "2px", display: "block" }}>
-                  💡 El extractor antibloqueo obtendrá el audio en 320kbps y lo meterá a AzuraCast AutoDJ.
-                </span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                <div>
-                  <label style={{ fontSize: "0.68rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
-                    TÍTULO (OPCIONAL)
-                  </label>
-                  <input
-                    key="input-youtube-title"
-                    type="text"
-                    value={title || ""}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ej. Demolición"
-                    className="neo-input"
-                    style={{
-                      width: "100%",
-                      padding: "7px 9px",
-                      fontSize: "0.72rem",
-                      border: "2px solid var(--primary)",
-                      backgroundColor: "white",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.68rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
-                    ARTISTA (OPCIONAL)
-                  </label>
-                  <input
-                    key="input-youtube-artist"
-                    type="text"
-                    value={artist || ""}
-                    onChange={(e) => setArtist(e.target.value)}
-                    placeholder="Ej. Los Saicos"
-                    className="neo-input"
-                    style={{
-                      width: "100%",
-                      padding: "7px 9px",
-                      fontSize: "0.72rem",
-                      border: "2px solid var(--primary)",
-                      backgroundColor: "white",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* TAB 2: FILE UPLOAD */
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {/* FILE UPLOAD MP3 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
                 <label style={{ fontSize: "0.7rem", fontWeight: 900, display: "block", marginBottom: "4px" }}>
                   ARCHIVO DE AUDIO (SOLO FORMATO MP3) *
@@ -721,7 +490,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
                   <input
                     key="input-file-title"
                     type="text"
-                    required={activeTab === "file"}
+                    required
                     value={title || ""}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Ej. Demolición"
@@ -742,7 +511,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
                   </label>
                   <input
                     type="text"
-                    required={activeTab === "file"}
+                    required
                     value={artist || ""}
                     onChange={(e) => setArtist(e.target.value)}
                     placeholder="Ej. Los Saicos"
@@ -759,7 +528,6 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
                 </div>
               </div>
             </div>
-          )}
 
           {/* DEDICATION (Shared) */}
           <div>
@@ -885,8 +653,8 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
           {/* SUBMIT BUTTON */}
           {(() => {
             const parsedCustom = customBidInput ? parseInt(customBidInput, 10) : 0;
-            const effectiveCost = parsedCustom >= 1000 ? parsedCustom : selectedBid;
-            const isInterrupt = effectiveCost >= 2000;
+            const effectiveCost = parsedCustom >= 1000 ? parsedCustom : baseCost;
+            const isRankingBid = effectiveCost > 1000;
 
             return (
               <button
@@ -894,7 +662,7 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
                 disabled={isSubmitting}
                 className="neo-button fun-hover-wobble"
                 style={{
-                  backgroundColor: isSubmitting ? "#E0E0E0" : effectiveCost >= 3500 ? "#FFDE82" : "#CCFF00",
+                  backgroundColor: isSubmitting ? "#E0E0E0" : isRankingBid ? "#FFDE82" : "#CCFF00",
                   color: "#111111",
                   padding: "11px",
                   fontSize: "0.82rem",
@@ -914,26 +682,20 @@ export const VipJukeboxModal = ({ isOpen, onClose, defaultCoins = 2000 }: VipJuk
                   <>
                     <Loader2 size={16} className="animate-spin" />
                     <span>
-                      {isInterrupt
-                        ? `CORTANDO EN VIVO (${Math.min(100, Math.round(uploadProgress))}%) ⚡`
-                        : `ENCOLANDO EN ROCOLA (${Math.min(100, Math.round(uploadProgress))}%) 📡`}
+                      {`ENCOLANDO EN LA RADIO (${Math.min(100, Math.round(uploadProgress))}%) 📡`}
                     </span>
                   </>
                 ) : (
                   <>
-                    {effectiveCost >= 3500 ? (
+                    {isRankingBid ? (
                       <Crown size={18} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
-                    ) : isInterrupt ? (
-                      <Zap size={16} color="#BA1A1A" />
                     ) : (
                       <Sparkles size={16} />
                     )}
                     <span>
-                      {effectiveCost >= 3500
-                        ? `👑 CONQUISTAR PUESTO #1 AL AIRE (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`
-                        : isInterrupt
-                          ? `⚡ CORTAR Y TRANSMITIR AHORA MISMO (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`
-                          : `📻 ENCOLAR EN LA ROCOLA (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`}
+                      {isRankingBid
+                        ? `👑 ENCOLAR + PUJAR AL #1 Y ANUNCIO CHAT (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`
+                        : `📻 ENCOLAR EN LA ROCOLA (-${userIsAdmin ? "0" : effectiveCost.toLocaleString()} C-COINS)`}
                     </span>
                   </>
                 )}

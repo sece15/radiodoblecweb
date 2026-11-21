@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Loader2, Lock } from "lucide-react";
-import type { LoadedSampleData } from "@/types/studio";
+import type { BeatBreakdownSamplePayload, LoadedSampleData } from "@/types/studio";
 import { useAudio } from "@/hooks/useAudio";
 import { canAccessStudio } from "@/lib/permissions";
 
@@ -64,11 +64,40 @@ const CSamplerPluginModal = dynamic(
   }
 );
 
+const BeatBreakdownSequencer = dynamic(
+  () => import("@/components/studio/BeatBreakdownSequencer").then((mod) => mod.BeatBreakdownSequencer),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{
+          minHeight: "100vh",
+          width: "100%",
+          backgroundColor: "var(--background)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "12px",
+          color: "var(--on-background)",
+          fontFamily: "'Space Grotesk', -apple-system, sans-serif",
+        }}
+      >
+        <Loader2 className="animate-spin" size={36} />
+        <span style={{ fontSize: "0.82rem", fontWeight: 900, letterSpacing: "1px" }}>
+          CARGANDO BEAT BREAKDOWN SEQUENCER...
+        </span>
+      </div>
+    ),
+  }
+);
+
 export default function StudioPage() {
   const userProfile = useAudio((s) => s.userProfile);
   const hasStudioAccess = canAccessStudio(userProfile.role);
-  const [activeView, setActiveView] = useState<"digger" | "sampler">("digger");
+  const [activeView, setActiveView] = useState<"digger" | "sampler" | "sequencer">("digger");
   const [loadedSampleForSampler, setLoadedSampleForSampler] = useState<LoadedSampleData | null>(null);
+  const [sequencerSamplePayload, setSequencerSamplePayload] = useState<BeatBreakdownSamplePayload | null>(null);
 
   if (!hasStudioAccess) {
     return (
@@ -146,6 +175,21 @@ export default function StudioPage() {
     );
   }
 
+  // 3. VISTA BEAT BREAKDOWN SEQUENCER (Secuenciador 16-Steps + Capas Separadas)
+  if (activeView === "sequencer") {
+    return (
+      <BeatBreakdownSequencer
+        samplePayload={sequencerSamplePayload}
+        onBackToSampler={() => {
+          setActiveView("sampler");
+        }}
+        onBackToDigger={() => {
+          setActiveView("digger");
+        }}
+      />
+    );
+  }
+
   // 2. VISTA C-SAMPLER (Laboratorio de Cortes, Stems y Muestreo Serato VST)
   return (
     <CSamplerPluginModal
@@ -157,6 +201,10 @@ export default function StudioPage() {
       externalSample={loadedSampleForSampler}
       onOpenDigger={() => {
         setActiveView("digger");
+      }}
+      onSendToSequencer={(payload) => {
+        setSequencerSamplePayload(payload);
+        setActiveView("sequencer");
       }}
     />
   );

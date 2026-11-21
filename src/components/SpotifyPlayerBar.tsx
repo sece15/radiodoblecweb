@@ -128,8 +128,8 @@ export const SpotifyPlayerBar = ({
           onClick={onExpand}
           title="Abrir reproductor"
           style={{
-            width: "52px",
-            height: "52px",
+            width: "46px",
+            height: "46px",
             borderRadius: "50%",
             background: "radial-gradient(circle, #2a2a2a 0%, #111111 40%, #1e1e1e 65%, #080808 100%)",
             border: "1.5px solid #111111",

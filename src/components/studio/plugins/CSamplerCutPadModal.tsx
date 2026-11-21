@@ -27,6 +27,9 @@ export interface CSamplerCutPadModalProps {
   musicalKey: string;
   genre: string;
   rawSliceBuffer: AudioBuffer;
+  originalSliceBuffer?: AudioBuffer;
+  initialTrimStartPct?: number;
+  initialTrimEndPct?: number;
   onSeparatedToMaster: (channels: {
     raw: AudioBuffer | null;
     drums: AudioBuffer | null;
@@ -38,6 +41,9 @@ export interface CSamplerCutPadModalProps {
     newStartSec: number;
     newEndSec: number;
     processedBuffer: AudioBuffer | null;
+    stemLabel?: string;
+    trimStartPct: number;
+    trimEndPct: number;
   }) => void;
 }
 
@@ -76,6 +82,9 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
   musicalKey,
   genre,
   rawSliceBuffer,
+  originalSliceBuffer,
+  initialTrimStartPct = 0,
+  initialTrimEndPct = 100,
   onSeparatedToMaster,
   onApplyRealCut,
 }) => {
@@ -86,18 +95,30 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
   const [echoMix, setEchoMix] = useState<number>(0); // 0..80
   const [volume, setVolume] = useState<number>(100); // 0..120
   const [loopOn, setLoopOn] = useState<boolean>(true);
-  const [trimStartPct, setTrimStartPct] = useState<number>(0); // 0..85
-  const [trimEndPct, setTrimEndPct] = useState<number>(100); // 15..100
+  const [trimStartPct, setTrimStartPct] = useState<number>(initialTrimStartPct);
+  const [trimEndPct, setTrimEndPct] = useState<number>(initialTrimEndPct);
+  const trimStartPctRef = useRef<number>(initialTrimStartPct);
+  const trimEndPctRef = useRef<number>(initialTrimEndPct);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playheadPct, setPlayheadPct] = useState<number>(0);
   const [isSeparating, setIsSeparating] = useState<boolean>(false);
   const [sepProgress, setSepProgress] = useState<{ pct: number; stage: string } | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-  const [liveSliceBuffer, setLiveSliceBuffer] = useState<AudioBuffer>(rawSliceBuffer);
+  const initialBaseBuffer = originalSliceBuffer || rawSliceBuffer;
+  const [liveSliceBuffer, setLiveSliceBuffer] = useState<AudioBuffer>(initialBaseBuffer);
+  const liveSliceBufferRef = useRef<AudioBuffer>(initialBaseBuffer);
   const [liveIsRealAudio, setLiveIsRealAudio] = useState<boolean>(isRealAudio);
   const [isRecordingPad, setIsRecordingPad] = useState<boolean>(false);
   const [isReversed, setIsReversed] = useState<boolean>(false);
   const [isTapeStopping, setIsTapeStopping] = useState<boolean>(false);
+  const [separatedStems, setSeparatedStems] = useState<{
+    raw: AudioBuffer | null;
+    melody: AudioBuffer | null;
+    bass: AudioBuffer | null;
+    vocals: AudioBuffer | null;
+    drums: AudioBuffer | null;
+  } | null>(null);
+  const [selectedStem, setSelectedStem] = useState<"raw" | "melody" | "bass" | "vocals" | "drums">("raw");
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -111,31 +132,51 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
   const togglePlayRef = useRef<(() => void) | null>(null);
+  const startBufferPlayRef = useRef<((buf: AudioBuffer) => void) | null>(null);
 
   useModalIsolation(isOpen, modalContainerRef, {
     onEscape: onClose,
     onSpace: () => togglePlayRef.current?.(),
   });
 
-  useEffect(() => {
-    setLiveSliceBuffer(rawSliceBuffer);
-    setLiveIsRealAudio(isRealAudio);
+  const handleRestoreOriginalCut = () => {
+    const baseBuf = originalSliceBuffer || rawSliceBuffer;
+    const wasPlaying = isPlaying;
+    stopPlayback();
+    liveSliceBufferRef.current = baseBuf;
+    setLiveSliceBuffer(baseBuf);
+    setTrimStartPct(0);
+    setTrimEndPct(100);
     setIsReversed(false);
-  }, [rawSliceBuffer, isRealAudio]);
+    setSeparatedStems(null);
+    setSelectedStem("raw");
+    setErrorNotice(null);
+    if (wasPlaying && liveIsRealAudio) {
+      trimStartPctRef.current = 0;
+      trimEndPctRef.current = 100;
+      startBufferPlayRef.current?.(baseBuf);
+    }
+  };
 
   const handleToggleReversePad = () => {
+    if (!liveIsRealAudio) {
+      setErrorNotice("Carga o graba el audio en RAM primero para invertir el audio (Reversa).");
+      return;
+    }
+    setErrorNotice(null);
+    const currentBuf = liveSliceBufferRef.current;
     const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new AudioCtx();
     try {
       const reversed = ctx.createBuffer(
-        liveSliceBuffer.numberOfChannels,
-        liveSliceBuffer.length,
-        liveSliceBuffer.sampleRate
+        currentBuf.numberOfChannels,
+        currentBuf.length,
+        currentBuf.sampleRate
       );
-      for (let ch = 0; ch < liveSliceBuffer.numberOfChannels; ch++) {
-        const srcData = liveSliceBuffer.getChannelData(ch);
+      for (let ch = 0; ch < currentBuf.numberOfChannels; ch++) {
+        const srcData = currentBuf.getChannelData(ch);
         const dstData = reversed.getChannelData(ch);
         for (let i = 0, len = srcData.length; i < len; i++) {
           dstData[i] = srcData[len - 1 - i];
@@ -143,13 +184,15 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
       }
       const wasPlaying = isPlaying;
       stopPlayback();
+      liveSliceBufferRef.current = reversed;
       setLiveSliceBuffer(reversed);
       setIsReversed((p) => !p);
-      if (liveIsRealAudio) {
-        onCapturedPadAudio?.(reversed);
+      if (separatedStems && selectedStem) {
+        setSeparatedStems((prev) => (prev ? { ...prev, [selectedStem]: reversed } : prev));
       }
+      onCapturedPadAudio?.(reversed);
       if (wasPlaying) {
-        setTimeout(() => togglePlayRef.current?.(), 30);
+        startBufferPlayRef.current?.(reversed);
       }
     } finally {
       ctx.close().catch(() => {});
@@ -157,22 +200,56 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
   };
 
   const handleTapeStopStart = () => {
+    if (!liveIsRealAudio) {
+      setErrorNotice("Carga o graba el audio en RAM primero para usar Tape Stop.");
+      return;
+    }
+    setErrorNotice(null);
     setIsTapeStopping(true);
+    if (!sourceRef.current) {
+      startBufferPlayRef.current?.(liveSliceBufferRef.current);
+    }
     const ctx = audioCtxRef.current;
     const src = sourceRef.current;
     if (ctx && src) {
-      src.playbackRate.cancelScheduledValues(ctx.currentTime);
-      src.playbackRate.setTargetAtTime(0.06, ctx.currentTime, 0.14);
+      const now = ctx.currentTime;
+      const curRate = Math.max(0.05, src.playbackRate.value || Math.pow(2, pitchSemi / 12));
+      src.playbackRate.cancelScheduledValues(now);
+      src.playbackRate.setValueAtTime(curRate, now);
+      src.playbackRate.exponentialRampToValueAtTime(0.03, now + 0.42);
+    }
+    if (ctx && filterNodeRef.current) {
+      const now = ctx.currentTime;
+      filterNodeRef.current.type = "lowpass";
+      filterNodeRef.current.frequency.cancelScheduledValues(now);
+      filterNodeRef.current.frequency.setValueAtTime(Math.max(300, filterNodeRef.current.frequency.value), now);
+      filterNodeRef.current.frequency.exponentialRampToValueAtTime(320, now + 0.42);
     }
   };
 
   const handleTapeStopEnd = () => {
+    if (!isTapeStopping) return;
     setIsTapeStopping(false);
     const ctx = audioCtxRef.current;
     const src = sourceRef.current;
     if (ctx && src) {
-      src.playbackRate.cancelScheduledValues(ctx.currentTime);
-      src.playbackRate.setTargetAtTime(Math.pow(2, pitchSemi / 12), ctx.currentTime, 0.08);
+      const now = ctx.currentTime;
+      const targetRate = Math.pow(2, pitchSemi / 12);
+      src.playbackRate.cancelScheduledValues(now);
+      src.playbackRate.setValueAtTime(Math.max(0.03, src.playbackRate.value), now);
+      src.playbackRate.exponentialRampToValueAtTime(targetRate, now + 0.18);
+    }
+    if (ctx && filterNodeRef.current) {
+      const now = ctx.currentTime;
+      filterNodeRef.current.frequency.cancelScheduledValues(now);
+      const restoreFreq =
+        filterSweep < -2
+          ? 22000 * Math.pow(250 / 22000, Math.abs(filterSweep) / 100)
+          : filterSweep > 2
+          ? 40 * Math.pow(4500 / 40, filterSweep / 100)
+          : 22000;
+      filterNodeRef.current.type = filterSweep > 2 ? "highpass" : "lowpass";
+      filterNodeRef.current.frequency.setTargetAtTime(restoreFreq, now, 0.06);
     }
   };
 
@@ -237,12 +314,130 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
     }
   }, [pitchSemi, filterSweep, resonance, crunch, echoMix, volume]);
 
+  // Sincronizar en tiempo real los límites del loop con la región pintada en la onda
+  useEffect(() => {
+    if (!isPlaying || !liveIsRealAudio || !sourceRef.current) return;
+    const dur = liveSliceBufferRef.current.duration;
+    const nextStart = (trimStartPct / 100) * dur;
+    const nextEnd = Math.max(nextStart + 0.08, (trimEndPct / 100) * dur);
+    sourceRef.current.loop = loopOn;
+    sourceRef.current.loopStart = nextStart;
+    sourceRef.current.loopEnd = nextEnd;
+    if (playheadPct < trimStartPct || playheadPct > trimEndPct) {
+      startBufferPlayRef.current?.(liveSliceBufferRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trimStartPct, trimEndPct, loopOn]);
+
   const getTrimmedTimes = useCallback(() => {
     const dur = liveSliceBuffer.duration;
     const startSec = (trimStartPct / 100) * dur;
     const endSec = Math.max(startSec + 0.1, (trimEndPct / 100) * dur);
     return { startSec, endSec, trimmedDur: endSec - startSec };
   }, [liveSliceBuffer.duration, trimStartPct, trimEndPct]);
+
+  const startAudioBufferPlayback = useCallback(
+    (targetBuf: AudioBuffer) => {
+      stopPlayback();
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        audioCtxRef.current = new AudioCtx();
+        streamDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+      }
+      const ctx = audioCtxRef.current;
+      if (!streamDestRef.current) {
+        streamDestRef.current = ctx.createMediaStreamDestination();
+      }
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+      const dur = targetBuf.duration;
+      const startSec = (trimStartPctRef.current / 100) * dur;
+      const endSec = Math.max(startSec + 0.08, (trimEndPctRef.current / 100) * dur);
+      const trimmedDur = endSec - startSec;
+
+      const src = ctx.createBufferSource();
+      src.buffer = targetBuf;
+      src.playbackRate.value = Math.pow(2, pitchSemi / 12);
+      src.loop = loopOn;
+      src.loopStart = startSec;
+      src.loopEnd = endSec;
+
+      const filter = ctx.createBiquadFilter();
+      filter.Q.value = resonance;
+      if (filterSweep < -2) {
+        filter.type = "lowpass";
+        filter.frequency.value = 22000 * Math.pow(250 / 22000, Math.abs(filterSweep) / 100);
+      } else if (filterSweep > 2) {
+        filter.type = "highpass";
+        filter.frequency.value = 40 * Math.pow(4500 / 40, filterSweep / 100);
+      } else {
+        filter.type = "lowpass";
+        filter.frequency.value = 22000;
+      }
+
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = makeCrunchCurve(crunch);
+      shaper.oversample = "2x";
+
+      const delay = ctx.createDelay(1.0);
+      delay.delayTime.value = Math.max(0.12, Math.min(0.45, 60 / Math.max(60, bpm) / 2));
+      const fb = ctx.createGain();
+      fb.gain.value = 0.36;
+      const echoGain = ctx.createGain();
+      echoGain.gain.value = echoMix / 100;
+
+      const gain = ctx.createGain();
+      gain.gain.value = volume / 100;
+
+      src.connect(filter);
+      filter.connect(shaper);
+      shaper.connect(gain);
+      shaper.connect(delay);
+      delay.connect(fb);
+      fb.connect(delay);
+      delay.connect(echoGain);
+      echoGain.connect(gain);
+
+      gain.connect(ctx.destination);
+      gain.connect(streamDestRef.current);
+
+      sourceRef.current = src;
+      filterNodeRef.current = filter;
+      shaperNodeRef.current = shaper;
+      echoGainRef.current = echoGain;
+      gainNodeRef.current = gain;
+
+      if (loopOn) {
+        src.start(0, startSec);
+      } else {
+        src.start(0, startSec, trimmedDur);
+        src.onended = () => {
+          if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+          setIsPlaying(false);
+          setPlayheadPct(0);
+        };
+      }
+
+      const startedAt = ctx.currentTime;
+      const updatePlayhead = () => {
+        if (!sourceRef.current) return;
+        const curStartSec = (trimStartPctRef.current / 100) * dur;
+        const curEndSec = Math.max(curStartSec + 0.08, (trimEndPctRef.current / 100) * dur);
+        const curTrimDur = Math.max(0.05, curEndSec - curStartSec);
+        const rate = Math.max(0.03, sourceRef.current.playbackRate.value || Math.pow(2, pitchSemi / 12));
+        const elapsed = (ctx.currentTime - startedAt) * rate;
+        const posInTrim = loopOn ? elapsed % curTrimDur : Math.min(curTrimDur, elapsed);
+        const posInBuf = curStartSec + posInTrim;
+        setPlayheadPct(Math.min(100, Math.max(0, (posInBuf / dur) * 100)));
+        rafRef.current = requestAnimationFrame(updatePlayhead);
+      };
+      rafRef.current = requestAnimationFrame(updatePlayhead);
+      setIsPlaying(true);
+    },
+    [bpm, crunch, echoMix, filterSweep, loopOn, pitchSemi, resonance, stopPlayback, volume]
+  );
 
   const handleTogglePlay = () => {
     if (isPlaying) {
@@ -286,98 +481,16 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
       return;
     }
 
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-      audioCtxRef.current = new AudioCtx();
-      streamDestRef.current = audioCtxRef.current.createMediaStreamDestination();
-    }
-    const ctx = audioCtxRef.current;
-    if (!streamDestRef.current) {
-      streamDestRef.current = ctx.createMediaStreamDestination();
-    }
-    if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-    const { startSec, endSec, trimmedDur } = getTrimmedTimes();
-    const src = ctx.createBufferSource();
-    src.buffer = liveSliceBuffer;
-    src.playbackRate.value = Math.pow(2, pitchSemi / 12);
-    src.loop = loopOn;
-    src.loopStart = startSec;
-    src.loopEnd = endSec;
-
-    const filter = ctx.createBiquadFilter();
-    filter.Q.value = resonance;
-    if (filterSweep < -2) {
-      filter.type = "lowpass";
-      filter.frequency.value = 22000 * Math.pow(250 / 22000, Math.abs(filterSweep) / 100);
-    } else if (filterSweep > 2) {
-      filter.type = "highpass";
-      filter.frequency.value = 40 * Math.pow(4500 / 40, filterSweep / 100);
-    } else {
-      filter.type = "lowpass";
-      filter.frequency.value = 22000;
-    }
-
-    const shaper = ctx.createWaveShaper();
-    shaper.curve = makeCrunchCurve(crunch);
-    shaper.oversample = "2x";
-
-    const delay = ctx.createDelay(1.0);
-    delay.delayTime.value = Math.max(0.12, Math.min(0.45, 60 / Math.max(60, bpm) / 2));
-    const fb = ctx.createGain();
-    fb.gain.value = 0.36;
-    const echoGain = ctx.createGain();
-    echoGain.gain.value = echoMix / 100;
-
-    const gain = ctx.createGain();
-    gain.gain.value = volume / 100;
-
-    src.connect(filter);
-    filter.connect(shaper);
-    shaper.connect(gain);
-    shaper.connect(delay);
-    delay.connect(fb);
-    fb.connect(delay);
-    delay.connect(echoGain);
-    echoGain.connect(gain);
-
-    gain.connect(ctx.destination);
-    gain.connect(streamDestRef.current);
-
-    sourceRef.current = src;
-    filterNodeRef.current = filter;
-    shaperNodeRef.current = shaper;
-    echoGainRef.current = echoGain;
-    gainNodeRef.current = gain;
-
-    if (loopOn) {
-      src.start(0, startSec);
-    } else {
-      src.start(0, startSec, trimmedDur);
-      src.onended = () => {
-        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-        setIsPlaying(false);
-        setPlayheadPct(0);
-      };
-    }
-
-    const startedAt = ctx.currentTime;
-    const updatePlayhead = () => {
-      if (!sourceRef.current) return;
-      const rate = Math.pow(2, pitchSemi / 12);
-      const elapsed = (ctx.currentTime - startedAt) * rate;
-      const posInTrim = loopOn ? elapsed % Math.max(0.05, trimmedDur) : Math.min(trimmedDur, elapsed);
-      const posInBuf = startSec + posInTrim;
-      setPlayheadPct(Math.min(100, Math.max(0, (posInBuf / liveSliceBuffer.duration) * 100)));
-      rafRef.current = requestAnimationFrame(updatePlayhead);
-    };
-    rafRef.current = requestAnimationFrame(updatePlayhead);
-    setIsPlaying(true);
+    startAudioBufferPlayback(liveSliceBufferRef.current);
   };
 
-  togglePlayRef.current = handleTogglePlay;
+  useEffect(() => {
+    trimStartPctRef.current = trimStartPct;
+    trimEndPctRef.current = trimEndPct;
+    liveSliceBufferRef.current = liveSliceBuffer;
+    startBufferPlayRef.current = startAudioBufferPlayback;
+    togglePlayRef.current = handleTogglePlay;
+  });
 
   // Renderiza el corte con Trim + Pitch + Filter + Crunch + Volume en un AudioBuffer limpio
   const renderProcessedCutBuffer = async (): Promise<AudioBuffer> => {
@@ -445,26 +558,34 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
       }
-      stopPlayback();
+      window.setTimeout(() => stopPlayback(), 120);
+      return;
+    }
+
+    if (!liveIsRealAudio) {
+      setErrorNotice("Carga o descarga el audio en RAM primero para grabar este pad con efectos en vivo.");
       return;
     }
 
     setErrorNotice(null);
-    if (!isPlaying) {
-      handleTogglePlay();
-    }
+    startAudioBufferPlayback(liveSliceBufferRef.current);
 
     const dest = streamDestRef.current;
     if (!dest) {
-      setErrorNotice("Reproduce el pad en RAM para grabar su salida con filtros en vivo.");
+      setErrorNotice("No se pudo inicializar el bus de grabación del pad.");
       return;
     }
 
     try {
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-      const recorder = new MediaRecorder(dest.stream, { mimeType });
+      const mimeType =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "";
+      const recorder = mimeType
+        ? new MediaRecorder(dest.stream, { mimeType })
+        : new MediaRecorder(dest.stream);
       const chunks: BlobPart[] = [];
 
       recorder.ondataavailable = (ev) => {
@@ -474,13 +595,23 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
       recorder.onstop = async () => {
         setIsRecordingPad(false);
         try {
-          const blob = new Blob(chunks, { type: mimeType });
-          const decoded = await decodeMediaBlobToAudioBuffer(blob);
-          setLiveSliceBuffer(decoded);
+          let captured: AudioBuffer;
+          if (chunks.length > 0) {
+            const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+            try {
+              captured = await decodeMediaBlobToAudioBuffer(blob);
+            } catch {
+              captured = await renderProcessedCutBuffer();
+            }
+          } else {
+            captured = await renderProcessedCutBuffer();
+          }
+          liveSliceBufferRef.current = captured;
+          setLiveSliceBuffer(captured);
           setLiveIsRealAudio(true);
           setTrimStartPct(0);
           setTrimEndPct(100);
-          onCapturedPadAudio?.(decoded);
+          onCapturedPadAudio?.(captured);
         } catch {
           setErrorNotice("No se pudo procesar la toma grabada del pad.");
         }
@@ -490,8 +621,18 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
       setIsRecordingPad(true);
       recorder.start(80);
     } catch {
+      // Fallback directo con OfflineAudioContext si MediaRecorder no está disponible
+      try {
+        const rendered = await renderProcessedCutBuffer();
+        liveSliceBufferRef.current = rendered;
+        setLiveSliceBuffer(rendered);
+        setTrimStartPct(0);
+        setTrimEndPct(100);
+        onCapturedPadAudio?.(rendered);
+      } catch {
+        setErrorNotice("No se pudo grabar el audio del pad.");
+      }
       setIsRecordingPad(false);
-      setErrorNotice("No se pudo iniciar la grabación interna del pad.");
     }
   };
 
@@ -515,7 +656,7 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
 
   const handleSeparateCutInstruments = async () => {
     if (!liveIsRealAudio) {
-      setErrorNotice("Esta pista está solo en streaming YouTube. Presiona GRABAR DEL VIDEO o CARGAR AUDIO para separar los instrumentos reales de este pad.");
+      setErrorNotice("Esta pista está solo en streaming YouTube. Carga o descarga el audio en RAM para separar los 4 instrumentos de este pad.");
       return;
     }
     setErrorNotice(null);
@@ -524,7 +665,7 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
     setSepProgress({ pct: 10, stage: "Procesando corte, pitch y efectos..." });
     try {
       const processedCut = await renderProcessedCutBuffer();
-      setSepProgress({ pct: 45, stage: "Separando instrumentos del pad..." });
+      setSepProgress({ pct: 45, stage: "Separando 4 instrumentos (Melodía, Bajo, Voz, Batería)..." });
       const dspBase = await separateAudioIntoStems(processedCut, bpm, musicalKey, genre);
       const browserAi = await separateAudioInBrowserWorker(processedCut, {
         windowStartSec: 0,
@@ -535,16 +676,40 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
         onProgress: (pct, stage) => setSepProgress({ pct, stage }),
       });
       const finalStems = browserAi ? browserAi.stems : dspBase;
-      onSeparatedToMaster({
+      const stemsPack = {
         raw: processedCut,
         drums: finalStems.drums,
         bass: finalStems.bass,
         melody: finalStems.melody,
         vocals: finalStems.vocals,
-      });
+      };
+      setSeparatedStems(stemsPack);
+      const defaultBuf = stemsPack.melody || stemsPack.raw || processedCut;
+      setSelectedStem(stemsPack.melody ? "melody" : "raw");
+      liveSliceBufferRef.current = defaultBuf;
+      setLiveSliceBuffer(defaultBuf);
+      setTrimStartPct(0);
+      setTrimEndPct(100);
+      // Notificar opcionalmente sin cerrar el modal para permitir elegir stem y guardarlo al pad
+      void onSeparatedToMaster;
     } finally {
       setIsSeparating(false);
       setSepProgress(null);
+    }
+  };
+
+  const handleSelectStem = (stemKey: "raw" | "melody" | "bass" | "vocals" | "drums") => {
+    if (!separatedStems) return;
+    const targetBuf = separatedStems[stemKey];
+    if (!targetBuf) return;
+    const wasPlaying = isPlaying;
+    setSelectedStem(stemKey);
+    liveSliceBufferRef.current = targetBuf;
+    setLiveSliceBuffer(targetBuf);
+    setTrimStartPct(0);
+    setTrimEndPct(100);
+    if (wasPlaying) {
+      startAudioBufferPlayback(targetBuf);
     }
   };
 
@@ -910,34 +1075,61 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
               )}
             </div>
 
-            {/* Recorte fino Start / End con tiempos reales de la canción */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            {/* Recorte fino Start / End (0% - 100% no destructivo, sincronizado al loop pintado) */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "10px", alignItems: "end" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.56rem", color: "#D4D4D8", fontFamily: "monospace" }}>
                 <span>
-                  INICIO: {formatSec(sliceStartSec + (trimStartPct / 100) * Math.max(0.1, sliceEndSec - sliceStartSec))}
+                  INICIO: {formatSec(sliceStartSec + (trimStartPct / 100) * Math.max(0.1, sliceEndSec - sliceStartSec))} ({Math.round(trimStartPct)}%)
                 </span>
                 <input
                   type="range"
                   min={0}
-                  max={Math.max(0, trimEndPct - 10)}
+                  max={100}
+                  step={0.5}
                   value={trimStartPct}
-                  onChange={(e) => setTrimStartPct(Number(e.target.value))}
+                  onChange={(e) => {
+                    const next = Math.min(Number(e.target.value), trimEndPct - 2);
+                    setTrimStartPct(Math.max(0, next));
+                  }}
                   style={{ accentColor: "#FFD600" }}
                 />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.56rem", color: "#D4D4D8", fontFamily: "monospace" }}>
                 <span>
-                  FIN: {formatSec(sliceStartSec + (trimEndPct / 100) * Math.max(0.1, sliceEndSec - sliceStartSec))}
+                  FIN: {formatSec(sliceStartSec + (trimEndPct / 100) * Math.max(0.1, sliceEndSec - sliceStartSec))} ({Math.round(trimEndPct)}%)
                 </span>
                 <input
                   type="range"
-                  min={Math.min(100, trimStartPct + 10)}
+                  min={0}
                   max={100}
+                  step={0.5}
                   value={trimEndPct}
-                  onChange={(e) => setTrimEndPct(Number(e.target.value))}
+                  onChange={(e) => {
+                    const next = Math.max(Number(e.target.value), trimStartPct + 2);
+                    setTrimEndPct(Math.min(100, next));
+                  }}
                   style={{ accentColor: "#FFD600" }}
                 />
               </label>
+              <button
+                type="button"
+                onClick={handleRestoreOriginalCut}
+                style={{
+                  padding: "5px 8px",
+                  backgroundColor: "#1F222A",
+                  color: "#FFD600",
+                  border: "1px solid #FFD600",
+                  borderRadius: "4px",
+                  fontSize: "0.54rem",
+                  fontWeight: 900,
+                  fontFamily: "monospace",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+                title="Revertir el recorte al rango original completo (0% - 100%)"
+              >
+                ↺ REVERTIR
+              </button>
             </div>
 
             {/* Botones de Acción */}
@@ -1024,27 +1216,41 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
                       const newEndSec =
                         Math.round((sliceStartSec + (trimEndPct / 100) * fullSpan) * 10) / 10;
                       const processedBuffer = liveIsRealAudio ? await renderProcessedCutBuffer() : null;
-                      onApplyRealCut({ newStartSec, newEndSec, processedBuffer });
+                      const stemLabelMap: Record<"raw" | "melody" | "bass" | "vocals" | "drums", string | undefined> = {
+                        raw: undefined,
+                        melody: "MELODÍA",
+                        bass: "BAJO",
+                        vocals: "VOZ",
+                        drums: "BATERÍA",
+                      };
+                      onApplyRealCut({
+                        newStartSec,
+                        newEndSec,
+                        processedBuffer,
+                        stemLabel: separatedStems ? stemLabelMap[selectedStem] : undefined,
+                        trimStartPct,
+                        trimEndPct,
+                      });
                     }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: "4px",
-                      padding: "6px 10px",
-                      backgroundColor: "#E4E4E7",
-                      color: "#090A0D",
-                      border: "1px solid #090A0D",
+                      padding: "6px 12px",
+                      backgroundColor: separatedStems ? "var(--primary-container)" : "#E4E4E7",
+                      color: separatedStems ? "var(--on-primary-container)" : "#090A0D",
+                      border: "1.5px solid #090A0D",
                       borderRadius: "4px",
                       boxShadow: "0 2px 0 #07080A",
-                      fontSize: "0.60rem",
+                      fontSize: "0.62rem",
                       fontWeight: 900,
                       fontFamily: "monospace",
                       cursor: "pointer",
                     }}
-                    title="Guarda este recorte con su pitch y efectos directamente en el pad del C-Sampler"
+                    title="Guarda el instrumento seleccionado (con pitch, reversa y efectos) directamente en este pad del C-Sampler"
                   >
                     <Scissors size={11} />
-                    <span>CORTE REAL</span>
+                    <span>{separatedStems ? "GUARDAR STEM EN PAD" : "GUARDAR EN PAD"}</span>
                   </button>
                 )}
               </div>
@@ -1073,10 +1279,71 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
                 <span>
                   {isSeparating
                     ? `SEPARANDO ${sepProgress?.pct ?? 0}%`
-                    : "SEPARAR INSTRUMENTOS"}
+                    : separatedStems
+                    ? "RE-SEPARAR 4 STEMS"
+                    : "SEPARAR 4 INSTRUMENTOS"}
                 </span>
               </button>
             </div>
+
+            {/* Selector de los 4 Stems separados para guardar directo en el Pad */}
+            {separatedStems && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  padding: "8px 10px",
+                  backgroundColor: "#14161B",
+                  border: "1.5px solid #FFD600",
+                  borderRadius: "5px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.56rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "1px" }}>
+                    ELIGE EL INSTRUMENTO PARA INSERTAR EN {padLabel}:
+                  </span>
+                  <span style={{ fontSize: "0.52rem", color: "#A1A1AA", fontFamily: "monospace" }}>
+                    Escucha y pulsa GUARDAR STEM EN PAD
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "5px" }}>
+                  {(
+                    [
+                      { key: "melody", label: "MELODÍA" },
+                      { key: "bass", label: "BAJO" },
+                      { key: "vocals", label: "VOZ" },
+                      { key: "drums", label: "BATERÍA" },
+                      { key: "raw", label: "ORIGINAL" },
+                    ] as const
+                  ).map((item) => {
+                    const isActive = selectedStem === item.key;
+                    const available = Boolean(separatedStems[item.key]);
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        disabled={!available}
+                        onClick={() => handleSelectStem(item.key)}
+                        style={{
+                          padding: "6px 4px",
+                          backgroundColor: isActive ? "#FFD600" : "#1F222A",
+                          color: isActive ? "#090A0D" : available ? "#F4F4F5" : "#52525B",
+                          border: isActive ? "1.5px solid #FFFFFF" : "1px solid #3F3F46",
+                          borderRadius: "4px",
+                          fontSize: "0.58rem",
+                          fontWeight: 900,
+                          fontFamily: "monospace",
+                          cursor: available ? "pointer" : "not-allowed",
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {sepProgress && (
               <div style={{ fontSize: "0.56rem", color: "#FFD600", fontFamily: "monospace", textAlign: "center" }}>

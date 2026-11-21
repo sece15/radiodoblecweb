@@ -9,6 +9,7 @@ export interface NeoModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  titleSize?: string;
   badgeText?: string;
   maxWidth?: string;
   backgroundColor?: string;
@@ -22,6 +23,7 @@ export const NeoModal = ({
   isOpen,
   onClose,
   title,
+  titleSize,
   badgeText,
   maxWidth = "550px",
   backgroundColor = "var(--background)",
@@ -113,7 +115,7 @@ export const NeoModal = ({
               {title && (
                 <h3
                   style={{
-                    fontSize: isMobile ? "0.95rem" : "1.05rem",
+                    fontSize: titleSize || (isMobile ? "0.95rem" : "1.05rem"),
                     fontWeight: 900,
                     textTransform: "uppercase",
                     lineHeight: "1.2",

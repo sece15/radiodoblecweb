@@ -149,7 +149,7 @@ export const ExploreView = ({ onNavigateToPlayer, filteredStyle, isChatOpen = fa
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        padding: "54px 16px 180px 16px",
+        padding: "82px 16px 160px 16px",
         width: "100%",
         maxWidth: "768px",
         margin: "0 auto",

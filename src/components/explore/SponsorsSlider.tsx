@@ -94,25 +94,10 @@ export const SponsorsSlider = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "10px",
-          margin: "0 0 16px 0",
+          gap: "6px",
+          margin: "12px 0 12px 0",
         }}
       >
-        <h3
-          className="sponsors-title"
-          style={{
-            fontWeight: 900,
-            textTransform: "uppercase",
-            color: "var(--primary)",
-            margin: "0 0 4px 0",
-            textAlign: "center",
-            fontSize: "0.85rem",
-            letterSpacing: "0.5px",
-          }}
-        >
-          AUSPICIADORES &amp; MARCAS ALIADAS
-        </h3>
-
         <InfiniteSlider gap={55} speed={28} speedOnHover={0} style={{ padding: "8px 0" }}>
           {SPONSORS_DATA.map((sponsor, idx) => (
             <div

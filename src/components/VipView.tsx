@@ -13,7 +13,6 @@ import {
   Flame,
   Volume2,
   Trophy,
-  Swords,
   Coins,
 } from "lucide-react";
 
@@ -73,10 +72,6 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
     const interval = setInterval(fetchRequests, 6000);
     return () => clearInterval(interval);
   }, []);
-
-  const top1 = rocolaRequests.length > 0 ? rocolaRequests[0] : null;
-  const top1Coins = top1 ? (top1.coins_paid || 1000) : 1000;
-  const outbidTarget = top1Coins + 500;
 
   const handleOpenJukebox = (suggestedCoins = 2000) => {
     setSelectedBidCoins(suggestedCoins);
@@ -217,11 +212,11 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
               opacity: 0.9,
             }}
           >
-            ¡El control de la radio es tuyo! Sube tu canción favorita en formato MP3 o pega un enlace de YouTube. El oyente que aporte más <strong>C-Coins</strong> se corona en <strong>PRIMERA FILA</strong> y suena de inmediato en vivo. ¡Supera a tus rivales y domina el dial de Radio Doble C!
+            ¡El control de la radio es tuyo! Sube tu canción favorita en formato MP3 para que entre en la <strong>cola global de la radio</strong> y suene para todos al terminar la pista actual. El oyente que aporte más <strong>C-Coins</strong> lidera en <strong>PRIMERA FILA</strong>.
           </p>
         </div>
 
-        {/* Action Buttons Bar */}
+        {/* Action Button */}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "4px" }}>
           <button
             onClick={() => handleOpenJukebox(2000)}
@@ -242,27 +237,6 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
           >
             <Zap size={18} style={{ fill: "#161E00" }} />
             ⚡ SUBIR MI CANCIÓN (ABRIR ROCOLA)
-          </button>
-
-          <button
-            onClick={() => handleOpenJukebox(outbidTarget)}
-            className="neo-button fun-hover-wobble"
-            style={{
-              backgroundColor: "#FFDE82",
-              color: "#111",
-              border: "2.5px solid var(--primary)",
-              padding: "12px 20px",
-              fontSize: "0.85rem",
-              fontWeight: 900,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: "4px 4px 0px var(--primary)",
-            }}
-          >
-            <Swords size={18} style={{ color: "#BA1A1A" }} />
-            ⚔️ DESTRONAR AL #1 (+{outbidTarget.toLocaleString()} COINS)
           </button>
         </div>
       </section>
@@ -430,26 +404,6 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
                     >
                       <Volume2 size={15} /> {isPlaying ? "EN VIVO 🔊" : "ESCUCHAR 📻"}
                     </button>
-
-                    <button
-                      onClick={() => handleOpenJukebox(coins + 500)}
-                      className="neo-button fun-hover-wobble"
-                      style={{
-                        backgroundColor: "#BA1A1A",
-                        color: "white",
-                        border: "2px solid var(--primary)",
-                        padding: "8px 14px",
-                        fontSize: "0.78rem",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        boxShadow: "2.5px 2.5px 0px var(--primary)",
-                      }}
-                    >
-                      <Swords size={15} /> DESTRONAR AL #1
-                    </button>
                   </div>
                 </div>
               );
@@ -542,24 +496,8 @@ export const VipView = ({ onNavigateToPlayer }: VipViewProps) => {
               ¡El trono de Radio Doble C está disponible!
             </span>
             <span style={{ fontSize: "0.8rem", opacity: 0.85, maxWidth: "480px" }}>
-              Sé el primer oyente en subir tu canción con C-Coins y coronarte en el puesto #1 al aire.
+              Sé el primer oyente en subir tu canción con C-Coins usando el botón de arriba y corónate en el puesto #1 al aire.
             </span>
-            <button
-              onClick={() => handleOpenJukebox(2000)}
-              className="neo-button"
-              style={{
-                marginTop: "6px",
-                backgroundColor: "#CCFF00",
-                color: "#111",
-                padding: "8px 16px",
-                fontSize: "0.8rem",
-                fontWeight: 900,
-                border: "2px solid var(--primary)",
-                cursor: "pointer",
-              }}
-            >
-              ⚡ SER EL PRIMER REY DEL DIAL
-            </button>
           </div>
         )}
       </section>

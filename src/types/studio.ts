@@ -205,6 +205,19 @@ export interface LoadedSampleData {
   trackInfo?: Partial<DiggerTrack>;
 }
 
+export interface BeatBreakdownSamplePayload {
+  title: string;
+  bpm: number;
+  musicalKey?: string;
+  genre?: string;
+  sampleBuffer: AudioBuffer | null;
+  bassBuffer?: AudioBuffer | null;
+  cues: SamplerCuePoint[];
+  padCustomBuffers: Record<number, AudioBuffer>;
+  selectedCueId: number | null;
+  recordedBars?: 1 | 2 | 4;
+}
+
 // ==========================================
 // 5. C-STEMS IA (SERATO STEMS 4-WAY SEPARATOR)
 // ==========================================
