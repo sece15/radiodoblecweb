@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Play, Square, Volume2, X, Layers, Sparkles, RotateCcw, FolderOpen, Save, Trash2 } from "lucide-react";
 import { encodeAudioBufferToWavBlob } from "@/lib/studio/browserStemAI";
 import { useModalIsolation } from "@/hooks/useModalIsolation";
 import {
@@ -18,8 +17,20 @@ import {
   loadNamedDrumKitSamples,
   deleteNamedDrumKit,
 } from "@/lib/studio/drumKitStorage";
+import {
+  DRUM_ROWS,
+  PRESET_PATTERNS,
+  triggerDrumRow,
+  type CustomDrumSampleMap,
+  type DrumAssetOption,
+  type LoadedDrumSample,
+} from "@/lib/studio/masterSynth";
+import { MasterHeaderBar } from "./master/MasterHeaderBar";
+import { MasterStemChannels, type MasterChannelState, type MasterStemKey } from "./master/MasterStemChannels";
+import { MasterSequencerSection } from "./master/MasterSequencerSection";
+import { MasterFooterBar } from "./master/MasterFooterBar";
 
-export type MasterStemKey = "raw" | "drums" | "bass" | "melody" | "vocals";
+export type { MasterStemKey };
 
 export interface CSamplerMasterModalProps {
   isOpen: boolean;
@@ -36,209 +47,7 @@ export interface CSamplerMasterModalProps {
   };
 }
 
-interface ChannelState {
-  gain: number; // 0..1.2
-  muted: boolean;
-  solo: boolean;
-}
-
-interface LoadedDrumSample {
-  name: string;
-  audioBuffer: AudioBuffer;
-  rawBytes: ArrayBuffer;
-}
-
-interface DrumAssetOption {
-  name: string;
-  label: string;
-  url: string;
-}
-
-type CustomDrumSampleMap = Partial<Record<DrumRowKey, LoadedDrumSample>>;
-
-const DRUM_ROWS: { key: DrumRowKey; label: string; badge: string }[] = [
-  { key: "kick", label: "KICK (BOMBO)", badge: "BD" },
-  { key: "snare", label: "SNARE (CAJA)", badge: "SD" },
-  { key: "hihat", label: "HI-HAT", badge: "HH" },
-  { key: "clap", label: "CLAP / PERC", badge: "CP" },
-  { key: "bass808", label: "BAJO 808", badge: "808" },
-];
-
-const BASS_NOTES: { label: string; freq: number }[] = [
-  { label: "C2", freq: 65.41 },
-  { label: "D2", freq: 73.42 },
-  { label: "Eb2", freq: 77.78 },
-  { label: "F2", freq: 87.31 },
-  { label: "G2", freq: 98.0 },
-  { label: "Ab2", freq: 103.83 },
-  { label: "Bb2", freq: 116.54 },
-];
-
-const PRESET_PATTERNS: Record<string, Record<DrumRowKey, boolean[]>> = {
-  boombap: {
-    kick:    [true, false, false, false, false, false, false, true, false, false, true, false, false, false, false, false],
-    snare:   [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
-    hihat:   [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, true],
-    clap:    [false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false],
-    bass808: [true, false, false, false, false, false, false, true, false, false, true, false, false, false, false, false],
-  },
-  trap: {
-    kick:    [true, false, false, false, false, false, true, false, false, false, true, false, false, false, false, false],
-    snare:   [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
-    hihat:   [true, true, true, true, true, false, true, true, true, true, true, true, true, false, true, true],
-    clap:    [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, true],
-    bass808: [true, false, false, false, false, false, true, false, false, false, true, false, false, true, false, false],
-  },
-  house: {
-    kick:    [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
-    snare:   [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
-    hihat:   [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
-    clap:    [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
-    bass808: [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
-  },
-  empty: {
-    kick:    Array(16).fill(false),
-    snare:   Array(16).fill(false),
-    hihat:   Array(16).fill(false),
-    clap:    Array(16).fill(false),
-    bass808: Array(16).fill(false),
-  },
-};
-
-function triggerSynthSound(
-  ctx: BaseAudioContext,
-  dest: AudioNode,
-  row: DrumRowKey,
-  time: number,
-  vol: number,
-  bassFreq: number
-) {
-  if (vol <= 0.001) return;
-
-  if (row === "kick") {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(145, time);
-    osc.frequency.exponentialRampToValueAtTime(42, time + 0.14);
-    gain.gain.setValueAtTime(0.95 * vol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
-    osc.connect(gain);
-    gain.connect(dest);
-    osc.start(time);
-    osc.stop(time + 0.3);
-  } else if (row === "snare") {
-    const bufferSize = Math.floor(ctx.sampleRate * 0.18);
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.value = 1100;
-
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.65 * vol, time);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.17);
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(dest);
-    noise.start(time);
-
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(190, time);
-    osc.frequency.exponentialRampToValueAtTime(95, time + 0.08);
-    oscGain.gain.setValueAtTime(0.45 * vol, time);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-    osc.connect(oscGain);
-    oscGain.connect(dest);
-    osc.start(time);
-    osc.stop(time + 0.12);
-  } else if (row === "hihat") {
-    const bufferSize = Math.floor(ctx.sampleRate * 0.06);
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.value = 6500;
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.32 * vol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.055);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(dest);
-    noise.start(time);
-  } else if (row === "clap") {
-    const bufferSize = Math.floor(ctx.sampleRate * 0.16);
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 1800;
-    filter.Q.value = 1.4;
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.55 * vol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(dest);
-    noise.start(time);
-  } else if (row === "bass808") {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(bassFreq * 1.15, time);
-    osc.frequency.exponentialRampToValueAtTime(bassFreq, time + 0.04);
-    gain.gain.setValueAtTime(0.85 * vol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.42);
-    osc.connect(gain);
-    gain.connect(dest);
-    osc.start(time);
-    osc.stop(time + 0.44);
-  }
-}
-
-function triggerDrumRow(
-  ctx: BaseAudioContext,
-  dest: AudioNode,
-  row: DrumRowKey,
-  time: number,
-  vol: number,
-  bassFreq: number,
-  customSamples: CustomDrumSampleMap
-) {
-  if (vol <= 0.001) return;
-  const custom = customSamples[row];
-  if (custom) {
-    const src = ctx.createBufferSource();
-    src.buffer = custom.audioBuffer;
-    if (row === "bass808") {
-      src.playbackRate.setValueAtTime(Math.max(0.25, Math.min(4, bassFreq / 65.41)), time);
-    }
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(vol, time);
-    src.connect(g);
-    g.connect(dest);
-    src.start(time);
-    return;
-  }
-  triggerSynthSound(ctx, dest, row, time, vol, bassFreq);
-}
+type ChannelState = MasterChannelState;
 
 export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
   isOpen,
@@ -311,21 +120,24 @@ export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
   });
 
   const patternRef = useRef(pattern);
-  patternRef.current = pattern;
   const drumVolumesRef = useRef(drumVolumes);
-  drumVolumesRef.current = drumVolumes;
   const drumMutedRef = useRef(drumMuted);
-  drumMutedRef.current = drumMuted;
   const bassFreqRef = useRef(bassFreq);
-  bassFreqRef.current = bassFreq;
   const beatEnabledRef = useRef(beatEnabled);
-  beatEnabledRef.current = beatEnabled;
   const sidechainPumpRef = useRef(sidechainPump);
-  sidechainPumpRef.current = sidechainPump;
   const channelStateRef = useRef(channelState);
-  channelStateRef.current = channelState;
   const customDrumSamplesRef = useRef(customDrumSamples);
-  customDrumSamplesRef.current = customDrumSamples;
+
+  useEffect(() => {
+    patternRef.current = pattern;
+    drumVolumesRef.current = drumVolumes;
+    drumMutedRef.current = drumMuted;
+    bassFreqRef.current = bassFreq;
+    beatEnabledRef.current = beatEnabled;
+    sidechainPumpRef.current = sidechainPump;
+    channelStateRef.current = channelState;
+    customDrumSamplesRef.current = customDrumSamples;
+  }, [pattern, drumVolumes, drumMuted, bassFreq, beatEnabled, sidechainPump, channelState, customDrumSamples]);
 
   const stopAllPlayback = useCallback(() => {
     if (stepTimerRef.current !== null) {
@@ -346,7 +158,11 @@ export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) {
-      stopAllPlayback();
+      const id = window.setTimeout(() => stopAllPlayback(), 0);
+      return () => {
+        window.clearTimeout(id);
+        stopAllPlayback();
+      };
     }
     return () => {
       stopAllPlayback();
@@ -418,16 +234,18 @@ export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
     if (!isOpen || sessionHydratedRef.current) return;
     sessionHydratedRef.current = true;
 
-    const savedState = loadSessionBeatState();
-    if (savedState) {
-      if (savedState.pattern) setPattern(savedState.pattern);
-      if (savedState.drumVolumes) setDrumVolumes(savedState.drumVolumes);
-      if (savedState.drumMuted) setDrumMuted(savedState.drumMuted);
-      if (typeof savedState.bassFreq === "number") setBassFreq(savedState.bassFreq);
-      if (typeof savedState.sidechainPump === "boolean") setSidechainPump(savedState.sidechainPump);
-      if (typeof savedState.beatEnabled === "boolean") setBeatEnabled(savedState.beatEnabled);
-    }
-    setSavedKits(listSavedDrumKits());
+    const timerId = window.setTimeout(() => {
+      const savedState = loadSessionBeatState();
+      if (savedState) {
+        if (savedState.pattern) setPattern(savedState.pattern);
+        if (savedState.drumVolumes) setDrumVolumes(savedState.drumVolumes);
+        if (savedState.drumMuted) setDrumMuted(savedState.drumMuted);
+        if (typeof savedState.bassFreq === "number") setBassFreq(savedState.bassFreq);
+        if (typeof savedState.sidechainPump === "boolean") setSidechainPump(savedState.sidechainPump);
+        if (typeof savedState.beatEnabled === "boolean") setBeatEnabled(savedState.beatEnabled);
+      }
+      setSavedKits(listSavedDrumKits());
+    }, 0);
 
     loadAllActiveDrumSamples()
       .then((stored) => {
@@ -437,6 +255,8 @@ export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
         });
       })
       .catch(() => {});
+
+    return () => window.clearTimeout(timerId);
   }, [isOpen, decodeStoredSamplesMap]);
 
   // Cargar catálogo de assets predeterminados desde public/assets/drumkits/
@@ -704,7 +524,9 @@ export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
     setIsPlaying(true);
   }, [isPlaying, stopAllPlayback, ensureAudioContext, channelState, channels, loopSample, bpm]);
 
-  playMasterRef.current = handlePlayMaster;
+  useEffect(() => {
+    playMasterRef.current = handlePlayMaster;
+  }, [handlePlayMaster]);
 
   const handleAuditionSingleChannel = (key: MasterStemKey) => {
     if (auditioningKey === key && isPlaying) {
@@ -848,864 +670,101 @@ export const CSamplerMasterModal: React.FC<CSamplerMasterModalProps> = ({
           flexDirection: "column",
         }}
       >
-        {/* Cabecera FL Master */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            padding: "10px 14px",
-            backgroundColor: "#141519",
-            borderBottom: "1px solid rgba(255,214,0,0.45)",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                background: "linear-gradient(180deg, #3A3C42 0%, #23252A 100%)",
-                color: "#FFD600",
-                fontWeight: 900,
-                fontFamily: "monospace",
-                fontSize: "0.70rem",
-                padding: "3px 9px",
-                borderRadius: "3px",
-                border: "1px solid #4B4E57",
-                boxShadow: "0 2px 0 #07080A",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <Layers size={12} />
-              <span>C-MASTER STUDIO</span>
-            </span>
-            <span style={{ fontSize: "0.70rem", fontWeight: 900, color: "#FFFFFF", fontFamily: "monospace" }}>
-              {padLabel}
-            </span>
-            <span style={{ fontSize: "0.60rem", color: "#A1A1AA", fontFamily: "monospace" }}>
-              {rangeLabel}
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={handlePlayMaster}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "4px 12px",
-                backgroundColor: isPlaying ? "#D4D4D8" : "#FFD600",
-                color: "#090A0D",
-                border: isPlaying ? "1px solid #FFFFFF" : "1px solid #FFE866",
-                borderRadius: "3px",
-                boxShadow: isPlaying
-                  ? "0 0 14px rgba(212,212,216,0.8)"
-                  : "0 0 14px rgba(255,214,0,0.85), 0 0 26px rgba(255,214,0,0.4)",
-                fontSize: "0.66rem",
-                fontWeight: 900,
-                fontFamily: "monospace",
-                cursor: "pointer",
-              }}
-            >
-              {isPlaying ? <Square size={11} fill="#090A0D" /> : <Play size={11} fill="#090A0D" />}
-              <span>{isPlaying ? "DETENER MASTER" : "REPRODUCIR MASTER"}</span>
-            </button>
-
-            <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.60rem", color: "#FFD600", fontFamily: "monospace", fontWeight: 900 }}>
-              BPM
-              <input
-                type="number"
-                min={60}
-                max={180}
-                value={bpm}
-                onChange={(e) => setBpm(Math.max(60, Math.min(180, Number(e.target.value) || 95)))}
-                style={{
-                  width: "48px",
-                  backgroundColor: "#090A0D",
-                  color: "#FFD600",
-                  border: "1px solid #3A3D48",
-                  borderRadius: "3px",
-                  padding: "2px 4px",
-                  fontSize: "0.64rem",
-                  fontWeight: 900,
-                  textAlign: "center",
-                }}
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => setLoopSample((p) => !p)}
-              style={{
-                padding: "4px 8px",
-                backgroundColor: loopSample ? "#FFD600" : "#E4E4E7",
-                color: "#090A0D",
-                border: "1px solid #090A0D",
-                borderRadius: "3px",
-                boxShadow: "0 2px 0 #07080A",
-                fontSize: "0.58rem",
-                fontWeight: 900,
-                fontFamily: "monospace",
-                cursor: "pointer",
-              }}
-            >
-              LOOP {loopSample ? "ON" : "OFF"}
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: "4px 7px",
-                backgroundColor: "#262830",
-                border: "1px solid #3A3D48",
-                borderRadius: "3px",
-                color: "#E4E4E7",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-              }}
-              title="Volver al C-Sampler"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
+        <MasterHeaderBar
+          padLabel={padLabel}
+          rangeLabel={rangeLabel}
+          isPlaying={isPlaying}
+          bpm={bpm}
+          loopSample={loopSample}
+          onPlayMaster={handlePlayMaster}
+          onChangeBpm={setBpm}
+          onToggleLoop={() => setLoopSample((p) => !p)}
+          onClose={onClose}
+        />
 
         <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "12px" }}>
-          {/* SECCIÓN 1: CANALES SEPARADOS DEL CORTE */}
-          <div
-            style={{
-              backgroundColor: "#0A0B0E",
-              border: "1px solid rgba(255,214,0,0.4)",
-              borderRadius: "6px",
-              padding: "10px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
+          <MasterStemChannels
+            channelMeta={channelMeta}
+            channelState={channelState}
+            channels={channels}
+            masterVol={masterVol}
+            auditioningKey={auditioningKey}
+            isPlaying={isPlaying}
+            onChangeMasterVol={setMasterVol}
+            onAuditionChannel={handleAuditionSingleChannel}
+            onToggleMute={(key) =>
+              setChannelState((prev) => ({
+                ...prev,
+                [key]: { ...prev[key], muted: !prev[key].muted },
+              }))
+            }
+            onToggleSolo={(key) =>
+              setChannelState((prev) => ({
+                ...prev,
+                [key]: { ...prev[key], solo: !prev[key].solo },
+              }))
+            }
+            onChangeGain={(key, nextGain) =>
+              setChannelState((prev) => ({
+                ...prev,
+                [key]: { ...prev[key], gain: nextGain, muted: nextGain > 0 ? false : prev[key].muted },
+              }))
+            }
+            onExportSingleStem={handleExportSingleStem}
+          />
+
+          <MasterSequencerSection
+            beatEnabled={beatEnabled}
+            sidechainPump={sidechainPump}
+            selectedKitId={selectedKitId}
+            savedKits={savedKits}
+            isSavingKit={isSavingKit}
+            kitNameInput={kitNameInput}
+            bassFreq={bassFreq}
+            pattern={pattern}
+            currentStep={currentStep}
+            customDrumSamples={customDrumSamples}
+            factoryDrumAssets={factoryDrumAssets}
+            drumMuted={drumMuted}
+            drumVolumes={drumVolumes}
+            dragOverRow={dragOverRow}
+            fileInputRefs={fileInputRefs}
+            onToggleBeatEnabled={() => setBeatEnabled((p) => !p)}
+            onToggleSidechainPump={() => setSidechainPump((p) => !p)}
+            onLoadDefaultFactoryKit={() => void handleLoadDefaultFactoryKit()}
+            onSelectSavedKit={handleSelectSavedKit}
+            onDeleteSavedKit={handleDeleteSavedKit}
+            onChangeSavingKit={setIsSavingKit}
+            onChangeKitNameInput={setKitNameInput}
+            onSaveCurrentKit={handleSaveCurrentKit}
+            onChangeBassFreq={setBassFreq}
+            onApplyPatternPreset={(presetId) => {
+              const p = PRESET_PATTERNS[presetId];
+              setPattern({
+                kick: [...p.kick],
+                snare: [...p.snare],
+                hihat: [...p.hihat],
+                clap: [...p.clap],
+                bass808: [...p.bass808],
+              });
             }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-              <span style={{ fontSize: "0.62rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "1.2px" }}>
-                1. CANALES SEPARADOS DEL CORTE (EXPORTA O MEZCLA CADA INSTRUMENTO)
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Volume2 size={12} color="#FFD600" />
-                <span style={{ fontSize: "0.58rem", color: "#D4D4D8", fontFamily: "monospace" }}>
-                  MASTER {Math.round(masterVol * 100)}%
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={120}
-                  value={Math.round(masterVol * 100)}
-                  onChange={(e) => setMasterVol(Number(e.target.value) / 100)}
-                  style={{ width: "80px", accentColor: "#FFD600" }}
-                />
-              </div>
-            </div>
+            onChangeDragOverRow={setDragOverRow}
+            onUploadDrumSample={(row, file) => void handleUploadDrumSample(row, file)}
+            onPreviewDrumRow={handlePreviewDrumRow}
+            onToggleDrumMute={(row) => setDrumMuted((p) => ({ ...p, [row]: !p[row] }))}
+            onChangeDrumVolume={(row, vol) => setDrumVolumes((p) => ({ ...p, [row]: vol }))}
+            onLoadFactoryAsset={(row, asset) => void handleLoadFactoryAsset(row, asset, true)}
+            onClearDrumSample={(row) => void handleClearDrumSample(row)}
+            onToggleStep={(row, stepIdx) =>
+              setPattern((prev) => {
+                const nextRow = [...prev[row]];
+                nextRow[stepIdx] = !nextRow[stepIdx];
+                return { ...prev, [row]: nextRow };
+              })
+            }
+          />
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "8px" }}>
-              {channelMeta.map((ch) => {
-                const st = channelState[ch.key];
-                const hasBuf = Boolean(channels[ch.key]);
-                return (
-                  <div
-                    key={ch.key}
-                    style={{
-                      backgroundColor: "#141519",
-                      border: st.solo ? "1.5px solid #FFD600" : "1px solid #262830",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                      opacity: hasBuf ? 1 : 0.45,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "0.60rem", fontWeight: 900, color: ch.accent, fontFamily: "monospace" }}>
-                        {ch.icon} {ch.label}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={!hasBuf}
-                        onClick={() => handleAuditionSingleChannel(ch.key)}
-                        style={{
-                          padding: "2px 6px",
-                          backgroundColor: auditioningKey === ch.key && isPlaying ? "#FFD600" : "#E4E4E7",
-                          color: "#090A0D",
-                          border: "1px solid #090A0D",
-                          borderRadius: "3px",
-                          fontSize: "0.55rem",
-                          fontWeight: 900,
-                          cursor: hasBuf ? "pointer" : "not-allowed",
-                          boxShadow:
-                            auditioningKey === ch.key && isPlaying
-                              ? "0 0 8px rgba(255,214,0,0.75)"
-                              : "none",
-                        }}
-                        title={
-                          auditioningKey === ch.key && isPlaying
-                            ? `Pausar / detener ${ch.label}`
-                            : `Escuchar solo ${ch.label}`
-                        }
-                      >
-                        {auditioningKey === ch.key && isPlaying ? "⏸" : "▶"}
-                      </button>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <button
-                        type="button"
-                        disabled={!hasBuf}
-                        onClick={() =>
-                          setChannelState((prev) => ({
-                            ...prev,
-                            [ch.key]: { ...prev[ch.key], muted: !prev[ch.key].muted },
-                          }))
-                        }
-                        style={{
-                          flex: 1,
-                          padding: "2px 0",
-                          fontSize: "0.56rem",
-                          fontWeight: 900,
-                          fontFamily: "monospace",
-                          backgroundColor: st.muted ? "#52525B" : "#E4E4E7",
-                          color: st.muted ? "#FFFFFF" : "#090A0D",
-                          border: "1px solid #090A0D",
-                          borderRadius: "3px",
-                          cursor: hasBuf ? "pointer" : "not-allowed",
-                        }}
-                      >
-                        M
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!hasBuf}
-                        onClick={() =>
-                          setChannelState((prev) => ({
-                            ...prev,
-                            [ch.key]: { ...prev[ch.key], solo: !prev[ch.key].solo },
-                          }))
-                        }
-                        style={{
-                          flex: 1,
-                          padding: "2px 0",
-                          fontSize: "0.56rem",
-                          fontWeight: 900,
-                          fontFamily: "monospace",
-                          backgroundColor: st.solo ? "#FFD600" : "#E4E4E7",
-                          color: "#090A0D",
-                          border: "1px solid #090A0D",
-                          borderRadius: "3px",
-                          cursor: hasBuf ? "pointer" : "not-allowed",
-                        }}
-                      >
-                        S
-                      </button>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <input
-                        type="range"
-                        min={0}
-                        max={120}
-                        disabled={!hasBuf}
-                        value={Math.round(st.gain * 100)}
-                        onChange={(e) => {
-                          const nextGain = Number(e.target.value) / 100;
-                          setChannelState((prev) => ({
-                            ...prev,
-                            [ch.key]: { ...prev[ch.key], gain: nextGain, muted: nextGain > 0 ? false : prev[ch.key].muted },
-                          }));
-                        }}
-                        style={{ width: "100%", accentColor: "#FFD600" }}
-                      />
-                      <span style={{ fontSize: "0.52rem", color: "#A1A1AA", fontFamily: "monospace", textAlign: "center" }}>
-                        {Math.round(st.gain * 100)}%
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={!hasBuf}
-                      onClick={() => handleExportSingleStem(ch.key)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "4px",
-                        padding: "3px 6px",
-                        backgroundColor: "#E4E4E7",
-                        color: "#090A0D",
-                        border: "1px solid #090A0D",
-                        borderRadius: "3px",
-                        boxShadow: "0 2px 0 #07080A",
-                        fontSize: "0.55rem",
-                        fontWeight: 900,
-                        fontFamily: "monospace",
-                        cursor: hasBuf ? "pointer" : "not-allowed",
-                      }}
-                    >
-                      <Download size={10} />
-                      <span>WAV</span>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* SECCIÓN 2: SECUENCIADOR FL STUDIO (BATERÍA + BAJO 808) */}
-          <div
-            style={{
-              backgroundColor: "#0A0B0E",
-              border: "1px solid rgba(255,214,0,0.4)",
-              borderRadius: "6px",
-              padding: "10px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "0.62rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "1.2px" }}>
-                  2. FL BEAT RACK (BATERÍA Y BAJO SOBRE TU SAMPLE)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setBeatEnabled((p) => !p)}
-                  style={{
-                    padding: "2px 7px",
-                    backgroundColor: beatEnabled ? "#FFD600" : "#262830",
-                    color: beatEnabled ? "#090A0D" : "#D4D4D8",
-                    border: "1px solid #090A0D",
-                    borderRadius: "3px",
-                    fontSize: "0.55rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                >
-                  BEAT {beatEnabled ? "ON" : "OFF"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSidechainPump((p) => !p)}
-                  style={{
-                    padding: "2px 7px",
-                    backgroundColor: sidechainPump ? "#FFD600" : "#262830",
-                    color: sidechainPump ? "#090A0D" : "#D4D4D8",
-                    border: "1px solid #090A0D",
-                    borderRadius: "3px",
-                    fontSize: "0.55rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                  title="Sidechain Ducking: baja suavemente el sample cada vez que golpea el Kick"
-                >
-                  PUMP {sidechainPump ? "ON" : "OFF"}
-                </button>
-              </div>
-
-              {/* Barra MIS KITS de sesión */}
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  onClick={() => void handleLoadDefaultFactoryKit()}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "3px",
-                    padding: "2px 7px",
-                    backgroundColor: "#262830",
-                    color: "#86EFAC",
-                    border: "1px solid rgba(134,239,172,0.45)",
-                    borderRadius: "3px",
-                    fontSize: "0.54rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                  title="Cargar el kit predeterminado desde /assets/drumkits/"
-                >
-                  <Sparkles size={10} />
-                  <span>KIT ASSETS</span>
-                </button>
-                <select
-                  value={selectedKitId}
-                  onChange={(e) => handleSelectSavedKit(e.target.value)}
-                  style={{
-                    backgroundColor: "#141519",
-                    color: "#E4E4E7",
-                    border: "1px solid #3A3D48",
-                    borderRadius: "3px",
-                    padding: "2px 6px",
-                    fontSize: "0.55rem",
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                    maxWidth: "150px",
-                  }}
-                  title="Cargar un Kit guardado en esta sesión"
-                >
-                  <option value="">MIS KITS ({savedKits.length})</option>
-                  {savedKits.map((kit) => (
-                    <option key={kit.id} value={kit.id}>
-                      {kit.name}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedKitId && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteSavedKit}
-                    style={{
-                      padding: "2px 5px",
-                      backgroundColor: "#262830",
-                      color: "#F87171",
-                      border: "1px solid #3A3D48",
-                      borderRadius: "3px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                    title="Eliminar este kit guardado"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                )}
-
-                {isSavingKit ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <input
-                      type="text"
-                      value={kitNameInput}
-                      onChange={(e) => setKitNameInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveCurrentKit();
-                        if (e.key === "Escape") setIsSavingKit(false);
-                      }}
-                      placeholder="Nombre del kit..."
-                      autoFocus
-                      style={{
-                        width: "120px",
-                        backgroundColor: "#141519",
-                        color: "#FFFFFF",
-                        border: "1px solid #FFD600",
-                        borderRadius: "3px",
-                        padding: "2px 6px",
-                        fontSize: "0.55rem",
-                        fontFamily: "monospace",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSaveCurrentKit}
-                      style={{
-                        padding: "2px 7px",
-                        backgroundColor: "#FFD600",
-                        color: "#090A0D",
-                        border: "1px solid #090A0D",
-                        borderRadius: "3px",
-                        fontSize: "0.54rem",
-                        fontWeight: 900,
-                        fontFamily: "monospace",
-                        cursor: "pointer",
-                      }}
-                    >
-                      OK
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsSavingKit(false)}
-                      style={{
-                        padding: "2px 5px",
-                        backgroundColor: "#262830",
-                        color: "#D4D4D8",
-                        border: "1px solid #3A3D48",
-                        borderRadius: "3px",
-                        fontSize: "0.54rem",
-                        fontFamily: "monospace",
-                        cursor: "pointer",
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsSavingKit(true)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "2px 7px",
-                      backgroundColor: "#262830",
-                      color: "#FFD600",
-                      border: "1px solid rgba(255,214,0,0.5)",
-                      borderRadius: "3px",
-                      fontSize: "0.54rem",
-                      fontWeight: 900,
-                      fontFamily: "monospace",
-                      cursor: "pointer",
-                    }}
-                    title="Guardar tus sonidos cargados y patrón actual como un Kit en tu sesión"
-                  >
-                    <Save size={10} />
-                    <span>GUARDAR KIT</span>
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.54rem", color: "#A1A1AA", fontFamily: "monospace" }}>NOTA 808:</span>
-                <select
-                  value={bassFreq}
-                  onChange={(e) => setBassFreq(Number(e.target.value))}
-                  style={{
-                    backgroundColor: "#141519",
-                    color: "#FFD600",
-                    border: "1px solid #3A3D48",
-                    borderRadius: "3px",
-                    padding: "2px 4px",
-                    fontSize: "0.58rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {BASS_NOTES.map((n) => (
-                    <option key={n.label} value={n.freq}>
-                      {n.label}
-                    </option>
-                  ))}
-                </select>
-
-                {(
-                  [
-                    { id: "boombap", label: "BOOM BAP" },
-                    { id: "trap", label: "TRAP 808" },
-                    { id: "house", label: "4x4" },
-                    { id: "empty", label: "LIMPIAR" },
-                  ] as const
-                ).map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => {
-                      const p = PRESET_PATTERNS[preset.id];
-                      setPattern({
-                        kick: [...p.kick],
-                        snare: [...p.snare],
-                        hihat: [...p.hihat],
-                        clap: [...p.clap],
-                        bass808: [...p.bass808],
-                      });
-                    }}
-                    style={{
-                      padding: "2px 7px",
-                      backgroundColor: "#E4E4E7",
-                      color: "#090A0D",
-                      border: "1px solid #090A0D",
-                      borderRadius: "3px",
-                      boxShadow: "0 2px 0 #07080A",
-                      fontSize: "0.54rem",
-                      fontWeight: 900,
-                      fontFamily: "monospace",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "3px",
-                    }}
-                  >
-                    {preset.id === "empty" ? <RotateCcw size={9} /> : <Sparkles size={9} />}
-                    <span>{preset.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              {DRUM_ROWS.map((row) => {
-                const customSample = customDrumSamples[row.key];
-                const isDragOver = dragOverRow === row.key;
-                return (
-                  <div
-                    key={row.key}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      if (dragOverRow !== row.key) setDragOverRow(row.key);
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverRow === row.key) setDragOverRow(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverRow(null);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) void handleUploadDrumSample(row.key, file);
-                    }}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "250px 1fr",
-                      alignItems: "center",
-                      gap: "8px",
-                      backgroundColor: isDragOver ? "#1F2117" : "#141519",
-                      border: isDragOver ? "1px dashed #FFD600" : "1px solid #22242C",
-                      borderRadius: "4px",
-                      padding: "4px 8px",
-                      transition: "border-color 0.12s, background-color 0.12s",
-                    }}
-                  >
-                    <input
-                      ref={(el) => {
-                        fileInputRefs.current[row.key] = el;
-                      }}
-                      type="file"
-                      accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void handleUploadDrumSample(row.key, file);
-                        e.target.value = "";
-                      }}
-                    />
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px", minWidth: 0 }}>
-                          <button
-                            type="button"
-                            onClick={() => handlePreviewDrumRow(row.key)}
-                            style={{
-                              padding: "1px 4px",
-                              backgroundColor: "#262830",
-                              color: "#FFD600",
-                              border: "1px solid #3A3D48",
-                              borderRadius: "2px",
-                              fontSize: "0.50rem",
-                              cursor: "pointer",
-                            }}
-                            title={`Escuchar ${row.label}`}
-                          >
-                            ▶
-                          </button>
-                          <span style={{ fontSize: "0.56rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", whiteSpace: "nowrap" }}>
-                            {row.label}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <button
-                            type="button"
-                            onClick={() => fileInputRefs.current[row.key]?.click()}
-                            style={{
-                              padding: "1px 5px",
-                              fontSize: "0.50rem",
-                              fontWeight: 900,
-                              backgroundColor: customSample ? "#FFD600" : "#262830",
-                              color: customSample ? "#090A0D" : "#E4E4E7",
-                              border: "1px solid #3A3D48",
-                              borderRadius: "2px",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "2px",
-                            }}
-                            title={`Cargar o arrastrar WAV/MP3 propio para ${row.label}`}
-                          >
-                            <FolderOpen size={9} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDrumMuted((p) => ({ ...p, [row.key]: !p[row.key] }))}
-                            style={{
-                              padding: "1px 4px",
-                              fontSize: "0.50rem",
-                              fontWeight: 900,
-                              backgroundColor: drumMuted[row.key] ? "#52525B" : "#E4E4E7",
-                              color: drumMuted[row.key] ? "#FFFFFF" : "#090A0D",
-                              border: "1px solid #090A0D",
-                              borderRadius: "2px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            M
-                          </button>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={Math.round(drumVolumes[row.key] * 100)}
-                            onChange={(e) => setDrumVolumes((p) => ({ ...p, [row.key]: Number(e.target.value) / 100 }))}
-                            style={{ width: "42px", accentColor: "#FFD600" }}
-                          />
-                        </div>
-                      </div>
-                      {(() => {
-                        const rowAssets = factoryDrumAssets[row.key] || [];
-                        if (!customSample && rowAssets.length === 0) return null;
-                        const matchedAsset = customSample
-                          ? rowAssets.find((a) => a.name === customSample.name)?.name || ""
-                          : "";
-                        return (
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            {rowAssets.length > 0 && (
-                              <select
-                                value={matchedAsset}
-                                onChange={(e) => {
-                                  const selected = rowAssets.find((a) => a.name === e.target.value);
-                                  if (selected) void handleLoadFactoryAsset(row.key, selected, true);
-                                }}
-                                style={{
-                                  flex: customSample ? "0 0 92px" : 1,
-                                  backgroundColor: "#0D0E12",
-                                  color: matchedAsset ? "#86EFAC" : "#D4D4D8",
-                                  border: "1px solid #2F323D",
-                                  borderRadius: "2px",
-                                  padding: "1px 3px",
-                                  fontSize: "0.49rem",
-                                  fontFamily: "monospace",
-                                  maxWidth: customSample ? "92px" : "100%",
-                                }}
-                                title={`Sonidos predeterminados en /assets/drumkits/${row.key}/`}
-                              >
-                                <option value="">Assets ({rowAssets.length})</option>
-                                {rowAssets.map((asset) => (
-                                  <option key={asset.name} value={asset.name}>
-                                    {asset.label}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                            {customSample && (
-                              <div
-                                style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "4px",
-                                  backgroundColor: "rgba(34,197,94,0.12)",
-                                  border: "1px solid rgba(34,197,94,0.35)",
-                                  borderRadius: "2px",
-                                  padding: "1px 5px",
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontSize: "0.49rem",
-                                    color: "#86EFAC",
-                                    fontFamily: "monospace",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  title={customSample.name}
-                                >
-                                  {customSample.name}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => void handleClearDrumSample(row.key)}
-                                  style={{
-                                    background: "none",
-                                    border: "none",
-                                    color: "#FCA5A5",
-                                    fontSize: "0.52rem",
-                                    fontWeight: 900,
-                                    cursor: "pointer",
-                                    padding: 0,
-                                    lineHeight: 1,
-                                  }}
-                                  title="Quitar sample y volver al sonido sintetizado"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(16, minmax(0, 1fr))", gap: "4px" }}>
-                      {pattern[row.key].map((active, stepIdx) => {
-                        const isBeatGroup = Math.floor(stepIdx / 4) % 2 === 1;
-                        const isCurrent = currentStep === stepIdx;
-                        return (
-                          <button
-                            key={stepIdx}
-                            type="button"
-                            onClick={() =>
-                              setPattern((prev) => {
-                                const nextRow = [...prev[row.key]];
-                                nextRow[stepIdx] = !nextRow[stepIdx];
-                                return { ...prev, [row.key]: nextRow };
-                              })
-                            }
-                            style={{
-                              height: "22px",
-                              borderRadius: "3px",
-                              border: isCurrent ? "1.5px solid #FFFFFF" : "1px solid #090A0D",
-                              backgroundColor: active
-                                ? "#FFD600"
-                                : isBeatGroup
-                                ? "#262830"
-                                : "#1B1D24",
-                              boxShadow: active
-                                ? isCurrent
-                                  ? "0 0 10px #FFD600"
-                                  : "inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 0 #07080A"
-                                : "inset 0 1px 2px rgba(0,0,0,0.6)",
-                              cursor: "pointer",
-                            }}
-                            title={`${row.label} · Paso ${stepIdx + 1}`}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* SECCIÓN 3: EXPORTAR MASTER */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.58rem", color: "#A1A1AA", fontFamily: "monospace" }}>
-              Exporta tu corte mezclado con batería y bajo 808 o descarga cada canal limpio en WAV.
-            </span>
-            <button
-              type="button"
-              onClick={handleExportMasterMix}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 14px",
-                background: "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)",
-                color: "#090A0D",
-                border: "1px solid #FFE866",
-                borderRadius: "4px",
-                boxShadow: "0 0 14px rgba(255,214,0,0.75), 0 3px 0 #07080A",
-                fontSize: "0.66rem",
-                fontWeight: 900,
-                fontFamily: "monospace",
-                cursor: "pointer",
-              }}
-            >
-              <Download size={12} />
-              <span>EXPORTAR MASTER WAV</span>
-            </button>
-          </div>
+          <MasterFooterBar onExportMasterMix={handleExportMasterMix} />
         </div>
       </div>
     </div>

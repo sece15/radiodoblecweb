@@ -1,4 +1,11 @@
-interface EmojiDefinition { id: string; label: string; unicode?: string }
+interface EmojiDefinition {
+  id: string;
+  label: string;
+  unicode?: string;
+  token?: string;
+  aliases?: string[];
+  scale?: number;
+}
 
 const DEFINITIONS: EmojiDefinition[] = [
   {"id":"feliz","label":"C feliz"},
@@ -19,9 +26,15 @@ const DEFINITIONS: EmojiDefinition[] = [
   {"id":"bomba","label":"Bomba C","unicode":"💣"},
   {"id":"hola","label":"C saludando"},
   {"id":"pulgar","label":"C me gusta","unicode":"👍"},
-  {"id":"paz","label":"C paz","unicode":"✌️"},
+  {"id":"paz","label":"C paz","unicode":"✌️","scale":1.26},
   {"id":"rock","label":"C rockero","unicode":"🤘"},
-  {"id":"manos-arriba","label":"C manos arriba","unicode":"🙌"},
+  {
+    "id":"manos-arriba",
+    "label":"C manos arriba",
+    "unicode":"🙌",
+    "token":":c-arriba:",
+    "aliases":[":c-manos-arriba:",":c-m****s-arriba:",":c-m***s-arriba:"],
+  },
   {"id":"aplausos","label":"C aplausos","unicode":"👏"},
   {"id":"carcajada","label":"C carcajada","unicode":"🤣"},
   {"id":"ojos","label":"C ojos neón","unicode":"👀"},
@@ -35,7 +48,7 @@ const DEFINITIONS: EmojiDefinition[] = [
 
 export const MASCOT_EMOJIS = DEFINITIONS.map((emoji) => ({
   ...emoji,
-  token: `:c-${emoji.id}:`,
+  token: emoji.token ?? `:c-${emoji.id}:`,
   src: `/emojis/msn/c-${emoji.id}-48.png`,
   smallSrc: `/emojis/msn/c-${emoji.id}-48.png`,
 }));
@@ -54,6 +67,7 @@ export interface EmojiCategoryItem {
   unicode?: string;
   src?: string;
   smallSrc?: string;
+  scale?: number;
   isNative?: boolean;
 }
 
@@ -157,6 +171,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
 
 const byCode = new Map(MASCOT_EMOJIS.flatMap((emoji) => [
   [emoji.token, emoji] as const,
+  ...(emoji.aliases ?? []).map((alias) => [alias, emoji] as const),
   ...(emoji.unicode ? [[emoji.unicode, emoji] as const, [emoji.unicode.replace(/\uFE0F/g, ""), emoji] as const] : []),
 ]));
 

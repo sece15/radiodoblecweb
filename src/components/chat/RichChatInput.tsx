@@ -13,7 +13,7 @@ import { getEmojiByTokenOrId } from "@/lib/mascotEmojis";
 import { CHAT_COMMAND_BACKGROUND, CHAT_COMMAND_COLOR, getGreetingCommand } from "@/lib/chatCommands";
 
 export interface RichChatInputRef {
-  insertEmoji: (emoji: string | { token: string; src?: string; label?: string; id?: string }) => void;
+  insertEmoji: (emoji: string | { token: string; src?: string; label?: string; id?: string; scale?: number }) => void;
   clear: () => void;
   focus: () => void;
   getText: () => string;
@@ -29,8 +29,9 @@ interface RichChatInputProps {
   showCounter?: boolean;
 }
 
-function createEmojiImg(def: { token: string; src: string; label?: string; id?: string }): HTMLImageElement {
+function createEmojiImg(def: { token: string; src: string; label?: string; id?: string; scale?: number }): HTMLImageElement {
   const img = document.createElement("img");
+  const size = Math.round(20 * (def.scale ?? 1));
   img.src = def.src;
   img.alt = def.token;
   img.title = def.label || def.token;
@@ -40,8 +41,8 @@ function createEmojiImg(def: { token: string; src: string; label?: string; id?: 
   img.className = "chat-inline-emoji";
   img.style.display = "inline-block";
   img.style.verticalAlign = "middle";
-  img.style.width = "20px";
-  img.style.height = "20px";
+  img.style.width = `${size}px`;
+  img.style.height = `${size}px`;
   img.style.imageRendering = "auto";
   img.style.margin = "0 2px";
   img.style.userSelect = "all";
@@ -135,7 +136,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [onSend, syncState]);
 
     const insertEmoji = useCallback(
-      (emojiInput: string | { token: string; src?: string; label?: string; id?: string }) => {
+      (emojiInput: string | { token: string; src?: string; label?: string; id?: string; scale?: number }) => {
         const container = editorRef.current;
         if (!container) return;
 
@@ -148,6 +149,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
                 src: emojiInput.src,
                 label: emojiInput.label || "",
                 id: emojiInput.id || "",
+                scale: emojiInput.scale ?? found?.scale,
               }
             : found
             ? {
@@ -155,6 +157,7 @@ export const RichChatInput = forwardRef<RichChatInputRef, RichChatInputProps>(
                 src: found.src,
                 label: found.label,
                 id: found.id,
+                scale: found.scale,
               }
             : null;
 

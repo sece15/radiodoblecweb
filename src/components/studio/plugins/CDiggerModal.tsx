@@ -1,24 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { useModalIsolation } from "@/hooks/useModalIsolation";
-import {
-  X,
-  Scissors,
-  ExternalLink,
-  Dices,
-  Check,
-  Heart,
-  Bookmark,
-  ArrowLeft,
-  ArrowRight,
-  Loader2,
-  History,
-  Trash2,
-  Sparkles,
-  Music2,
-} from "lucide-react";
 import type {
   DiggerTrack,
   LoadedSampleData,
@@ -27,158 +10,26 @@ import type {
   YTPlayer,
   PlayedHistoryItem,
 } from "@/types/studio";
+import { shuffleCratePool, loadYouTubeIframeAPI } from "@/lib/studio/crateEngine";
 import {
-  EXPANDED_CRATE_DATABASE,
-  shuffleCratePool,
-  buildSampletteYouTubeWatchUrl,
-  loadYouTubeIframeAPI,
-} from "@/lib/studio/crateEngine";
+  STORAGE_DIG_HISTORY,
+  STORAGE_HEARD_IDS,
+  STORAGE_UNPLAYED_POOL,
+  STORAGE_FAVORITES,
+  STORAGE_BLOCKED_VIDEOS,
+  CRATE_DATABASE,
+  getInitialHeardIds,
+  getInitialTracksPool,
+  getInitialPlayedHistory,
+  getInitialBlockedIds,
+} from "@/lib/studio/diggerStorage";
 import { useAudio } from "@/hooks/useAudio";
-
-const STORAGE_DIG_HISTORY = "c_digger_played_history_v3";
-const STORAGE_HEARD_IDS = "c_digger_heard_ids_v1";
-const STORAGE_UNPLAYED_POOL = "c_digger_unplayed_pool_v1";
-const STORAGE_FAVORITES = "c_digger_favorites_v2";
-const STORAGE_BLOCKED_VIDEOS = "c_digger_blocked_videos_v2";
-
-function getInitialHeardIds(history: PlayedHistoryItem[]): string[] {
-  const seen = new Set<string>();
-  for (const h of history) {
-    if (h.id) seen.add(h.id);
-    if (h.youtubeId) seen.add(h.youtubeId);
-  }
-  if (typeof window !== "undefined") {
-    try {
-      const saved = localStorage.getItem(STORAGE_HEARD_IDS);
-      if (saved) {
-        const arr = JSON.parse(saved);
-        if (Array.isArray(arr)) {
-          for (const id of arr) {
-            if (typeof id === "string" && id) seen.add(id);
-          }
-        }
-      }
-    } catch {}
-  }
-  return Array.from(seen).slice(-5000);
-}
-
-function getInitialTracksPool(heardSet: Set<string>, blockedSet: Set<string>): DiggerTrack[] {
-  const combined: DiggerTrack[] = [];
-  const seenYt = new Set<string>();
-
-  if (typeof window !== "undefined") {
-    try {
-      const savedPool = localStorage.getItem(STORAGE_UNPLAYED_POOL);
-      if (savedPool) {
-        const parsed = JSON.parse(savedPool);
-        if (Array.isArray(parsed)) {
-          for (const t of parsed) {
-            if (
-              t &&
-              typeof t.youtubeId === "string" &&
-              !seenYt.has(t.youtubeId) &&
-              !heardSet.has(t.youtubeId) &&
-              !heardSet.has(t.id) &&
-              !blockedSet.has(t.youtubeId)
-            ) {
-              seenYt.add(t.youtubeId);
-              combined.push(t as DiggerTrack);
-            }
-          }
-        }
-      }
-    } catch {}
-  }
-
-  for (const t of CRATE_DATABASE) {
-    if (!seenYt.has(t.youtubeId) && !blockedSet.has(t.youtubeId)) {
-      seenYt.add(t.youtubeId);
-      combined.push(t);
-    }
-  }
-
-  // Priorizar pistas inéditas al inicio (barajadas) y dejar las ya escuchadas al final
-  const unplayed = shuffleCratePool(
-    combined.filter((t) => !heardSet.has(t.id) && !heardSet.has(t.youtubeId))
-  );
-  const played = shuffleCratePool(
-    combined.filter((t) => heardSet.has(t.id) || heardSet.has(t.youtubeId))
-  );
-  return [...unplayed, ...played];
-}
-
-function formatRelativeTime(timestamp: number): string {
-  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
-  if (diffSec < 60) return "Hace un momento";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `Hace ${diffMin}m`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `Hace ${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `Hace ${diffDays}d`;
-}
-
-function getInitialPlayedHistory(): PlayedHistoryItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const savedV3 = localStorage.getItem("c_digger_played_history_v3");
-    if (savedV3) {
-      const parsed = JSON.parse(savedV3);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-    const savedV2 = localStorage.getItem("c_digger_played_history_v2");
-    if (savedV2) {
-      const parsed = JSON.parse(savedV2);
-      if (Array.isArray(parsed)) {
-        const migrated: PlayedHistoryItem[] = [];
-        const seen = new Set<string>();
-        for (const item of parsed) {
-          if (typeof item === "string" && !seen.has(item)) {
-            seen.add(item);
-            const found = EXPANDED_CRATE_DATABASE.find((t) => t.id === item || t.youtubeId === item);
-            migrated.push({
-              id: item,
-              youtubeId: found ? found.youtubeId : item,
-              title: found ? found.title : "Vinilo escuchado",
-              artist: found ? found.artist : "Artista",
-              genre: found ? found.genre : "Vinilo",
-              country: found ? found.country : "Mundial",
-              decade: found?.decade,
-              bpm: found?.bpm,
-              key: found?.key,
-              playedAt: Date.now() - 3600000,
-            });
-          } else if (typeof item === "object" && item && item.id) {
-            migrated.push(item as PlayedHistoryItem);
-          }
-        }
-        return migrated.slice(0, 500);
-      }
-    }
-  } catch {}
-  return [];
-}
-
-// Lista inicial de IDs restringidos por sellos discográficos (LatinAutor, UMPG, Sony, Warner)
-const DEFAULT_KNOWN_BLOCKED_IDS = ["rdGMhD8Smbg", "CuHNqaN5CmU", "rhnx7ciyOBg"];
-
-function getInitialBlockedIds(): Set<string> {
-  const defaults = new Set<string>(DEFAULT_KNOWN_BLOCKED_IDS);
-  if (typeof window === "undefined") return defaults;
-  try {
-    const saved = localStorage.getItem(STORAGE_BLOCKED_VIDEOS);
-    if (saved) {
-      const arr = JSON.parse(saved);
-      if (Array.isArray(arr)) {
-        arr.forEach((id) => defaults.add(id));
-      }
-    }
-  } catch {}
-  return defaults;
-}
+import { DiggerHeaderBar } from "./digger/DiggerHeaderBar";
+import { DiggerFiltersBar } from "./digger/DiggerFiltersBar";
+import { DiggerPlayerStage } from "./digger/DiggerPlayerStage";
+import { DiggerTrackDossier } from "./digger/DiggerTrackDossier";
+import { DiggerCrateDrawer } from "./digger/DiggerCrateDrawer";
+import { DiggerFooterBar } from "./digger/DiggerFooterBar";
 
 interface CDiggerModalProps {
   isOpen?: boolean;
@@ -187,55 +38,6 @@ interface CDiggerModalProps {
   isStandalone?: boolean;
   onOpenSampler?: () => void;
 }
-
-// Curated Crate-Digging vinyl records collection (powered by Crate Engine)
-const CRATE_DATABASE: DiggerTrack[] = EXPANDED_CRATE_DATABASE;
-
-const GENRES = [
-  "Todos",
-  "Jazz",
-  "Funk",
-  "Electronic",
-  "Pop",
-  "Metal",
-  "Hip-Hop",
-  "Chicha & Cumbia",
-  "City Pop",
-  "Soul & R&B",
-  "Rock & Psych",
-  "Bossa Nova & MPB",
-  "Afrobeat & Highlife",
-  "Reggae & Dub",
-  "Salsa & Boogaloo",
-  "Disco & Post-Disco",
-  "Ambient & New Age",
-  "Blues & Gospel",
-  "Punk & Post-Punk",
-  "Latin Jazz & Mambo",
-  "Lo-Fi & Chillhop",
-  "Classical & Baroque",
-];
-
-const DECADES = ["Todas", "60s", "70s", "80s", "90s", "2000s"];
-const COUNTRIES = [
-  "Todos",
-  "Perú 🇵🇪",
-  "Japón 🇯🇵",
-  "USA 🇺🇸",
-  "UK 🇬🇧",
-  "Alemania 🇩🇪",
-  "Brasil 🇧🇷",
-  "Ghana 🇬🇭",
-  "Francia 🇫🇷",
-  "Jamaica 🇯🇲",
-  "Colombia 🇨🇴",
-];
-const OBSCURITIES = [
-  { id: "all", label: "Todas las visitas" },
-  { id: "ultra_rare", label: "Ultra Raro (< 10K vistas)" },
-  { id: "rare", label: "Joya Oculta (10K - 50K)" },
-  { id: "known", label: "Clásicos Populares (> 50K)" },
-];
 
 export const CDiggerModal = ({
   isOpen = true,
@@ -297,7 +99,7 @@ export const CDiggerModal = ({
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
       }
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -322,7 +124,7 @@ export const CDiggerModal = ({
       if (typeof window !== "undefined" && playedHistory.length > 0) {
         localStorage.setItem(STORAGE_DIG_HISTORY, JSON.stringify(playedHistory.slice(0, 500)));
       }
-    } catch {}
+    } catch { }
   }, [playedHistory]);
 
   // 1b. Sincronizar registro maestro de IDs escuchados (hasta 5,000 IDs para evitar repeticiones entre días)
@@ -331,7 +133,7 @@ export const CDiggerModal = ({
       if (typeof window !== "undefined" && heardIds.length > 0) {
         localStorage.setItem(STORAGE_HEARD_IDS, JSON.stringify(heardIds.slice(-5000)));
       }
-    } catch {}
+    } catch { }
   }, [heardIds]);
 
   // 1c. Persistir descubrimientos inéditos pendientes de escuchar para arrancar al instante en la próxima sesión
@@ -349,7 +151,7 @@ export const CDiggerModal = ({
           .slice(0, 80);
         localStorage.setItem(STORAGE_UNPLAYED_POOL, JSON.stringify(unplayedExtras));
       }
-    } catch {}
+    } catch { }
   }, [tracksPool, playedIdsSet, blockedVideoIds]);
 
   // 2. Sincronizar favoritos con localStorage
@@ -358,7 +160,7 @@ export const CDiggerModal = ({
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_FAVORITES, JSON.stringify(favorites));
       }
-    } catch {}
+    } catch { }
   }, [favorites]);
 
   // Extraction state (Prepares for Steps 2 & 3)
@@ -434,12 +236,12 @@ export const CDiggerModal = ({
                 data.provider === "youtube_playlist"
                   ? `Playlist de YouTube: ${data.tracks.length} vinilos cargados para reproducción aleatoria`
                   : data.provider === "direct_youtube_url"
-                  ? "Enlace de YouTube importado"
-                  : data.provider === "youtube_oauth_user_session"
-                  ? `Google OAuth: ${data.tracks.length} vinilos exclusivos cargados`
-                  : data.provider === "youtube_data_api_v3"
-                  ? `YouTube API: ${data.tracks.length} vinilos encontrados`
-                  : `YouTube Live: ${data.tracks.length} vinilos cargados`;
+                    ? "Enlace de YouTube importado"
+                    : data.provider === "youtube_oauth_user_session"
+                      ? `Google OAuth: ${data.tracks.length} vinilos exclusivos cargados`
+                      : data.provider === "youtube_data_api_v3"
+                        ? `YouTube API: ${data.tracks.length} vinilos encontrados`
+                        : `YouTube Live: ${data.tracks.length} vinilos cargados`;
 
               setProviderNotice(label);
             }
@@ -565,7 +367,7 @@ export const CDiggerModal = ({
         const updated = [newItem, ...filtered].slice(0, 500);
         try {
           localStorage.setItem(STORAGE_DIG_HISTORY, JSON.stringify(updated));
-        } catch {}
+        } catch { }
         return updated;
       });
     }, 0);
@@ -593,12 +395,15 @@ export const CDiggerModal = ({
       (t) => !playedIdsSet.has(t.id) && !playedIdsSet.has(t.youtubeId) && !blockedVideoIds.has(t.youtubeId)
     ).length;
 
-    if (unplayedCount <= 4) {
-      const currentAlreadyHeard =
-        playedIdsSet.has(currentTrack.id) || playedIdsSet.has(currentTrack.youtubeId);
+    if (unplayedCount > 4) return;
 
+    const currentAlreadyHeard =
+      playedIdsSet.has(currentTrack.id) || playedIdsSet.has(currentTrack.youtubeId);
+
+    let cancelled = false;
+    const timerId = window.setTimeout(() => {
       handleSearchYouTube("", true, true).then((freshTracks) => {
-        if (!Array.isArray(freshTracks) || freshTracks.length === 0) return;
+        if (cancelled || !Array.isArray(freshTracks) || freshTracks.length === 0) return;
         const brandNew = freshTracks.find(
           (t) =>
             !playedIdsSet.has(t.id) &&
@@ -609,7 +414,12 @@ export const CDiggerModal = ({
           selectTrack(brandNew);
         }
       });
-    }
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+    };
   }, [
     isOpen,
     isStandalone,
@@ -864,7 +674,7 @@ export const CDiggerModal = ({
         localStorage.removeItem(STORAGE_HEARD_IDS);
         localStorage.removeItem(STORAGE_UNPLAYED_POOL);
         localStorage.removeItem("c_digger_played_history_v2");
-      } catch {}
+      } catch { }
       setProviderNotice("Historial de vinilos limpiado");
       setTimeout(() => setProviderNotice(null), 2500);
     }
@@ -913,7 +723,7 @@ export const CDiggerModal = ({
           next.add(track.id);
           try {
             localStorage.setItem(STORAGE_BLOCKED_VIDEOS, JSON.stringify(Array.from(next)));
-          } catch {}
+          } catch { }
           return next;
         });
       }
@@ -962,7 +772,7 @@ export const CDiggerModal = ({
             setIsPlayerLoading(false);
             return;
           }
-        } catch {}
+        } catch { }
 
         console.warn(`[C-DIGGER 🛡️ Watchdog] Timeout en ${ytId}: la pista no inició reproducción tras 7.5s. Descartando...`);
         handleBanishTrackRef.current(
@@ -1001,7 +811,7 @@ export const CDiggerModal = ({
             isEmbedBlocked
           );
         }
-      } catch {}
+      } catch { }
     };
     window.addEventListener("message", handleWindowMessage);
     return () => window.removeEventListener("message", handleWindowMessage);
@@ -1048,7 +858,7 @@ export const CDiggerModal = ({
                 // El escudo permanece activo hasta que el video alcance el estado 1 (PLAYING).
                 try {
                   event.target.playVideo();
-                } catch {}
+                } catch { }
                 startPlaybackWatchdog(currentTrackRef.current.youtubeId);
               },
               onStateChange: (event) => {
@@ -1089,7 +899,7 @@ export const CDiggerModal = ({
                       console.warn("[C-DIGGER] Evento ENDED prematuro o residual ignorado.");
                       return;
                     }
-                  } catch {}
+                  } catch { }
 
                   setIsPlayerLoading(true);
                   setTimeout(() => {
@@ -1133,7 +943,7 @@ export const CDiggerModal = ({
       if (ytPlayerRef.current && typeof ytPlayerRef.current.destroy === "function") {
         try {
           ytPlayerRef.current.destroy();
-        } catch {}
+        } catch { }
         ytPlayerRef.current = null;
         playerReadyRef.current = false;
       }
@@ -1159,7 +969,7 @@ export const CDiggerModal = ({
         setTimeout(() => {
           try {
             ytPlayerRef.current?.playVideo();
-          } catch {}
+          } catch { }
         }, 120);
       } catch (e) {
         console.warn("[C-DIGGER] Error en loadVideoById:", e);
@@ -1173,7 +983,7 @@ export const CDiggerModal = ({
       try {
         ytPlayerRef.current.seekTo(activePadTime, true);
         ytPlayerRef.current.playVideo();
-      } catch {}
+      } catch { }
     }
   }, [activePadTime]);
 
@@ -1205,7 +1015,7 @@ export const CDiggerModal = ({
             } else {
               ytPlayerRef.current.playVideo();
             }
-          } catch {}
+          } catch { }
         }
       }
     };
@@ -1349,197 +1159,22 @@ export const CDiggerModal = ({
       }
     >
       {/* 0. OUTSIDE TOP BAR: Volver a la radio, Crate, y Ver DAW (Solo fuera del contorno) */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          maxWidth: "1200px",
-          marginBottom: "10px",
-          flexShrink: 0,
-          gap: "12px",
+      <DiggerHeaderBar
+        isStandalone={isStandalone}
+        isAuthenticated={isAuthenticated}
+        userName={userProfile.name}
+        userAvatarUrl={userProfile.avatarUrl}
+        showCrateDrawer={showCrateDrawer}
+        playedHistoryCount={playedHistory.length}
+        onSignIn={signInWithGoogle}
+        onSignOut={signOut}
+        onToggleHistoryDrawer={() => {
+          setDrawerTab("history");
+          setShowCrateDrawer((prev) => !prev);
         }}
-      >
-        {isStandalone ? (
-          <Link
-            href="/"
-            className="neo-button fun-hover-wobble"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 12px",
-              backgroundColor: "#161922",
-              color: "#CCFF00",
-              border: "2px solid #CCFF00",
-              boxShadow: "2px 2px 0px #CCFF00",
-              borderRadius: "4px",
-              fontSize: "0.7rem",
-              fontWeight: 900,
-              textDecoration: "none",
-              cursor: "pointer",
-            }}
-            title="Volver a la señal en vivo de Radio Doble C"
-          >
-            <ArrowLeft size={13} />
-            <span>VOLVER A LA RADIO</span>
-          </Link>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "0.74rem", fontWeight: 900, color: "#CCFF00", letterSpacing: "1px" }}>
-              C-DIGGER
-            </span>
-          </div>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "0.72rem", fontWeight: 900, color: "#94A3B8", letterSpacing: "0.5px" }}>
-            RADIO DOBLE C · <span style={{ color: "#CCFF00" }}>STUDIO</span>
-          </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {/* Supabase Google OAuth Cloud Badge / Connect Button */}
-          {isAuthenticated ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "3px 8px",
-                backgroundColor: "#161B26",
-                border: "1px solid #232838",
-                borderRadius: "4px",
-              }}
-              title={`Conectado como ${userProfile.name}. Cuota personal activa.`}
-            >
-              <img
-                src={userProfile.avatarUrl}
-                alt={userProfile.name}
-                style={{
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  border: "1px solid #CCFF00",
-                }}
-              />
-              <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "#CCFF00", letterSpacing: "0.5px" }}>
-                {userProfile.name.split(" ")[0]} · VINCULADO
-              </span>
-              <button
-                type="button"
-                onClick={signOut}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#94A3B8",
-                  fontSize: "0.6rem",
-                  cursor: "pointer",
-                  padding: "0 2px",
-                }}
-                title="Desconectar cuenta"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "5px 10px",
-                backgroundColor: "#161B26",
-                color: "#CCFF00",
-                border: "1px solid #CCFF00",
-                borderRadius: "4px",
-                fontSize: "0.68rem",
-                fontWeight: 900,
-                cursor: "pointer",
-              }}
-              title="Vincular tu cuenta de Google / Supabase"
-            >
-              <span>⚡</span>
-              <span>VINCULAR GOOGLE</span>
-            </button>
-          )}
-
-          {/* Drawer Toggle: Historial y Guardados */}
-          <button
-            onClick={() => {
-              setDrawerTab("history");
-              setShowCrateDrawer((prev) => !prev);
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 12px",
-              backgroundColor: showCrateDrawer ? "#CCFF00" : "#161B26",
-              color: showCrateDrawer ? "#000000" : "#FFFFFF",
-              border: "1px solid #232838",
-              borderRadius: "4px",
-              fontSize: "0.7rem",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-            title="Abrir historial de vinilos escuchados y pistas guardadas"
-          >
-            <History size={13} />
-            <span>HISTORIAL ({playedHistory.length})</span>
-          </button>
-
-          {onOpenSampler && (
-            <button
-              onClick={onOpenSampler}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "5px 12px",
-                backgroundColor: "#101D24",
-                color: "#00E5FF",
-                border: "1px solid #00E5FF",
-                borderRadius: "4px",
-                fontSize: "0.7rem",
-                fontWeight: 900,
-                cursor: "pointer",
-              }}
-              title="Ir al laboratorio de sampleo y stems C-Sampler"
-            >
-              <span>🎚️</span>
-              <span>C-SAMPLER</span>
-            </button>
-          )}
-
-          {!isStandalone && onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "5px 10px",
-                backgroundColor: "#161B26",
-                color: "#FFFFFF",
-                border: "1px solid #232838",
-                borderRadius: "4px",
-                fontSize: "0.7rem",
-                fontWeight: 900,
-                cursor: "pointer",
-              }}
-              title="Cerrar C-Digger"
-            >
-              <X size={14} />
-              <span>SALIR</span>
-            </button>
-          )}
-        </div>
-      </div>
+        onOpenSampler={onOpenSampler}
+        onClose={onClose}
+      />
 
       {/* THE CONTOURED MODAL CARD (Compact & Centered) */}
       <div
@@ -1634,1009 +1269,89 @@ export const CDiggerModal = ({
 
             {/* 3-Column Studio Grid: 1. Filtros | 2. Reproductor Centrado | 3. Dossier & Mini-Pads Simétricos */}
             <div className="digger-stage-grid">
-              {/* 1. Left Column: Filtros (Género, País, Época, Visitas) */}
-              <div
-                style={{
-                  backgroundColor: "#11141C",
-                  border: "2px solid #1E2332",
-                  borderRadius: "6px",
-                  padding: "12px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "9px",
+              <DiggerFiltersBar
+                selectedGenre={selectedGenre}
+                selectedCountry={selectedCountry}
+                selectedDecade={selectedDecade}
+                selectedObscurity={selectedObscurity}
+                searchQuery={searchQuery}
+                onChangeGenre={(v) => {
+                  setSelectedGenre(v);
+                  setCurrentTrackIndex(0);
                 }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderBottom: "1px solid #1E2332",
-                    paddingBottom: "6px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        backgroundColor: "#CCFF00",
-                        display: "inline-block",
-                      }}
-                    />
-                    <span style={{ fontSize: "0.68rem", fontWeight: 900, color: "#CCFF00", letterSpacing: "0.5px" }}>
-                      FILTROS
-                    </span>
-                  </div>
-                </div>
-
-                {/* Género */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <label style={{ fontSize: "0.62rem", fontWeight: 800, color: "#94A3B8" }}>GÉNERO</label>
-                  <select
-                    value={selectedGenre}
-                    onChange={(e) => {
-                      setSelectedGenre(e.target.value);
-                      setCurrentTrackIndex(0);
-                    }}
-                    style={{
-                      backgroundColor: "#161B26",
-                      color: "#FFFFFF",
-                      border: "1px solid #232838",
-                      borderRadius: "3px",
-                      padding: "5px 6px",
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      outline: "none",
-                      width: "100%",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {GENRES.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* País */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <label style={{ fontSize: "0.62rem", fontWeight: 800, color: "#94A3B8" }}>PAÍS</label>
-                  <select
-                    value={selectedCountry}
-                    onChange={(e) => {
-                      setSelectedCountry(e.target.value);
-                      setCurrentTrackIndex(0);
-                    }}
-                    style={{
-                      backgroundColor: "#161B26",
-                      color: "#FFFFFF",
-                      border: "1px solid #232838",
-                      borderRadius: "3px",
-                      padding: "5px 6px",
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      outline: "none",
-                      width: "100%",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Época */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <label style={{ fontSize: "0.62rem", fontWeight: 800, color: "#94A3B8" }}>ÉPOCA</label>
-                  <select
-                    value={selectedDecade}
-                    onChange={(e) => {
-                      setSelectedDecade(e.target.value);
-                      setCurrentTrackIndex(0);
-                    }}
-                    style={{
-                      backgroundColor: "#161B26",
-                      color: "#FFFFFF",
-                      border: "1px solid #232838",
-                      borderRadius: "3px",
-                      padding: "5px 6px",
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      outline: "none",
-                      width: "100%",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {DECADES.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Visitas / Rareza */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <label style={{ fontSize: "0.62rem", fontWeight: 800, color: "#94A3B8" }}>VISITAS</label>
-                  <select
-                    value={selectedObscurity}
-                    onChange={(e) => {
-                      setSelectedObscurity(e.target.value);
-                      setCurrentTrackIndex(0);
-                    }}
-                    style={{
-                      backgroundColor: "#161B26",
-                      color: "#FFFFFF",
-                      border: "1px solid #232838",
-                      borderRadius: "3px",
-                      padding: "5px 6px",
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      outline: "none",
-                      width: "100%",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {OBSCURITIES.map((obs) => (
-                      <option key={obs.id} value={obs.id}>
-                        {obs.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Limpiar filtros */}
-                {(selectedGenre !== "Todos" ||
-                  selectedDecade !== "Todas" ||
-                  selectedCountry !== "Todos" ||
-                  selectedObscurity !== "all" ||
-                  searchQuery !== "") && (
-                  <button
-                    onClick={handleClearFilters}
-                    style={{
-                      backgroundColor: "transparent",
-                      color: "#FFFFFF",
-                      border: "1px dashed #CCFF00",
-                      borderRadius: "3px",
-                      padding: "4px 8px",
-                      fontSize: "0.65rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      marginTop: "auto",
-                    }}
-                  >
-                    ✕ Limpiar filtros
-                  </button>
-                )}
-              </div>
-
-              {/* 2. Center Column: YouTube Embed Player (Perfectamente Centrado) */}
-              <div
-                style={{
-                  backgroundColor: "#11141C",
-                  border: "2px solid #1E2332",
-                  borderRadius: "6px",
-                  padding: "12px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                  alignItems: "stretch",
-                  justifyContent: "space-between",
+                onChangeCountry={(v) => {
+                  setSelectedCountry(v);
+                  setCurrentTrackIndex(0);
                 }}
-              >
-                {/* Header de Reproducción y Estado */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span
-                        style={{
-                          width: "7px",
-                          height: "7px",
-                          borderRadius: "50%",
-                          backgroundColor: "#CCFF00",
-                          display: "inline-block",
-                        }}
-                      />
-                      <span style={{ fontSize: "0.70rem", fontWeight: 900, color: "#CCFF00", letterSpacing: "0.5px" }}>
-                        GÉNERO: {currentTrack.genre.toUpperCase()}
-                      </span>
-                    </div>
-
-                    {/* Insignia visual: Escuchado vs Nuevo */}
-                    {isCurrentInHistory ? (
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          padding: "2px 7px",
-                          backgroundColor: "#161E2E",
-                          border: "1px solid #3B82F6",
-                          borderRadius: "3px",
-                          color: "#60A5FA",
-                          fontSize: "0.62rem",
-                          fontWeight: 800,
-                        }}
-                        title="Este vinilo ya fue escuchado y registrado en tu historial"
-                      >
-                        <Check size={10} />
-                        <span>✓ EN HISTORIAL</span>
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          padding: "2px 7px",
-                          backgroundColor: "#1C2611",
-                          border: "1px solid #CCFF00",
-                          borderRadius: "3px",
-                          color: "#CCFF00",
-                          fontSize: "0.62rem",
-                          fontWeight: 800,
-                        }}
-                        title="Primer contacto con este vinilo: totalmente inédito"
-                      >
-                        <Sparkles size={10} />
-                        <span>NUEVO DESCUBRIMIENTO</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <a
-                      href={buildSampletteYouTubeWatchUrl(currentTrack.youtubeId, activePadTime || 0)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontSize: "0.68rem",
-                        color: "#94A3B8",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        textDecoration: "none",
-                      }}
-                      title="Abrir video original en YouTube"
-                    >
-                      <span>Abrir en YouTube</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  </div>
-                </div>
-
-                {/* Direct Video Player Screen (Centrado Prominente) */}
-                <div
-                  style={{
-                    position: "relative",
-                    width: "100%",
-                    height: "260px",
-                    backgroundColor: "#000000",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    border: "1.5px solid #1E2332",
-                  }}
-                >
-                  {/* Contenedor objetivo permanente para YouTube IFrame API */}
-                  <div
-                    id="cdigger-yt-player-target"
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                    }}
-                  />
-
-                  {/* Samplette Loader Overlay: Spinner animado y escudo protector contra pantallas de error */}
-                  {(isPlayerLoading || skipNotice) && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "#0A0C12",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "10px",
-                        zIndex: 35,
-                        textAlign: "center",
-                        padding: "16px",
-                      }}
-                    >
-                      {/* Disco de vinilo giratorio estilo Samplette */}
-                      <div
-                        className="animate-spin"
-                        style={{
-                          width: "44px",
-                          height: "44px",
-                          borderRadius: "50%",
-                          border: "3px solid #1E2332",
-                          borderTopColor: "#CCFF00",
-                          borderRightColor: "#FFFFFF",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "12px",
-                            height: "12px",
-                            borderRadius: "50%",
-                            backgroundColor: "#CCFF00",
-                          }}
-                        />
-                      </div>
-
-                      {skipNotice ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                          <span
-                            style={{
-                              color: "#CCFF00",
-                              fontWeight: 900,
-                              fontSize: "0.80rem",
-                              letterSpacing: "0.5px",
-                            }}
-                          >
-                            ESCUDO ANTI-BLOQUEO
-                          </span>
-                          <span
-                            style={{
-                              color: "#94A3B8",
-                              fontSize: "0.72rem",
-                              maxWidth: "320px",
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {skipNotice}
-                          </span>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                          <span
-                            style={{
-                              color: "#CCFF00",
-                              fontSize: "0.76rem",
-                              fontWeight: 800,
-                              letterSpacing: "1px",
-                            }}
-                          >
-                            SINTONIZANDO VINILO...
-                          </span>
-                          <span
-                            style={{
-                              color: "#94A3B8",
-                              fontSize: "0.68rem",
-                              maxWidth: "280px",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {currentTrack.title} — {currentTrack.artist}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Control Inferior: Botón Hero C-RANDOM-SAMPLE e Indicador de Rocola */}
-                <div
-                  style={{
-                    padding: "8px 10px",
-                    backgroundColor: "#161B26",
-                    border: "1px solid #1E2332",
-                    borderRadius: "5px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  {/* Single Hero C-RANDOM-SAMPLE Button */}
-                  <button
-                    onClick={handleRandomDig}
-                    disabled={isDiggingRandom}
-                    className="neo-button fun-hover-wobble"
-                    style={{
-                      width: "100%",
-                      padding: "10px 16px",
-                      backgroundColor: isDiggingRandom ? "#8CAE00" : "#CCFF00",
-                      color: "#000000",
-                      border: "2px solid #000000",
-                      boxShadow: "2.5px 2.5px 0px #FFFFFF",
-                      borderRadius: "4px",
-                      fontSize: "0.82rem",
-                      fontWeight: 900,
-                      cursor: isDiggingRandom ? "wait" : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      letterSpacing: "0.5px",
-                      opacity: isDiggingRandom ? 0.85 : 1,
-                    }}
-                    title="Descubrir un nuevo sample de vinilo al azar desde YouTube excluyendo los ya escuchados"
-                  >
-                    {isDiggingRandom ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" style={{ color: "#000000" }} />
-                        <span>BUSCANDO NUEVO VINILO EN YOUTUBE...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Dices size={16} style={{ color: "#000000" }} />
-                        <span>C-RANDOM-SAMPLE 🎲</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* 3. Right Column: Track Metadata Dossier + Mini Pads Simétricos */}
-              <div
-                style={{
-                  backgroundColor: "#11141C",
-                  border: "2px solid #1E2332",
-                  borderRadius: "6px",
-                  padding: "12px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "9px",
+                onChangeDecade={(v) => {
+                  setSelectedDecade(v);
+                  setCurrentTrackIndex(0);
                 }}
-              >
-                {/* Track Title, Artist & Favorite Button */}
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
-                  <div style={{ overflow: "hidden" }}>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: "0.92rem",
-                        fontWeight: 900,
-                        color: "#FFFFFF",
-                        letterSpacing: "0.5px",
-                        lineHeight: 1.25,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {currentTrack.title}
-                    </h2>
-                    {currentTrack.artist &&
-                      !currentTrack.artist.toLowerCase().includes("desconocid") &&
-                      !currentTrack.artist.toLowerCase().includes("canal de") && (
-                        <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "#CCFF00", marginTop: "2px" }}>
-                          👤 {currentTrack.artist}
-                        </div>
-                      )}
-                  </div>
+                onChangeObscurity={(v) => {
+                  setSelectedObscurity(v);
+                  setCurrentTrackIndex(0);
+                }}
+                onClearFilters={handleClearFilters}
+              />
 
-                  {/* Favorite Button */}
-                  <button
-                    onClick={() => handleToggleFavorite(currentTrack.id)}
-                    style={{
-                      padding: "6px 8px",
-                      backgroundColor: isCurrentFavorite ? "#CCFF00" : "#161B26",
-                      color: isCurrentFavorite ? "#000000" : "#FFFFFF",
-                      border: "1px solid #232838",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    title={isCurrentFavorite ? "Guardado en favoritos" : "Guardar en favoritos"}
-                  >
-                    <Heart size={14} fill={isCurrentFavorite ? "#000000" : "none"} />
-                  </button>
-                </div>
+              <DiggerPlayerStage
+                currentTrack={currentTrack}
+                isCurrentInHistory={isCurrentInHistory}
+                activePadTime={activePadTime}
+                isPlayerLoading={isPlayerLoading}
+                skipNotice={skipNotice}
+                isDiggingRandom={isDiggingRandom}
+                onRandomDig={handleRandomDig}
+              />
 
-                {/* Minimalist Key Metadata Badges */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                  <span
-                    style={{
-                      padding: "3px 6px",
-                      backgroundColor: "#161B26",
-                      border: "1px solid #232838",
-                      color: "#FFFFFF",
-                      borderRadius: "3px",
-                      fontSize: "0.64rem",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {currentTrack.year || currentTrack.decade}
-                  </span>
-                  <span
-                    style={{
-                      padding: "3px 6px",
-                      backgroundColor: "#161B26",
-                      border: "1px solid #232838",
-                      color: "#CCFF00",
-                      borderRadius: "3px",
-                      fontSize: "0.64rem",
-                      fontWeight: 800,
-                    }}
-                  >
-                    ⚡ {currentTrack.bpm} BPM
-                  </span>
-                  <span
-                    style={{
-                      padding: "3px 6px",
-                      backgroundColor: "#161B26",
-                      border: "1px solid #232838",
-                      color: "#FFFFFF",
-                      borderRadius: "3px",
-                      fontSize: "0.64rem",
-                      fontWeight: 800,
-                    }}
-                  >
-                    🎵 {currentTrack.key}
-                  </span>
-                  {currentTrack.country &&
-                    !currentTrack.country.toLowerCase().includes("mundial") &&
-                    currentTrack.country !== "Todos" && (
-                      <span
-                        style={{
-                          padding: "3px 6px",
-                          backgroundColor: "#161B26",
-                          border: "1px solid #232838",
-                          color: "#94A3B8",
-                          borderRadius: "3px",
-                          fontSize: "0.64rem",
-                          fontWeight: 800,
-                        }}
-                      >
-                        📍 {currentTrack.country}
-                      </span>
-                    )}
-                </div>
-
-                {/* Minimalist Compact 8 Mini Pads (Grid 2x4) */}
-                <div
-                  style={{
-                    backgroundColor: "#0B0E14",
-                    border: "1px solid #1E2332",
-                    borderRadius: "4px",
-                    padding: "8px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.64rem", fontWeight: 800, color: "#94A3B8" }}>
-                      8 PADS DE CORTE
-                    </span>
-                    <span style={{ fontSize: "0.58rem", color: "#CCFF00", fontWeight: 700 }}>
-                      Preescucha en vivo
-                    </span>
-                  </div>
-
-                  {/* 2-Column Compact 8-Pads Grid (4 filas x 2 columnas) */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "5px",
-                    }}
-                  >
-                    {trackPads.map((pad) => {
-                      const isSelected = activePadId === pad.id;
-                      return (
-                        <button
-                          key={pad.id}
-                          onClick={() => handleJumpToPad(pad)}
-                          style={{
-                            padding: "4px 6px",
-                            backgroundColor: isSelected ? "#CCFF00" : "#161B26",
-                            color: isSelected ? "#000000" : "#FFFFFF",
-                            border: isSelected ? "1px solid #CCFF00" : "1px solid #232838",
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                            gap: "1px",
-                            transition: "all 0.1s ease",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                            <span style={{ fontSize: "0.60rem", fontWeight: 900 }}>
-                              PAD {pad.id}
-                            </span>
-                            <span style={{ fontSize: "0.56rem", fontFamily: "monospace", opacity: 0.85 }}>
-                              {Math.floor(pad.timeSec / 60)}:{(pad.timeSec % 60).toString().padStart(2, "0")}
-                            </span>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: "0.58rem",
-                              fontWeight: 700,
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              width: "100%",
-                              textAlign: "left",
-                              opacity: isSelected ? 1 : 0.85,
-                            }}
-                          >
-                            {pad.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Description */}
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.70rem",
-                    color: "#94A3B8",
-                    lineHeight: 1.35,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {currentTrack.description}
-                </p>
-              </div>
+              <DiggerTrackDossier
+                currentTrack={currentTrack}
+                isCurrentFavorite={isCurrentFavorite}
+                trackPads={trackPads}
+                activePadId={activePadId}
+                onToggleFavorite={handleToggleFavorite}
+                onJumpToPad={handleJumpToPad}
+              />
             </div>
           </div>
 
-          {/* ======================================================== */}
-          {/* 5. RIGHT DRAWER: HISTORIAL & GUARDADOS                   */}
-          {/* ======================================================== */}
           {showCrateDrawer && (
-            <div
-              style={{
-                width: "300px",
-                backgroundColor: "#0D1017",
-                borderLeft: "2px solid #1E2332",
-                display: "flex",
-                flexDirection: "column",
-                overflowY: "auto",
-                padding: "12px",
-                gap: "10px",
+            <DiggerCrateDrawer
+              drawerTab={drawerTab}
+              playedHistory={playedHistory}
+              favorites={favorites}
+              tracksPool={tracksPool}
+              currentTrack={currentTrack}
+              onChangeTab={setDrawerTab}
+              onClose={() => setShowCrateDrawer(false)}
+              onClearHistory={handleClearHistory}
+              onSelectHistoryTrack={handleSelectHistoryTrack}
+              onSelectFavoriteTrack={(fav) => {
+                const idx = filteredTracks.findIndex((t) => t.id === fav.id);
+                if (idx >= 0) {
+                  selectTrack(fav, filteredTracks);
+                } else {
+                  setSelectedGenre("Todos");
+                  setSelectedCountry("Todos");
+                  setSelectedDecade("Todas");
+                  setSelectedObscurity("all");
+                  setSearchQuery("");
+                  const exists = tracksPool.some((t) => t.id === fav.id);
+                  if (!exists) {
+                    setTracksPool((prev) => [fav, ...prev]);
+                  }
+                  selectTrack(fav);
+                }
               }}
-            >
-              {/* Drawer Top Header: Tabs Selector & Close Button */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
-                <div style={{ display: "flex", gap: "4px", flex: 1 }}>
-                  <button
-                    onClick={() => setDrawerTab("history")}
-                    style={{
-                      flex: 1,
-                      padding: "6px 8px",
-                      backgroundColor: drawerTab === "history" ? "#CCFF00" : "#161B26",
-                      color: drawerTab === "history" ? "#000000" : "#94A3B8",
-                      border: "1px solid #232838",
-                      borderRadius: "4px",
-                      fontSize: "0.68rem",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    <History size={12} />
-                    <span>HISTORIAL ({playedHistory.length})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setDrawerTab("favorites")}
-                    style={{
-                      flex: 1,
-                      padding: "6px 8px",
-                      backgroundColor: drawerTab === "favorites" ? "#CCFF00" : "#161B26",
-                      color: drawerTab === "favorites" ? "#000000" : "#94A3B8",
-                      border: "1px solid #232838",
-                      borderRadius: "4px",
-                      fontSize: "0.68rem",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    <Bookmark size={12} />
-                    <span>GUARDADOS ({favorites.length})</span>
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => setShowCrateDrawer(false)}
-                  style={{
-                    backgroundColor: "transparent",
-                    border: "none",
-                    color: "#94A3B8",
-                    cursor: "pointer",
-                    padding: "4px",
-                  }}
-                  title="Cerrar panel lateral"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-
-              {/* TAB 1: HISTORIAL DE ESCUCHA */}
-              {drawerTab === "history" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#94A3B8" }}>
-                      VINILOS REPRODUCIDOS
-                    </span>
-                    {playedHistory.length > 0 && (
-                      <button
-                        onClick={handleClearHistory}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: "#EF4444",
-                          fontSize: "0.62rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "3px",
-                          padding: "2px 4px",
-                        }}
-                        title="Limpiar registro de historial"
-                      >
-                        <Trash2 size={10} />
-                        <span>Limpiar</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {playedHistory.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "20px 12px",
-                        textAlign: "center",
-                        color: "#94A3B8",
-                        fontSize: "0.72rem",
-                        backgroundColor: "#11141C",
-                        border: "1px dashed #1E2332",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Music2 size={24} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
-                      <p style={{ margin: 0 }}>Aún no has reproducido vinilos en esta sesión.</p>
-                      <p style={{ margin: "4px 0 0 0", fontSize: "0.66rem", color: "#CCFF00" }}>
-                        ¡Presiona C-RANDOM-SAMPLE 🎲 para comenzar!
-                      </p>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {playedHistory.map((item, index) => {
-                        const isCurrent =
-                          currentTrack.id === item.id || currentTrack.youtubeId === item.youtubeId;
-                        return (
-                          <button
-                            key={`${item.youtubeId || item.id}-${item.playedAt || index}`}
-                            onClick={() => handleSelectHistoryTrack(item)}
-                            style={{
-                              padding: "7px 9px",
-                              backgroundColor: isCurrent ? "#161E2E" : "#11141C",
-                              border: isCurrent ? "1.5px solid #CCFF00" : "1px solid #1E2332",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                              textAlign: "left",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "2px",
-                              transition: "all 0.12s ease",
-                            }}
-                            title="Haz clic para volver a escuchar este vinilo"
-                          >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
-                              <span
-                                style={{
-                                  fontSize: "0.72rem",
-                                  fontWeight: 800,
-                                  color: isCurrent ? "#CCFF00" : "#FFFFFF",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  flex: 1,
-                                }}
-                              >
-                                {item.title}
-                              </span>
-                              {isCurrent && (
-                                <span style={{ fontSize: "0.58rem", fontWeight: 900, color: "#000000", backgroundColor: "#CCFF00", padding: "1px 4px", borderRadius: "2px" }}>
-                                  ACTUAL
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
-                              <span style={{ fontSize: "0.64rem", color: "#94A3B8" }}>
-                                👤 {item.artist} {item.country ? `· ${item.country}` : ""}
-                              </span>
-                              <span style={{ fontSize: "0.58rem", color: "#64748B", fontFamily: "monospace" }}>
-                                {formatRelativeTime(item.playedAt)}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 2: FAVORITOS GUARDADOS */}
-              {drawerTab === "favorites" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#94A3B8" }}>
-                    VINILOS GUARDADOS EN TU CRATE
-                  </span>
-                  {favorites.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "20px 12px",
-                        textAlign: "center",
-                        color: "#94A3B8",
-                        fontSize: "0.72rem",
-                        backgroundColor: "#11141C",
-                        border: "1px dashed #1E2332",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Bookmark size={24} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
-                      <p style={{ margin: 0 }}>No tienes vinilos guardados aún.</p>
-                      <p style={{ margin: "4px 0 0 0", fontSize: "0.66rem", color: "#CCFF00" }}>
-                        Guarda tus pistas favoritas con el botón de corazón ❤️
-                      </p>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {tracksPool
-                        .filter((t) => favorites.includes(t.id))
-                        .concat(
-                          CRATE_DATABASE.filter(
-                            (t) => favorites.includes(t.id) && !tracksPool.some((p) => p.id === t.id)
-                          )
-                        )
-                        .map((fav) => {
-                          const isCurrent = fav.id === currentTrack.id;
-                          return (
-                            <button
-                              key={fav.id}
-                              onClick={() => {
-                                const idx = filteredTracks.findIndex((t) => t.id === fav.id);
-                                if (idx >= 0) {
-                                  selectTrack(fav, filteredTracks);
-                                } else {
-                                  setSelectedGenre("Todos");
-                                  setSelectedCountry("Todos");
-                                  setSelectedDecade("Todas");
-                                  setSelectedObscurity("all");
-                                  setSearchQuery("");
-                                  const exists = tracksPool.some((t) => t.id === fav.id);
-                                  if (!exists) {
-                                    setTracksPool((prev) => [fav, ...prev]);
-                                  }
-                                  selectTrack(fav);
-                                }
-                              }}
-                              style={{
-                                padding: "7px 9px",
-                                backgroundColor: isCurrent ? "#161E2E" : "#11141C",
-                                border: isCurrent ? "1.5px solid #CCFF00" : "1px solid #1E2332",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                                textAlign: "left",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "2px",
-                              }}
-                            >
-                              <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {fav.title}
-                              </span>
-                              <span style={{ fontSize: "0.64rem", color: "#CCFF00" }}>
-                                {fav.artist} ({fav.country})
-                              </span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            />
           )}
         </div>
 
-        {/* ======================================================== */}
-        {/* 2. BOTTOM ACTION BAR: SIGUIENTE                          */}
-        {/* ======================================================== */}
-        <div
-          style={{
-            backgroundColor: "#0D1017",
-            borderTop: "2px solid #1E2332",
-            padding: "10px 18px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            flexShrink: 0,
-            flexWrap: "wrap",
-          }}
-        >
-          {/* Current Track Summary Info */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.74rem", color: "#94A3B8" }}>
-            <span style={{ color: "#CCFF00", fontWeight: 900, letterSpacing: "0.5px" }}>PISTA:</span>
-            <span style={{ color: "#FFFFFF", fontWeight: 800 }}>{currentTrack.artist}</span>
-            <span>—</span>
-            <span style={{ color: "#FFFFFF", fontWeight: 800 }}>{currentTrack.title}</span>
-            <span style={{ fontSize: "0.68rem", opacity: 0.8, fontFamily: "monospace" }}>
-              ({currentTrack.bpm} BPM · {currentTrack.key})
-            </span>
-          </div>
-
-          {/* Siguiente Button */}
-          <button
-            onClick={handleSendToSampler}
-            disabled={isExtracting}
-            className="neo-button fun-hover-wobble"
-            style={{
-              minWidth: "180px",
-              padding: "10px 22px",
-              backgroundColor: "#CCFF00",
-              color: "#000000",
-              border: "2px solid #000000",
-              boxShadow: "3px 3px 0px #FFFFFF",
-              borderRadius: "4px",
-              fontSize: "0.85rem",
-              fontWeight: 900,
-              cursor: isExtracting ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              letterSpacing: "0.8px",
-              opacity: isExtracting ? 0.7 : 1,
-              transition: "transform 0.15s ease, box-shadow 0.15s ease",
-            }}
-            title="Avanzar al siguiente paso: samplear y cortar en C-Sampler"
-          >
-            {isExtracting ? (
-              <>
-                <Scissors size={17} />
-                <span>CARGANDO EN MEMORIA RAM...</span>
-              </>
-            ) : (
-              <>
-                <span>SIGUIENTE</span>
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </div>
+        <DiggerFooterBar
+          currentTrack={currentTrack}
+          isExtracting={isExtracting}
+          onSendToSampler={handleSendToSampler}
+        />
       </div>
     </div>
   );

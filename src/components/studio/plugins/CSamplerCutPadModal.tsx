@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Loader2, Mic, Play, Scissors, Sparkles, Square, X } from "lucide-react";
 import {
   decodeMediaBlobToAudioBuffer,
   encodeAudioBufferToWavBlob,
@@ -9,6 +8,10 @@ import {
 } from "@/lib/studio/browserStemAI";
 import { extractStemPeaks, separateAudioIntoStems } from "@/lib/studio/stemEngine";
 import { useModalIsolation } from "@/hooks/useModalIsolation";
+import { CutPadHeaderBar } from "./cutpad/CutPadHeaderBar";
+import { CutPadPitchPanel } from "./cutpad/CutPadPitchPanel";
+import { CutPadWaveformCenter } from "./cutpad/CutPadWaveformCenter";
+import { CutPadEffectsPanel } from "./cutpad/CutPadEffectsPanel";
 
 export interface CSamplerCutPadModalProps {
   isOpen: boolean;
@@ -46,13 +49,6 @@ export interface CSamplerCutPadModalProps {
     trimEndPct: number;
   }) => void;
 }
-
-const formatSec = (sec: number): string => {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  const ms = Math.floor((sec % 1) * 10);
-  return `${m}:${s.toString().padStart(2, "0")}.${ms}`;
-};
 
 function makeCrunchCurve(amount: number): Float32Array<ArrayBuffer> {
   const n = 1024;
@@ -749,834 +745,104 @@ export const CSamplerCutPadModal: React.FC<CSamplerCutPadModalProps> = ({
           flexDirection: "column",
         }}
       >
-        {/* Cabecera */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "9px 14px",
-            backgroundColor: "#141519",
-            borderBottom: "1px solid rgba(255,214,0,0.45)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                background: "linear-gradient(180deg, #3A3C42 0%, #23252A 100%)",
-                color: "#FFD600",
-                fontWeight: 900,
-                fontFamily: "monospace",
-                fontSize: "0.68rem",
-                padding: "3px 9px",
-                borderRadius: "3px",
-                border: "1px solid #4B4E57",
-                boxShadow: "0 2px 0 #07080A",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <Scissors size={11} />
-              <span>CORTAR PAD</span>
-            </span>
-            <span style={{ fontSize: "0.70rem", fontWeight: 900, color: "#FFFFFF", fontFamily: "monospace" }}>
-              {padLabel}
-            </span>
-            <span style={{ fontSize: "0.60rem", color: "#A1A1AA", fontFamily: "monospace" }}>
-              {rangeLabel} · Recorte: {(trimmedDur / Math.pow(2, pitchSemi / 12)).toFixed(2)}s
-            </span>
-            <span
-              style={{
-                fontSize: "0.52rem",
-                fontWeight: 900,
-                fontFamily: "monospace",
-                padding: "2px 6px",
-                borderRadius: "3px",
-                backgroundColor: liveIsRealAudio ? "#162A1B" : hasYoutubeFallback ? "#231E0C" : "#2A1F14",
-                color: liveIsRealAudio ? "#4ADE80" : "#FFD600",
-                border: liveIsRealAudio ? "1px solid #22C55E" : "1px solid #FFD600",
-              }}
-            >
-              {liveIsRealAudio
-                ? "AUDIO REAL DEL CORTE"
-                : hasYoutubeFallback
-                ? "CANCIÓN REAL (YOUTUBE)"
-                : "AUDIO SINTÉTICO"}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "4px 7px",
-              backgroundColor: "#262830",
-              border: "1px solid #3A3D48",
-              borderRadius: "3px",
-              color: "#E4E4E7",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-            }}
-            title="Cerrar editor de corte"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        {errorNotice && (
-          <div
-            style={{
-              padding: "8px 14px",
-              backgroundColor: "rgba(255, 214, 0, 0.08)",
-              borderBottom: "1px solid rgba(255, 214, 0, 0.35)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
-            <span style={{ fontSize: "0.62rem", color: "#FDE047", fontFamily: "monospace", fontWeight: 700, flex: 1 }}>
-              {errorNotice}
-            </span>
-            {onRequestLoadAudio && (
-              <button
-                type="button"
-                onClick={onRequestLoadAudio}
-                style={{
-                  padding: "4px 10px",
-                  backgroundColor: "#FFD600",
-                  color: "#090A0D",
-                  border: "none",
-                  borderRadius: "3px",
-                  fontSize: "0.60rem",
-                  fontWeight: 900,
-                  fontFamily: "monospace",
-                  cursor: "pointer",
-                }}
-              >
-                CARGAR AUDIO
-              </button>
-            )}
-          </div>
-        )}
+        <CutPadHeaderBar
+          padLabel={padLabel}
+          rangeLabel={rangeLabel}
+          effectiveDurationSec={trimmedDur / Math.pow(2, pitchSemi / 12)}
+          liveIsRealAudio={liveIsRealAudio}
+          hasYoutubeFallback={hasYoutubeFallback}
+          errorNotice={errorNotice}
+          onRequestLoadAudio={onRequestLoadAudio}
+          onClose={onClose}
+        />
 
         {/* Cuerpo 3 Columnas: Costado Izq (PITCH) | Centro (ONDA + SEPARAR) | Costado Der (EFECTOS) */}
         <div
           style={{
             padding: "12px 14px",
             display: "grid",
-            gridTemplateColumns: "185px 1fr 235px",
+            gridTemplateColumns: "185px minmax(0, 1fr) 235px",
             gap: "12px",
             alignItems: "stretch",
           }}
         >
-          {/* COSTADO IZQUIERDO: PERILLA PITCH */}
-          <div
-            style={{
-              backgroundColor: "#0A0B0E",
-              border: "1px solid rgba(255,214,0,0.4)",
-              borderRadius: "6px",
-              padding: "10px",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              gap: "10px",
+          <CutPadPitchPanel
+            pitchSemi={pitchSemi}
+            isReversed={isReversed}
+            isTapeStopping={isTapeStopping}
+            loopOn={loopOn}
+            onChangePitch={setPitchSemi}
+            onToggleReverse={handleToggleReversePad}
+            onTapeStopStart={handleTapeStopStart}
+            onTapeStopEnd={handleTapeStopEnd}
+            onToggleLoop={() => setLoopOn((p) => !p)}
+          />
+
+          <CutPadWaveformCenter
+            padLabel={padLabel}
+            peaks={peaks}
+            sliceStartSec={sliceStartSec}
+            sliceEndSec={sliceEndSec}
+            trimStartPct={trimStartPct}
+            trimEndPct={trimEndPct}
+            isPlaying={isPlaying}
+            playheadPct={playheadPct}
+            isRecordingPad={isRecordingPad}
+            isSeparating={isSeparating}
+            sepProgress={sepProgress}
+            separatedStems={separatedStems}
+            selectedStem={selectedStem}
+            hasApplyCut={Boolean(onApplyRealCut)}
+            onChangeTrimStart={setTrimStartPct}
+            onChangeTrimEnd={setTrimEndPct}
+            onRestoreOriginalCut={handleRestoreOriginalCut}
+            onTogglePlay={handleTogglePlay}
+            onToggleRecordPad={handleToggleRecordPad}
+            onDownloadWav={handleDownloadCutWav}
+            onApplyCut={async () => {
+              if (!onApplyRealCut) return;
+              stopPlayback();
+              const fullSpan = Math.max(0.2, sliceEndSec - sliceStartSec);
+              const newStartSec = Math.round((sliceStartSec + (trimStartPct / 100) * fullSpan) * 10) / 10;
+              const newEndSec = Math.round((sliceStartSec + (trimEndPct / 100) * fullSpan) * 10) / 10;
+              const processedBuffer = liveIsRealAudio ? await renderProcessedCutBuffer() : null;
+              const stemLabelMap: Record<"raw" | "melody" | "bass" | "vocals" | "drums", string | undefined> = {
+                raw: undefined,
+                melody: "MELODÍA",
+                bass: "BAJO",
+                vocals: "VOZ",
+                drums: "BATERÍA",
+              };
+              onApplyRealCut({
+                newStartSec,
+                newEndSec,
+                processedBuffer,
+                stemLabel: separatedStems ? stemLabelMap[selectedStem] : undefined,
+                trimStartPct,
+                trimEndPct,
+              });
             }}
-          >
-            <div style={{ borderBottom: "1px solid rgba(255,214,0,0.3)", paddingBottom: "4px", textAlign: "center" }}>
-              <span style={{ fontSize: "0.58rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "1.4px" }}>
-                PITCH / TONO
-              </span>
-            </div>
+            onSeparateInstruments={handleSeparateCutInstruments}
+            onSelectStem={handleSelectStem}
+          />
 
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-              <div
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  const startY = e.clientY;
-                  const startVal = pitchSemi;
-                  const onMove = (ev: PointerEvent) => {
-                    const delta = Math.round(((startY - ev.clientY) / 100) * 24);
-                    setPitchSemi(Math.max(-12, Math.min(12, startVal + delta)));
-                  };
-                  const onUp = () => {
-                    window.removeEventListener("pointermove", onMove);
-                    window.removeEventListener("pointerup", onUp);
-                  };
-                  window.addEventListener("pointermove", onMove);
-                  window.addEventListener("pointerup", onUp);
-                }}
-                onWheel={(e) => {
-                  e.preventDefault();
-                  setPitchSemi((p) => Math.max(-12, Math.min(12, p + (e.deltaY < 0 ? 1 : -1))));
-                }}
-                onDoubleClick={() => setPitchSemi(0)}
-                title="Arrastra arriba/abajo o usa la rueda del mouse (-12 a +12 st). Doble clic para 0 st."
-                style={{
-                  width: "54px",
-                  height: "54px",
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle at 50% 45%, #2B2D33 0%, #191A1E 75%, #0D0E10 100%)",
-                  border: "2px dashed #FFD600",
-                  boxShadow: "0 0 14px rgba(255, 214, 0, 0.55), inset 0 0 8px rgba(255, 214, 0, 0.2), 0 3px 6px rgba(0,0,0,0.85)",
-                  position: "relative",
-                  cursor: "ns-resize",
-                  transform: `rotate(${(pitchSemi / 12) * 135}deg)`,
-                  userSelect: "none",
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "6px",
-                    left: "50%",
-                    transform: "translateX(-50%) rotate(45deg)",
-                    width: "6px",
-                    height: "6px",
-                    backgroundColor: "#FFD600",
-                    borderRadius: "1px",
-                  }}
-                />
-              </div>
-              <span style={{ fontSize: "1.15rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", textShadow: "0 0 10px rgba(255,214,0,0.5)" }}>
-                {pitchSemi > 0 ? `+${pitchSemi}` : pitchSemi} st
-              </span>
-              <span style={{ fontSize: "0.50rem", color: "#A1A1AA", fontFamily: "monospace", textAlign: "center" }}>
-                Arrastra arriba/abajo · 2x clic = 0
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-                <button
-                  type="button"
-                  onClick={handleToggleReversePad}
-                  style={{
-                    padding: "5px 4px",
-                    backgroundColor: isReversed ? "#FFD600" : "#E4E4E7",
-                    color: "#090A0D",
-                    border: "1px solid #090A0D",
-                    borderRadius: "4px",
-                    boxShadow: "0 2px 0 #07080A",
-                    fontSize: "0.56rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                  title="Invierte el audio del pad (Reverse)"
-                >
-                  ◀ {isReversed ? "REV ON" : "REVERSA"}
-                </button>
-                <button
-                  type="button"
-                  onPointerDown={handleTapeStopStart}
-                  onPointerUp={handleTapeStopEnd}
-                  onPointerLeave={handleTapeStopEnd}
-                  style={{
-                    padding: "5px 4px",
-                    backgroundColor: isTapeStopping ? "#FFD600" : "#E4E4E7",
-                    color: "#090A0D",
-                    border: "1px solid #090A0D",
-                    borderRadius: "4px",
-                    boxShadow: "0 2px 0 #07080A",
-                    fontSize: "0.56rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                  title="Mantén presionado mientras suena o grabas para frenar la cinta estilo vinilo (Tape Stop)"
-                >
-                  🛑 TAPE STOP
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setLoopOn((p) => !p)}
-                style={{
-                  padding: "5px 8px",
-                  backgroundColor: loopOn ? "#FFD600" : "#E4E4E7",
-                  color: "#090A0D",
-                  border: "1px solid #090A0D",
-                  borderRadius: "4px",
-                  boxShadow: "0 2px 0 #07080A",
-                  fontSize: "0.60rem",
-                  fontWeight: 900,
-                  fontFamily: "monospace",
-                  cursor: "pointer",
-                }}
-              >
-                LOOP CORTE: {loopOn ? "ON" : "OFF"}
-              </button>
-            </div>
-          </div>
-
-          {/* CENTRO: ONDA CORTADA + TRIM + REPRODUCIR + SEPARAR INSTRUMENTOS */}
-          <div
-            style={{
-              backgroundColor: "#0A0B0E",
-              border: "1px solid rgba(255,214,0,0.4)",
-              borderRadius: "6px",
-              padding: "10px",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              gap: "10px",
+          <CutPadEffectsPanel
+            filterSweep={filterSweep}
+            resonance={resonance}
+            crunch={crunch}
+            echoMix={echoMix}
+            onChangeFilterSweep={setFilterSweep}
+            onChangeResonance={setResonance}
+            onChangeCrunch={setCrunch}
+            onChangeEchoMix={setEchoMix}
+            onApplyPreset={(preset) => {
+              setFilterSweep(preset.filterSweep);
+              setResonance(preset.resonance);
+              setCrunch(preset.crunch);
+              setEchoMix(preset.echoMix);
+              setVolume(preset.volume);
             }}
-          >
-            {/* Visualizador de Onda del Pad */}
-            <div
-              style={{
-                position: "relative",
-                height: "92px",
-                backgroundColor: "#06070A",
-                border: "1px solid #22242C",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                gap: "2px",
-                padding: "8px 6px",
-                overflow: "hidden",
-              }}
-            >
-              {peaks.map((pk, idx) => {
-                const pct = (idx / peaks.length) * 100;
-                const inside = pct >= trimStartPct && pct <= trimEndPct;
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      flex: 1,
-                      height: `${Math.max(10, Math.min(100, pk * 100))}%`,
-                      backgroundColor: inside ? "#FFD600" : "#3F3F46",
-                      opacity: inside ? 0.95 : 0.4,
-                      borderRadius: "1px",
-                    }}
-                  />
-                );
-              })}
-              {isPlaying && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    bottom: 0,
-                    left: `${playheadPct}%`,
-                    width: "2px",
-                    backgroundColor: "#FFFFFF",
-                    boxShadow: "0 0 8px #FFFFFF",
-                    pointerEvents: "none",
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Recorte fino Start / End (0% - 100% no destructivo, sincronizado al loop pintado) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "10px", alignItems: "end" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.56rem", color: "#D4D4D8", fontFamily: "monospace" }}>
-                <span>
-                  INICIO: {formatSec(sliceStartSec + (trimStartPct / 100) * Math.max(0.1, sliceEndSec - sliceStartSec))} ({Math.round(trimStartPct)}%)
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={trimStartPct}
-                  onChange={(e) => {
-                    const next = Math.min(Number(e.target.value), trimEndPct - 2);
-                    setTrimStartPct(Math.max(0, next));
-                  }}
-                  style={{ accentColor: "#FFD600" }}
-                />
-              </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.56rem", color: "#D4D4D8", fontFamily: "monospace" }}>
-                <span>
-                  FIN: {formatSec(sliceStartSec + (trimEndPct / 100) * Math.max(0.1, sliceEndSec - sliceStartSec))} ({Math.round(trimEndPct)}%)
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={trimEndPct}
-                  onChange={(e) => {
-                    const next = Math.max(Number(e.target.value), trimStartPct + 2);
-                    setTrimEndPct(Math.min(100, next));
-                  }}
-                  style={{ accentColor: "#FFD600" }}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={handleRestoreOriginalCut}
-                style={{
-                  padding: "5px 8px",
-                  backgroundColor: "#1F222A",
-                  color: "#FFD600",
-                  border: "1px solid #FFD600",
-                  borderRadius: "4px",
-                  fontSize: "0.54rem",
-                  fontWeight: 900,
-                  fontFamily: "monospace",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-                title="Revertir el recorte al rango original completo (0% - 100%)"
-              >
-                ↺ REVERTIR
-              </button>
-            </div>
-
-            {/* Botones de Acción */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <button
-                  type="button"
-                  onClick={handleTogglePlay}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    padding: "6px 12px",
-                    backgroundColor: isPlaying ? "#D4D4D8" : "#FFD600",
-                    color: "#090A0D",
-                    border: isPlaying ? "1px solid #FFFFFF" : "1px solid #FFE866",
-                    borderRadius: "4px",
-                    boxShadow: "0 0 14px rgba(255,214,0,0.7)",
-                    fontSize: "0.64rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                >
-                  {isPlaying ? <Square size={11} fill="#090A0D" /> : <Play size={11} fill="#090A0D" />}
-                  <span>{isPlaying ? "DETENER" : "ESCUCHAR"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleToggleRecordPad}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    padding: "6px 10px",
-                    backgroundColor: isRecordingPad ? "#FFD600" : "#E4E4E7",
-                    color: "#090A0D",
-                    border: "1px solid #090A0D",
-                    borderRadius: "4px",
-                    boxShadow: isRecordingPad ? "0 0 14px rgba(255,214,0,0.85)" : "0 2px 0 #07080A",
-                    fontSize: "0.60rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                  title="Graba en vivo el audio del pad mientras mueves las perillas de Pitch y Efectos (Resample)"
-                >
-                  <Mic size={11} />
-                  <span>{isRecordingPad ? "■ PARAR PAD" : "● GRABAR PAD"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadCutWav}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    padding: "6px 10px",
-                    backgroundColor: "#E4E4E7",
-                    color: "#090A0D",
-                    border: "1px solid #090A0D",
-                    borderRadius: "4px",
-                    boxShadow: "0 2px 0 #07080A",
-                    fontSize: "0.60rem",
-                    fontWeight: 900,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Download size={11} />
-                  <span>WAV</span>
-                </button>
-
-                {onApplyRealCut && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      stopPlayback();
-                      const fullSpan = Math.max(0.2, sliceEndSec - sliceStartSec);
-                      const newStartSec =
-                        Math.round((sliceStartSec + (trimStartPct / 100) * fullSpan) * 10) / 10;
-                      const newEndSec =
-                        Math.round((sliceStartSec + (trimEndPct / 100) * fullSpan) * 10) / 10;
-                      const processedBuffer = liveIsRealAudio ? await renderProcessedCutBuffer() : null;
-                      const stemLabelMap: Record<"raw" | "melody" | "bass" | "vocals" | "drums", string | undefined> = {
-                        raw: undefined,
-                        melody: "MELODÍA",
-                        bass: "BAJO",
-                        vocals: "VOZ",
-                        drums: "BATERÍA",
-                      };
-                      onApplyRealCut({
-                        newStartSec,
-                        newEndSec,
-                        processedBuffer,
-                        stemLabel: separatedStems ? stemLabelMap[selectedStem] : undefined,
-                        trimStartPct,
-                        trimEndPct,
-                      });
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "6px 12px",
-                      backgroundColor: separatedStems ? "var(--primary-container)" : "#E4E4E7",
-                      color: separatedStems ? "var(--on-primary-container)" : "#090A0D",
-                      border: "1.5px solid #090A0D",
-                      borderRadius: "4px",
-                      boxShadow: "0 2px 0 #07080A",
-                      fontSize: "0.62rem",
-                      fontWeight: 900,
-                      fontFamily: "monospace",
-                      cursor: "pointer",
-                    }}
-                    title="Guarda el instrumento seleccionado (con pitch, reversa y efectos) directamente en este pad del C-Sampler"
-                  >
-                    <Scissors size={11} />
-                    <span>{separatedStems ? "GUARDAR STEM EN PAD" : "GUARDAR EN PAD"}</span>
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="button"
-                disabled={isSeparating}
-                onClick={handleSeparateCutInstruments}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  background: "linear-gradient(180deg, #FFE855 0%, #FFD600 100%)",
-                  color: "#090A0D",
-                  border: "1px solid #FFE866",
-                  borderRadius: "4px",
-                  boxShadow: "0 0 16px rgba(255,214,0,0.8), 0 3px 0 #07080A",
-                  fontSize: "0.64rem",
-                  fontWeight: 900,
-                  fontFamily: "monospace",
-                  cursor: isSeparating ? "wait" : "pointer",
-                }}
-              >
-                {isSeparating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                <span>
-                  {isSeparating
-                    ? `SEPARANDO ${sepProgress?.pct ?? 0}%`
-                    : separatedStems
-                    ? "RE-SEPARAR 4 STEMS"
-                    : "SEPARAR 4 INSTRUMENTOS"}
-                </span>
-              </button>
-            </div>
-
-            {/* Selector de los 4 Stems separados para guardar directo en el Pad */}
-            {separatedStems && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  padding: "8px 10px",
-                  backgroundColor: "#14161B",
-                  border: "1.5px solid #FFD600",
-                  borderRadius: "5px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.56rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "1px" }}>
-                    ELIGE EL INSTRUMENTO PARA INSERTAR EN {padLabel}:
-                  </span>
-                  <span style={{ fontSize: "0.52rem", color: "#A1A1AA", fontFamily: "monospace" }}>
-                    Escucha y pulsa GUARDAR STEM EN PAD
-                  </span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "5px" }}>
-                  {(
-                    [
-                      { key: "melody", label: "MELODÍA" },
-                      { key: "bass", label: "BAJO" },
-                      { key: "vocals", label: "VOZ" },
-                      { key: "drums", label: "BATERÍA" },
-                      { key: "raw", label: "ORIGINAL" },
-                    ] as const
-                  ).map((item) => {
-                    const isActive = selectedStem === item.key;
-                    const available = Boolean(separatedStems[item.key]);
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        disabled={!available}
-                        onClick={() => handleSelectStem(item.key)}
-                        style={{
-                          padding: "6px 4px",
-                          backgroundColor: isActive ? "#FFD600" : "#1F222A",
-                          color: isActive ? "#090A0D" : available ? "#F4F4F5" : "#52525B",
-                          border: isActive ? "1.5px solid #FFFFFF" : "1px solid #3F3F46",
-                          borderRadius: "4px",
-                          fontSize: "0.58rem",
-                          fontWeight: 900,
-                          fontFamily: "monospace",
-                          cursor: available ? "pointer" : "not-allowed",
-                        }}
-                      >
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {sepProgress && (
-              <div style={{ fontSize: "0.56rem", color: "#FFD600", fontFamily: "monospace", textAlign: "center" }}>
-                {sepProgress.stage}
-              </div>
-            )}
-          </div>
-
-          {/* COSTADO DERECHO: PERILLAS DE EFECTOS + FILTROS ESPECIALES */}
-          <div
-            style={{
-              backgroundColor: "#0A0B0E",
-              border: "1px solid rgba(255,214,0,0.4)",
-              borderRadius: "6px",
-              padding: "10px",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              gap: "8px",
-            }}
-          >
-            <div style={{ borderBottom: "1px solid rgba(255,214,0,0.3)", paddingBottom: "4px", textAlign: "center" }}>
-              <span style={{ fontSize: "0.58rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace", letterSpacing: "1.4px" }}>
-                EFECTOS DEL CORTE
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              {(
-                [
-                  {
-                    label: "FILTER",
-                    valText: filterSweep === 0 ? "FLAT" : filterSweep < 0 ? `LP ${filterSweep}` : `HP +${filterSweep}`,
-                    deg: (filterSweep / 100) * 135,
-                    min: -100,
-                    max: 100,
-                    step: 2,
-                    value: filterSweep,
-                    onReset: () => setFilterSweep(0),
-                    onChange: (v: number) => setFilterSweep(v),
-                    title: "Filtro DJ Sweep (-100 LowPass a +100 HighPass). Arrastra arriba/abajo.",
-                  },
-                  {
-                    label: "RESO (Q)",
-                    valText: `Q ${resonance}`,
-                    deg: ((resonance - 1) / 14) * 270 - 135,
-                    min: 1,
-                    max: 15,
-                    step: 1,
-                    value: resonance,
-                    onReset: () => setResonance(1),
-                    onChange: (v: number) => setResonance(v),
-                    title: "Resonancia del filtro (1 a 15) para barridos tipo SP-404 / Acid.",
-                  },
-                  {
-                    label: "CRUNCH",
-                    valText: `${crunch}%`,
-                    deg: (crunch / 100) * 270 - 135,
-                    min: 0,
-                    max: 100,
-                    step: 2,
-                    value: crunch,
-                    onReset: () => setCrunch(0),
-                    onChange: (v: number) => setCrunch(v),
-                    title: "Saturación 12-Bit / Vinyl Drive (0% a 100%).",
-                  },
-                  {
-                    label: "DUB ECHO",
-                    valText: `${echoMix}%`,
-                    deg: (echoMix / 80) * 270 - 135,
-                    min: 0,
-                    max: 80,
-                    step: 2,
-                    value: echoMix,
-                    onReset: () => setEchoMix(0),
-                    onChange: (v: number) => setEchoMix(v),
-                    title: "Eco espacial sincronizado al BPM (0% a 80%).",
-                  },
-                ] as const
-              ).map((knob) => (
-                <div key={knob.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-                  <span style={{ fontSize: "0.48rem", fontWeight: 900, color: "#FFD600", fontFamily: "monospace" }}>
-                    {knob.label}
-                  </span>
-                  <div
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      const startY = e.clientY;
-                      const startVal = knob.value;
-                      const range = knob.max - knob.min;
-                      const onMove = (ev: PointerEvent) => {
-                        const raw = startVal + ((startY - ev.clientY) / 90) * range;
-                        const snapped = Math.round(raw / knob.step) * knob.step;
-                        knob.onChange(Math.max(knob.min, Math.min(knob.max, snapped)));
-                      };
-                      const onUp = () => {
-                        window.removeEventListener("pointermove", onMove);
-                        window.removeEventListener("pointerup", onUp);
-                      };
-                      window.addEventListener("pointermove", onMove);
-                      window.addEventListener("pointerup", onUp);
-                    }}
-                    onWheel={(e) => {
-                      e.preventDefault();
-                      const dir = e.deltaY < 0 ? 1 : -1;
-                      knob.onChange(Math.max(knob.min, Math.min(knob.max, knob.value + dir * knob.step)));
-                    }}
-                    onDoubleClick={knob.onReset}
-                    title={knob.title}
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      background: "radial-gradient(circle at 50% 45%, #2B2D33 0%, #191A1E 75%, #0D0E10 100%)",
-                      border: "1.5px dashed #FFD600",
-                      boxShadow: "0 0 10px rgba(255, 214, 0, 0.45), inset 0 0 6px rgba(255, 214, 0, 0.18), 0 2px 5px rgba(0,0,0,0.85)",
-                      position: "relative",
-                      cursor: "ns-resize",
-                      transform: `rotate(${knob.deg}deg)`,
-                      userSelect: "none",
-                    }}
-                  >
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: "4px",
-                        left: "50%",
-                        transform: "translateX(-50%) rotate(45deg)",
-                        width: "4px",
-                        height: "4px",
-                        backgroundColor: "#FFD600",
-                        borderRadius: "1px",
-                      }}
-                    />
-                  </div>
-                  <span style={{ fontSize: "0.52rem", fontWeight: 900, color: "#E4E4E7", fontFamily: "monospace" }}>
-                    {knob.valText}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSweep(0);
-                  setResonance(1);
-                  setCrunch(0);
-                  setEchoMix(0);
-                  setVolume(100);
-                }}
-                style={{
-                  padding: "3px 4px",
-                  backgroundColor: "#E4E4E7",
-                  color: "#090A0D",
-                  border: "1px solid #090A0D",
-                  borderRadius: "3px",
-                  fontSize: "0.52rem",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                FLAT
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSweep(-45);
-                  setResonance(3);
-                  setCrunch(55);
-                  setEchoMix(0);
-                  setVolume(105);
-                }}
-                style={{
-                  padding: "3px 4px",
-                  backgroundColor: "#E4E4E7",
-                  color: "#090A0D",
-                  border: "1px solid #090A0D",
-                  borderRadius: "3px",
-                  fontSize: "0.52rem",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                LO-FI 12B
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSweep(55);
-                  setResonance(6);
-                  setCrunch(35);
-                  setEchoMix(0);
-                  setVolume(105);
-                }}
-                style={{
-                  padding: "3px 4px",
-                  backgroundColor: "#E4E4E7",
-                  color: "#090A0D",
-                  border: "1px solid #090A0D",
-                  borderRadius: "3px",
-                  fontSize: "0.52rem",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                RADIO TEL
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSweep(-30);
-                  setResonance(4);
-                  setCrunch(15);
-                  setEchoMix(45);
-                  setVolume(100);
-                }}
-                style={{
-                  padding: "3px 4px",
-                  backgroundColor: "#E4E4E7",
-                  color: "#090A0D",
-                  border: "1px solid #090A0D",
-                  borderRadius: "3px",
-                  fontSize: "0.52rem",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                DUB ECHO
-              </button>
-            </div>
-          </div>
+          />
         </div>
       </div>
     </div>

@@ -32,6 +32,14 @@ class StudioAudioEngine {
   private activeSamplerSource: AudioBufferSourceNode | null = null;
   private activeSamplerGain: GainNode | null = null;
 
+  // Sampler Master DSP Bus (FILTER -> CRUNCH -> VOLUME -> masterGain)
+  private samplerFilterNode: BiquadFilterNode | null = null;
+  private samplerCrunchNode: WaveShaperNode | null = null;
+  private samplerMasterGain: GainNode | null = null;
+  private samplerFilterSweep: number = 0; // -100..+100
+  private samplerCrunchPct: number = 0; // 0..100
+  private samplerVolume: number = 0.9; // 0..1.2
+
   private lookaheadMs: number = 25.0; // Check every 25ms
   private scheduleAheadSec: number = 0.1; // Schedule notes up to 100ms in advance
 
@@ -764,6 +772,101 @@ class StudioAudioEngine {
     }
   }
 
+  private ensureSamplerBus(): GainNode | null {
+    const ctx = this.getAudioContext();
+    if (!this.masterGain) return null;
+    if (!this.samplerFilterNode || !this.samplerCrunchNode || !this.samplerMasterGain) {
+      this.samplerFilterNode = ctx.createBiquadFilter();
+      this.samplerFilterNode.type = "allpass";
+      this.samplerFilterNode.frequency.value = 1000;
+      this.samplerFilterNode.Q.value = 1.0;
+
+      this.samplerCrunchNode = ctx.createWaveShaper();
+      this.samplerCrunchNode.oversample = "2x";
+      this.samplerCrunchNode.curve = null;
+
+      this.samplerMasterGain = ctx.createGain();
+      this.samplerMasterGain.gain.value = this.samplerVolume;
+
+      this.samplerFilterNode.connect(this.samplerCrunchNode);
+      this.samplerCrunchNode.connect(this.samplerMasterGain);
+      this.samplerMasterGain.connect(this.masterGain);
+
+      this.applySamplerFilterSweep();
+      this.applySamplerCrunch();
+    }
+    return this.samplerMasterGain;
+  }
+
+  private applySamplerFilterSweep() {
+    if (!this.samplerFilterNode || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const s = this.samplerFilterSweep;
+    if (Math.abs(s) <= 2) {
+      this.samplerFilterNode.type = "allpass";
+      this.samplerFilterNode.frequency.setTargetAtTime(1000, now, 0.015);
+      this.samplerFilterNode.Q.setTargetAtTime(0.7, now, 0.015);
+    } else if (s < 0) {
+      const norm = Math.min(1, Math.abs(s) / 100);
+      const freq = 18000 * Math.pow(180 / 18000, norm);
+      this.samplerFilterNode.type = "lowpass";
+      this.samplerFilterNode.frequency.setTargetAtTime(freq, now, 0.015);
+      this.samplerFilterNode.Q.setTargetAtTime(1.4 + norm * 2.2, now, 0.015);
+    } else {
+      const norm = Math.min(1, s / 100);
+      const freq = 40 * Math.pow(5200 / 40, norm);
+      this.samplerFilterNode.type = "highpass";
+      this.samplerFilterNode.frequency.setTargetAtTime(freq, now, 0.015);
+      this.samplerFilterNode.Q.setTargetAtTime(1.2 + norm * 1.8, now, 0.015);
+    }
+  }
+
+  private applySamplerCrunch() {
+    if (!this.samplerCrunchNode) return;
+    if (this.samplerCrunchPct <= 1) {
+      this.samplerCrunchNode.curve = null;
+    } else {
+      const curve = this.createDistortionCurve((this.samplerCrunchPct / 100) * 140);
+      this.samplerCrunchNode.curve = curve as Float32Array<ArrayBuffer>;
+    }
+  }
+
+  public setSamplerFilterSweep(sweep: number) {
+    this.samplerFilterSweep = Math.max(-100, Math.min(100, sweep));
+    if (this.samplerFilterNode) {
+      this.applySamplerFilterSweep();
+    }
+  }
+
+  public setSamplerCrunch(pct: number) {
+    this.samplerCrunchPct = Math.max(0, Math.min(100, pct));
+    if (this.samplerCrunchNode) {
+      this.applySamplerCrunch();
+    }
+  }
+
+  public setSamplerMasterVolume(vol: number) {
+    this.samplerVolume = Math.max(0, Math.min(1.2, vol));
+    if (this.samplerMasterGain && this.ctx) {
+      this.samplerMasterGain.gain.setTargetAtTime(this.samplerVolume, this.ctx.currentTime, 0.015);
+    }
+  }
+
+  public setActiveSamplerPitch(pitchSemi: number) {
+    if (this.activeSamplerSource && this.ctx) {
+      const rate = Math.pow(2, pitchSemi / 12);
+      this.activeSamplerSource.playbackRate.setTargetAtTime(rate, this.ctx.currentTime, 0.015);
+    }
+  }
+
+  public playSamplerContinuous(buffer: AudioBuffer, startSec: number, pitchSemi: number = 0) {
+    this.playSamplerSlice(
+      { startSec: Math.max(0, Math.min(buffer.duration - 0.05, startSec)) },
+      { pitchSemi, velocity: 1.0 },
+      buffer
+    );
+  }
+
   // ==========================================
   // C-SAMPLER ENGINE (SERATO SAMPLER & AKAI 16 LEVELS REPLICA)
   // ==========================================
@@ -825,6 +928,9 @@ class StudioAudioEngine {
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(this.volume * 0.95 * velocity, time);
 
+      this.ensureSamplerBus();
+      const samplerDest: AudioNode = this.samplerFilterNode || this.masterGain;
+
       // Si se especificó Filter Cutoff (Akai 16 Levels Filter mode)
       if (filterCutoff && filterCutoff < 17000) {
         const filter = ctx.createBiquadFilter();
@@ -837,7 +943,7 @@ class StudioAudioEngine {
         source.connect(gain);
       }
 
-      gain.connect(this.masterGain);
+      gain.connect(samplerDest);
 
       this.activeSamplerSource = source;
       this.activeSamplerGain = gain;
