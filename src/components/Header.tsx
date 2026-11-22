@@ -347,19 +347,19 @@ export const Header = ({
             justifyContent: "space-between",
             width: "100%",
             paddingBottom: "10px",
-            borderBottom: "2px solid rgba(204, 255, 0, 0.28)",
+            borderBottom: "2.5px solid var(--primary)",
           }}
         >
           <div
             style={{
-              backgroundColor: "#0E1118",
-              color: "#CCFF00",
-              border: "1.5px solid #CCFF00",
+              backgroundColor: "var(--primary)",
+              color: "var(--on-primary)",
               padding: "3px 8px",
               fontSize: "0.68rem",
               fontWeight: 900,
               letterSpacing: "0.8px",
-              boxShadow: "2px 2px 0px #000000",
+              transform: "rotate(-1.5deg)",
+              boxShadow: "2px 2px 0px var(--primary-container)",
             }}
           >
             📻 MENÚ RADIO DOBLE C
@@ -370,12 +370,10 @@ export const Header = ({
             className="neo-button fun-hover-wobble"
             style={{
               padding: "4px 8px",
-              backgroundColor: "#1F2433",
-              color: "#F1F5F9",
-              border: "2px solid #334155",
+              backgroundColor: "var(--card-bg)",
               fontSize: "0.65rem",
               fontWeight: 900,
-              boxShadow: "2px 2px 0px #000000",
+              boxShadow: "1.5px 1.5px 0px var(--primary)",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -387,7 +385,7 @@ export const Header = ({
           </button>
         </div>
 
-        {/* Navigation Links — Estilo unificado azul oscuro C-Station (#161922) */}
+        {/* Navigation Links — Fondo uniforme del tema + Hover azul oscuro C-Station (#161922) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", alignItems: "center" }}>
           {/* 1. Explorar */}
           <button
@@ -404,13 +402,13 @@ export const Header = ({
             {isExplore && (
               <span
                 style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111111",
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid #000000",
+                  border: "1px solid var(--primary)",
                   flexShrink: 0,
                 }}
               >
@@ -436,13 +434,13 @@ export const Header = ({
             {isHorarios && (
               <span
                 style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111111",
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid #000000",
+                  border: "1px solid var(--primary)",
                   flexShrink: 0,
                 }}
               >
@@ -470,13 +468,12 @@ export const Header = ({
               </div>
               <span
                 style={{
-                  backgroundColor: "rgba(204, 255, 0, 0.14)",
-                  color: "#CCFF00",
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid rgba(204, 255, 0, 0.55)",
                   flexShrink: 0,
                 }}
               >
@@ -502,13 +499,13 @@ export const Header = ({
               </div>
               <span
                 style={{
-                  backgroundColor: "rgba(204, 255, 0, 0.14)",
-                  color: "#CCFF00",
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid rgba(204, 255, 0, 0.55)",
+                  border: "1px solid #000000",
                   flexShrink: 0,
                 }}
               >
@@ -532,13 +529,13 @@ export const Header = ({
             {isStore && (
               <span
                 style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111111",
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid #000000",
+                  border: "1px solid var(--primary)",
                   flexShrink: 0,
                 }}
               >
@@ -556,19 +553,19 @@ export const Header = ({
             } as CSSProperties}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-              <Crown size={16} style={{ color: "#FFB000", flexShrink: 0 }} />
+              <Crown size={16} style={{ color: "#BA1A1A", fill: "#FFB000", flexShrink: 0 }} />
               <span>ROCOLA VIP</span>
             </div>
             {isVipTab && (
               <span
                 style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111111",
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid #000000",
+                  border: "1px solid var(--primary)",
                   flexShrink: 0,
                 }}
               >
@@ -592,13 +589,13 @@ export const Header = ({
             {isProfile && (
               <span
                 style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111111",
+                  backgroundColor: "var(--primary)",
+                  color: "var(--on-primary)",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid #000000",
+                  border: "1px solid var(--primary)",
                   flexShrink: 0,
                 }}
               >
@@ -624,13 +621,13 @@ export const Header = ({
             </div>
             <span
               style={{
-                backgroundColor: "#991B1B",
+                backgroundColor: "#BA1A1A",
                 color: "#FFFFFF",
                 fontSize: "0.55rem",
                 fontWeight: 900,
                 padding: "2px 6px",
                 letterSpacing: "0.8px",
-                border: "1px solid rgba(255, 255, 255, 0.25)",
+                border: "1px solid var(--primary)",
                 flexShrink: 0,
               }}
             >
@@ -645,16 +642,15 @@ export const Header = ({
             marginTop: "auto",
             paddingTop: "14px",
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
-            borderTop: "2px dashed rgba(248, 250, 252, 0.2)",
+            borderTop: "2px dashed var(--primary)",
             width: "100%",
             textAlign: "center",
             display: "flex",
             flexDirection: "column",
             gap: "4px",
-            color: "#CBD5E1",
           }}
         >
-          <div style={{ fontSize: "0.75rem", fontWeight: 900, letterSpacing: "1px", color: "#F8FAFC" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 900, letterSpacing: "1px" }}>
             📻 APOYE A SU RADIO LOCAL
           </div>
           <div style={{ fontSize: "0.62rem", fontWeight: "bold", opacity: 0.75 }}>
