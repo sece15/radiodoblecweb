@@ -33,13 +33,13 @@ export function useModalDimensions(): ModalDimensions {
       };
     }
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const width = window.visualViewport?.width ?? window.innerWidth;
+    const height = window.visualViewport?.height ?? window.innerHeight;
     const isMobile = width < 768;
     const isTablet = width >= 768 && width < 1024;
 
-    const availableHeight = Math.max(280, height - (isMobile ? 32 : 50));
-    const maxModalHeight = Math.min(availableHeight, isMobile ? height - 32 : 720);
+    const availableHeight = Math.max(280, height - (isMobile ? 48 : 50));
+    const maxModalHeight = Math.min(availableHeight, isMobile ? height - 48 : 720);
     const maxTracklistHeight = Math.max(160, maxModalHeight - 200);
 
     return {
@@ -56,13 +56,13 @@ export function useModalDimensions(): ModalDimensions {
 
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      const width = window.visualViewport?.width ?? window.innerWidth;
+      const height = window.visualViewport?.height ?? window.innerHeight;
       const isMobile = width < 768;
       const isTablet = width >= 768 && width < 1024;
 
-      const availableHeight = Math.max(280, height - (isMobile ? 32 : 50));
-      const maxModalHeight = Math.min(availableHeight, isMobile ? height - 32 : 720);
+      const availableHeight = Math.max(280, height - (isMobile ? 48 : 50));
+      const maxModalHeight = Math.min(availableHeight, isMobile ? height - 48 : 720);
       const maxTracklistHeight = Math.max(160, maxModalHeight - 200);
 
       setDimensions({
@@ -79,12 +79,14 @@ export function useModalDimensions(): ModalDimensions {
 
     window.addEventListener("resize", handleResize, { passive: true });
     window.addEventListener("orientationchange", handleResize, { passive: true });
+    window.visualViewport?.addEventListener("resize", handleResize, { passive: true });
 
     handleResize();
 
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      window.visualViewport?.removeEventListener("resize", handleResize);
     };
   }, []);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ListMusic, Loader2, Plus, RefreshCw, Search } from "lucide-react";
+import { useModalDimensions } from "@/hooks/useModalDimensions";
 import type { AdminRadioTrack, AdminRadioPlaylist } from "@/types/adminRadio";
 
 interface AdminLibrarySearchPanelProps {
@@ -42,41 +43,54 @@ export function AdminLibrarySearchPanel({
   onEnqueueTrack,
   onLoadMoreTracks,
 }: AdminLibrarySearchPanelProps) {
+  const { isMobile } = useModalDimensions();
+
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(250px, 310px) minmax(0, 1fr)",
-        gap: "14px",
+        gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "minmax(250px, 310px) minmax(0, 1fr)",
+        gap: isMobile ? "10px" : "14px",
         alignItems: "start",
+        width: "100%",
+        minWidth: 0,
       }}
     >
-      {/* COLUMNA IZQUIERDA: PLAYLISTS */}
-      <div
-        style={{
-          border: "2px solid var(--primary)",
-          backgroundColor: "var(--surface-container)",
-          display: "flex",
-          flexDirection: "column",
-          maxHeight: "420px",
-          overflow: "hidden",
-          minWidth: 0,
-        }}
-      >
+      {/* PLAYLISTS: Selector compacto en móvil, columna lateral en escritorio */}
+      {isMobile ? (
         <div
           style={{
-            padding: "8px 10px",
-            borderBottom: "2px solid var(--primary)",
-            fontSize: "0.68rem",
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
+            gap: "6px",
+            width: "100%",
+            minWidth: 0,
           }}
         >
-          <span>PLAYLISTS ({playlists.length})</span>
+          <select
+            aria-label="Filtrar por playlist"
+            value={selectedFilterPlaylistId}
+            onChange={(e) => onSelectPlaylist(e.target.value)}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "8px 10px",
+              fontSize: "0.72rem",
+              fontWeight: 900,
+              border: "2px solid var(--primary)",
+              backgroundColor: "var(--surface-container)",
+              color: "var(--on-background)",
+              boxSizing: "border-box",
+            }}
+          >
+            <option value="">PLAYLIST: TODAS ({totalTracks})</option>
+            {playlists.map((pl) => (
+              <option key={pl.id} value={String(pl.id)}>
+                {pl.name} ({pl.num_songs})
+              </option>
+            ))}
+          </select>
+
           <button
             type="button"
             disabled={isFetchingLibrary}
@@ -84,96 +98,144 @@ export function AdminLibrarySearchPanel({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "4px",
-              background: "transparent",
-              border: "none",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
+              backgroundColor: "var(--surface-container)",
+              border: "2px solid var(--primary)",
               color: "var(--on-background)",
-              fontSize: "0.62rem",
-              fontWeight: 900,
               cursor: isFetchingLibrary ? "wait" : "pointer",
+              flexShrink: 0,
             }}
             title="Sincronizar biblioteca desde el servidor"
           >
-            <RefreshCw size={12} className={isFetchingLibrary ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={isFetchingLibrary ? "animate-spin" : ""} />
           </button>
         </div>
-
+      ) : (
         <div
           style={{
-            overflowY: "auto",
+            border: "2px solid var(--primary)",
+            backgroundColor: "var(--surface-container)",
             display: "flex",
             flexDirection: "column",
-            padding: "6px",
-            gap: "5px",
+            maxHeight: "420px",
+            overflow: "hidden",
+            minWidth: 0,
           }}
         >
-          <button
-            type="button"
-            onClick={() => onSelectPlaylist("")}
+          <div
             style={{
-              width: "100%",
+              padding: "8px 10px",
+              borderBottom: "2px solid var(--primary)",
+              fontSize: "0.68rem",
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "6px 9px",
-              fontSize: "0.68rem",
-              fontWeight: 900,
-              border: "1.5px solid var(--primary)",
-              backgroundColor:
-                selectedFilterPlaylistId === "" ? "var(--primary-container)" : "var(--card-bg)",
-              color:
-                selectedFilterPlaylistId === ""
-                  ? "var(--on-primary-container)"
-                  : "var(--on-background)",
-              cursor: "pointer",
-              textAlign: "left",
             }}
           >
-            <span>TODAS LAS CANCIONES</span>
-            <span>{totalTracks}</span>
-          </button>
+            <span>PLAYLISTS ({playlists.length})</span>
+            <button
+              type="button"
+              disabled={isFetchingLibrary}
+              onClick={onRefreshLibrary}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "transparent",
+                border: "none",
+                color: "var(--on-background)",
+                fontSize: "0.62rem",
+                fontWeight: 900,
+                cursor: isFetchingLibrary ? "wait" : "pointer",
+              }}
+              title="Sincronizar biblioteca desde el servidor"
+            >
+              <RefreshCw size={12} className={isFetchingLibrary ? "animate-spin" : ""} />
+            </button>
+          </div>
 
-          {playlists.map((pl) => {
-            const isActive = selectedFilterPlaylistId === String(pl.id);
-            return (
-              <button
-                key={pl.id}
-                type="button"
-                onClick={() => onSelectPlaylist(String(pl.id))}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 9px",
-                  fontSize: "0.68rem",
-                  fontWeight: 900,
-                  border: "1.5px solid var(--primary)",
-                  backgroundColor: isActive ? "var(--primary-container)" : "var(--card-bg)",
-                  color: isActive ? "var(--on-primary-container)" : "var(--on-background)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  minWidth: 0,
-                  overflow: "hidden",
-                }}
-              >
-                <span
+          <div
+            style={{
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              padding: "6px",
+              gap: "5px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onSelectPlaylist("")}
+              style={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "6px 9px",
+                fontSize: "0.68rem",
+                fontWeight: 900,
+                border: "1.5px solid var(--primary)",
+                backgroundColor:
+                  selectedFilterPlaylistId === "" ? "var(--primary-container)" : "var(--card-bg)",
+                color:
+                  selectedFilterPlaylistId === ""
+                    ? "var(--on-primary-container)"
+                    : "var(--on-background)",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <span>TODAS LAS CANCIONES</span>
+              <span>{totalTracks}</span>
+            </button>
+
+            {playlists.map((pl) => {
+              const isActive = selectedFilterPlaylistId === String(pl.id);
+              return (
+                <button
+                  key={pl.id}
+                  type="button"
+                  onClick={() => onSelectPlaylist(String(pl.id))}
                   style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 9px",
+                    fontSize: "0.68rem",
+                    fontWeight: 900,
+                    border: "1.5px solid var(--primary)",
+                    backgroundColor: isActive ? "var(--primary-container)" : "var(--card-bg)",
+                    color: isActive ? "var(--on-primary-container)" : "var(--on-background)",
+                    cursor: "pointer",
+                    textAlign: "left",
                     minWidth: 0,
+                    overflow: "hidden",
                   }}
                 >
-                  {pl.name}
-                </span>
-                <span style={{ flexShrink: 0, opacity: 0.85 }}>{pl.num_songs}</span>
-              </button>
-            );
-          })}
+                  <span
+                    style={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      minWidth: 0,
+                    }}
+                  >
+                    {pl.name}
+                  </span>
+                  <span style={{ flexShrink: 0, opacity: 0.85 }}>{pl.num_songs}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* COLUMNA DERECHA: BUSCADOR + LISTA DE CANCIONES */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
@@ -233,12 +295,14 @@ export function AdminLibrarySearchPanel({
             }
           }}
           style={{
-            height: "352px",
+            height: isMobile ? "300px" : "352px",
+            maxHeight: isMobile ? "45dvh" : "352px",
             overflowY: "auto",
             border: "2px solid var(--primary)",
             backgroundColor: "var(--card-bg)",
             display: "flex",
             flexDirection: "column",
+            minWidth: 0,
           }}
         >
           {isLoadingLibrary && allTracksCount === 0 ? (
@@ -337,7 +401,7 @@ export function AdminLibrarySearchPanel({
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "4px",
-                        padding: "5px 10px",
+                        padding: isMobile ? "5px 8px" : "5px 10px",
                         backgroundColor: isDone ? "var(--primary)" : "var(--primary-container)",
                         color: isDone ? "var(--on-primary)" : "var(--on-primary-container)",
                         border: "1.5px solid var(--primary)",
@@ -346,6 +410,7 @@ export function AdminLibrarySearchPanel({
                         cursor: isBusy ? "wait" : "pointer",
                         flexShrink: 0,
                       }}
+                      title="Poner como siguiente canción"
                     >
                       {isBusy ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -354,7 +419,17 @@ export function AdminLibrarySearchPanel({
                       ) : (
                         <Plus size={12} />
                       )}
-                      <span>{isBusy ? "..." : isDone ? "ENCOLADA" : "PONER SIGUIENTE"}</span>
+                      <span>
+                        {isBusy
+                          ? "..."
+                          : isDone
+                          ? isMobile
+                            ? "LISTO"
+                            : "ENCOLADA"
+                          : isMobile
+                          ? "SIGUIENTE"
+                          : "PONER SIGUIENTE"}
+                      </span>
                     </button>
                   </div>
                 );

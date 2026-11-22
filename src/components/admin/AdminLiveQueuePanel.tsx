@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ListMusic, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import type { AdminQueueItem } from "@/types/adminRadio";
 import { useAdminDeleteQueueItem, useAdminQueue } from "@/hooks/useAdminRadioQuery";
+import { useModalDimensions } from "@/hooks/useModalDimensions";
 
 interface AdminLiveQueuePanelProps {
   enabled: boolean;
@@ -25,6 +26,7 @@ function getQueueItemLabel(item: AdminQueueItem): string {
 }
 
 export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanelProps) => {
+  const { isMobile } = useModalDimensions();
   const queueQuery = useAdminQueue(enabled);
   const deleteMutation = useAdminDeleteQueueItem();
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
@@ -52,6 +54,8 @@ export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanel
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
           fontSize: "0.7rem",
           fontWeight: 900,
           color: "var(--on-surface-variant)",
@@ -213,7 +217,7 @@ export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanel
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "4px",
-                      padding: "5px 10px",
+                      padding: isMobile ? "5px 7px" : "5px 10px",
                       backgroundColor: "#FEE2E2",
                       color: "#991B1B",
                       border: "1.5px solid var(--primary)",
@@ -225,7 +229,7 @@ export const AdminLiveQueuePanel = ({ enabled, onFeedback }: AdminLiveQueuePanel
                     title="Eliminar de la cola"
                   >
                     {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                    <span>{isDeleting ? "..." : "ELIMINAR"}</span>
+                    {!isMobile && <span>{isDeleting ? "..." : "ELIMINAR"}</span>}
                   </button>
                 )}
               </div>

@@ -9,7 +9,7 @@ import { NewsModal } from "@/components/NewsModal";
 import { AdminPersonalPlayerModal } from "@/components/admin/AdminPersonalPlayerModal";
 import { useAudio } from "@/hooks/useAudio";
 import { useNews } from "@/hooks/useNews";
-import { isVip, canAccessStudio } from "@/lib/permissions";
+import { canAccessStudio } from "@/lib/permissions";
 
 type ActiveTab = "explore" | "store" | "profile" | "vip";
 
@@ -56,7 +56,6 @@ export const Header = ({
     lastUpdated,
   } = useNews();
 
-  const isVipUser = isVip(userProfile.role);
   const hasStudioAccess = canAccessStudio(userProfile.role);
   const isExactAdmin = (userProfile?.role || "").toUpperCase() === "ADMIN";
 
@@ -348,19 +347,19 @@ export const Header = ({
             justifyContent: "space-between",
             width: "100%",
             paddingBottom: "10px",
-            borderBottom: "2.5px solid var(--primary)",
+            borderBottom: "2px solid rgba(204, 255, 0, 0.28)",
           }}
         >
           <div
             style={{
-              backgroundColor: "var(--primary)",
-              color: "var(--on-primary)",
+              backgroundColor: "#0E1118",
+              color: "#CCFF00",
+              border: "1.5px solid #CCFF00",
               padding: "3px 8px",
               fontSize: "0.68rem",
               fontWeight: 900,
               letterSpacing: "0.8px",
-              transform: "rotate(-1.5deg)",
-              boxShadow: "2px 2px 0px var(--primary-container)",
+              boxShadow: "2px 2px 0px #000000",
             }}
           >
             📻 MENÚ RADIO DOBLE C
@@ -371,10 +370,12 @@ export const Header = ({
             className="neo-button fun-hover-wobble"
             style={{
               padding: "4px 8px",
-              backgroundColor: "var(--card-bg)",
+              backgroundColor: "#1F2433",
+              color: "#F1F5F9",
+              border: "2px solid #334155",
               fontSize: "0.65rem",
               fontWeight: 900,
-              boxShadow: "1.5px 1.5px 0px var(--primary)",
+              boxShadow: "2px 2px 0px #000000",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -386,39 +387,31 @@ export const Header = ({
           </button>
         </div>
 
-        {/* Navigation Links with Distinct Active State */}
+        {/* Navigation Links — Estilo unificado azul oscuro C-Station (#161922) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", alignItems: "center" }}>
           {/* 1. Explorar */}
           <button
             onClick={() => handleNavClick("explore")}
-            className="mobile-nav-link fun-hover-wobble"
+            className={`mobile-nav-link fun-hover-wobble ${isExplore ? "mobile-nav-link-active" : ""}`}
             style={{
-              backgroundColor: isExplore ? "#CCFF00" : "var(--card-bg)",
-              color: isExplore ? "#161E00" : "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: isExplore ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
-              transform: isExplore ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(-1deg)",
-              "--rest-rot": isExplore ? "0deg" : "-1deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
+              "--rest-rot": "0deg",
             } as CSSProperties}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Radio size={16} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <Radio size={16} style={{ flexShrink: 0 }} />
               <span>EXPLORAR RADIO</span>
             </div>
             {isExplore && (
               <span
                 style={{
-                  backgroundColor: "var(--primary)",
-                  color: "var(--on-primary)",
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid var(--primary)",
+                  border: "1px solid #000000",
+                  flexShrink: 0,
                 }}
               >
                 ● ACTIVO
@@ -430,35 +423,27 @@ export const Header = ({
           <Link
             href="/horarios"
             onClick={() => setIsMenuOpen(false)}
-            className="mobile-nav-link fun-hover-wobble"
+            className={`mobile-nav-link fun-hover-wobble ${isHorarios ? "mobile-nav-link-active" : ""}`}
             style={{
-              backgroundColor: isHorarios ? "#CCFF00" : "var(--card-bg)",
-              color: isHorarios ? "#161E00" : "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: isHorarios ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
-              transform: isHorarios ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1.5deg)",
               textDecoration: "none",
-              "--rest-rot": isHorarios ? "0deg" : "1.5deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
+              "--rest-rot": "0deg",
             } as CSSProperties}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Calendar size={16} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <Calendar size={16} style={{ flexShrink: 0 }} />
               <span>MÚSICA &amp; HORARIOS 24/7</span>
             </div>
             {isHorarios && (
               <span
                 style={{
-                  backgroundColor: "var(--primary)",
-                  color: "var(--on-primary)",
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid var(--primary)",
+                  border: "1px solid #000000",
+                  flexShrink: 0,
                 }}
               >
                 ● ACTIVO
@@ -466,7 +451,7 @@ export const Header = ({
             )}
           </Link>
 
-          {/* Reproductor Personal Admin - Solo role === ADMIN (Móvil) */}
+          {/* Reproductor Personal Admin - Solo role === ADMIN */}
           {isExactAdmin && (
             <button
               type="button"
@@ -474,34 +459,25 @@ export const Header = ({
                 setIsMenuOpen(false);
                 setIsAdminPlayerOpen(true);
               }}
-              className="mobile-nav-link fun-hover-wobble"
+              className={`mobile-nav-link fun-hover-wobble ${isAdminPlayerOpen ? "mobile-nav-link-active" : ""}`}
               style={{
-                backgroundColor: "var(--primary-container)",
-                color: "var(--on-primary-container)",
-                border: "2.5px solid var(--primary)",
-                boxShadow: "3.5px 3.5px 0px var(--primary)",
-                transform: "rotate(1deg)",
-                "--rest-rot": "1deg",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "9px 14px",
-                width: "100%",
-                cursor: "pointer",
+                "--rest-rot": "0deg",
               } as CSSProperties}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "1rem" }}>🎚️</span>
-                <span style={{ fontWeight: 900 }}>ADMIN PLAYER</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                <span style={{ fontSize: "1rem", flexShrink: 0 }}>🎚️</span>
+                <span>ADMIN PLAYER</span>
               </div>
               <span
                 style={{
-                  backgroundColor: "var(--primary)",
-                  color: "var(--on-primary)",
+                  backgroundColor: "rgba(204, 255, 0, 0.14)",
+                  color: "#CCFF00",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
+                  border: "1px solid rgba(204, 255, 0, 0.55)",
+                  flexShrink: 0,
                 }}
               >
                 ADMIN
@@ -514,34 +490,26 @@ export const Header = ({
             <Link
               href="/studio"
               onClick={() => setIsMenuOpen(false)}
-              className="mobile-nav-link fun-hover-wobble"
+              className={`mobile-nav-link fun-hover-wobble ${pathname === "/studio" ? "mobile-nav-link-active" : ""}`}
               style={{
-                backgroundColor: pathname === "/studio" ? "#CCFF00" : "#161922",
-                color: pathname === "/studio" ? "#111111" : "#CCFF00",
-                border: "2.5px solid var(--primary)",
-                boxShadow: "3.5px 3.5px 0px var(--primary)",
-                transform: "rotate(-1deg)",
                 textDecoration: "none",
-                "--rest-rot": "-1deg",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "9px 14px",
+                "--rest-rot": "0deg",
               } as CSSProperties}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "1rem" }}>🎛️</span>
-                <span style={{ fontWeight: 900 }}>C-STATION</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                <span style={{ fontSize: "1rem", flexShrink: 0 }}>🎛️</span>
+                <span>C-STATION</span>
               </div>
               <span
                 style={{
-                  backgroundColor: "#CCFF00",
-                  color: "#111111",
+                  backgroundColor: "rgba(204, 255, 0, 0.14)",
+                  color: "#CCFF00",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid #000000",
+                  border: "1px solid rgba(204, 255, 0, 0.55)",
+                  flexShrink: 0,
                 }}
               >
                 ✨ NUEVO
@@ -552,34 +520,26 @@ export const Header = ({
           {/* 3. Tienda */}
           <button
             onClick={() => handleNavClick("store")}
-            className="mobile-nav-link fun-hover-wobble"
+            className={`mobile-nav-link fun-hover-wobble ${isStore ? "mobile-nav-link-active" : ""}`}
             style={{
-              backgroundColor: isStore ? "#CCFF00" : "var(--card-bg)",
-              color: isStore ? "#161E00" : "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: isStore ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
-              transform: isStore ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(-1.5deg)",
-              "--rest-rot": isStore ? "0deg" : "-1.5deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
+              "--rest-rot": "0deg",
             } as CSSProperties}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <ShoppingBag size={16} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <ShoppingBag size={16} style={{ flexShrink: 0 }} />
               <span>TIENDA OFICIAL</span>
             </div>
             {isStore && (
               <span
                 style={{
-                  backgroundColor: "var(--primary)",
-                  color: "var(--on-primary)",
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid var(--primary)",
+                  border: "1px solid #000000",
+                  flexShrink: 0,
                 }}
               >
                 ● ACTIVO
@@ -590,34 +550,26 @@ export const Header = ({
           {/* 4. Zona VIP */}
           <button
             onClick={() => handleNavClick("vip")}
-            className="mobile-nav-link fun-hover-wobble"
+            className={`mobile-nav-link fun-hover-wobble ${isVipTab ? "mobile-nav-link-active" : ""}`}
             style={{
-              backgroundColor: isVipTab ? "#CCFF00" : isVipUser ? "#FFDE82" : "var(--card-bg)",
-              color: isVipTab ? "#161E00" : "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: isVipTab ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
-              transform: isVipTab ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(1deg)",
-              "--rest-rot": isVipTab ? "0deg" : "1deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
+              "--rest-rot": "0deg",
             } as CSSProperties}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Crown size={16} style={{ color: "#BA1A1A", fill: "#FFB000" }} />
-              <span>ROCOLA VIP 👑</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <Crown size={16} style={{ color: "#FFB000", flexShrink: 0 }} />
+              <span>ROCOLA VIP</span>
             </div>
             {isVipTab && (
               <span
                 style={{
-                  backgroundColor: "var(--primary)",
-                  color: "var(--on-primary)",
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid var(--primary)",
+                  border: "1px solid #000000",
+                  flexShrink: 0,
                 }}
               >
                 ● ACTIVO
@@ -628,34 +580,26 @@ export const Header = ({
           {/* 5. Mi Perfil */}
           <button
             onClick={() => handleNavClick("profile")}
-            className="mobile-nav-link fun-hover-wobble"
+            className={`mobile-nav-link fun-hover-wobble ${isProfile ? "mobile-nav-link-active" : ""}`}
             style={{
-              backgroundColor: isProfile ? "#CCFF00" : "var(--card-bg)",
-              color: isProfile ? "#161E00" : "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: isProfile ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
-              transform: isProfile ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(-1deg)",
-              "--rest-rot": isProfile ? "0deg" : "-1deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
+              "--rest-rot": "0deg",
             } as CSSProperties}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <User size={16} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <User size={16} style={{ flexShrink: 0 }} />
               <span>MI PERFIL &amp; AJUSTES</span>
             </div>
             {isProfile && (
               <span
                 style={{
-                  backgroundColor: "var(--primary)",
-                  color: "var(--on-primary)",
+                  backgroundColor: "#CCFF00",
+                  color: "#111111",
                   fontSize: "0.55rem",
                   fontWeight: 900,
                   padding: "2px 6px",
                   letterSpacing: "0.8px",
-                  border: "1px solid var(--primary)",
+                  border: "1px solid #000000",
+                  flexShrink: 0,
                 }}
               >
                 ● ACTIVO
@@ -669,33 +613,25 @@ export const Header = ({
               setIsMenuOpen(false);
               setNewsModalOpen(true);
             }}
-            className="mobile-nav-link fun-hover-wobble"
+            className={`mobile-nav-link fun-hover-wobble ${isNewsModalOpen ? "mobile-nav-link-active" : ""}`}
             style={{
-              backgroundColor: isNewsModalOpen ? "#CCFF00" : "var(--card-bg)",
-              color: isNewsModalOpen ? "#161E00" : "var(--primary)",
-              border: "2.5px solid var(--primary)",
-              boxShadow: isNewsModalOpen ? "1.5px 1.5px 0px var(--primary)" : "3.5px 3.5px 0px var(--primary)",
-              transform: isNewsModalOpen ? "translate(1.5px, 1.5px) rotate(0deg)" : "rotate(-1deg)",
-              "--rest-rot": isNewsModalOpen ? "0deg" : "-1deg",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 14px",
+              "--rest-rot": "0deg",
             } as CSSProperties}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Newspaper size={16} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+              <Newspaper size={16} style={{ flexShrink: 0 }} />
               <span>FLASH DEL MUNDO</span>
             </div>
             <span
               style={{
-                backgroundColor: "#BA1A1A",
+                backgroundColor: "#991B1B",
                 color: "#FFFFFF",
                 fontSize: "0.55rem",
                 fontWeight: 900,
                 padding: "2px 6px",
                 letterSpacing: "0.8px",
-                border: "1px solid var(--primary)",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                flexShrink: 0,
               }}
             >
               ● EN VIVO
@@ -707,16 +643,18 @@ export const Header = ({
         <div
           style={{
             marginTop: "auto",
-            paddingTop: "16px",
-            borderTop: "2px dashed var(--primary)",
+            paddingTop: "14px",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            borderTop: "2px dashed rgba(248, 250, 252, 0.2)",
             width: "100%",
             textAlign: "center",
             display: "flex",
             flexDirection: "column",
             gap: "4px",
+            color: "#CBD5E1",
           }}
         >
-          <div style={{ fontSize: "0.75rem", fontWeight: 900, letterSpacing: "1px" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 900, letterSpacing: "1px", color: "#F8FAFC" }}>
             📻 APOYE A SU RADIO LOCAL
           </div>
           <div style={{ fontSize: "0.62rem", fontWeight: "bold", opacity: 0.75 }}>

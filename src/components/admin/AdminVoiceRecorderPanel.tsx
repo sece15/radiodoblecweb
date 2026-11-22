@@ -17,6 +17,7 @@ import {
   type AdminVoiceNoteResponse,
 } from "@/types/adminRadio";
 import { useAdminVoiceNote } from "@/hooks/useAdminRadioQuery";
+import { useModalDimensions } from "@/hooks/useModalDimensions";
 
 interface AdminVoiceRecorderPanelProps {
   playlists: AdminRadioPlaylist[];
@@ -62,6 +63,7 @@ export const AdminVoiceRecorderPanel = ({
   defaultUploadPlaylistId,
   onFeedback,
 }: AdminVoiceRecorderPanelProps) => {
+  const { isMobile } = useModalDimensions();
   const voiceMutation = useAdminVoiceNote();
 
   const [mode, setMode] = useState<VoiceMode>("capsule");
@@ -268,7 +270,15 @@ export const AdminVoiceRecorderPanel = ({
   return (
     <form onSubmit={handleSubmitVoice} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {/* Selector de modo */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))",
+          gap: "8px",
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
         <button
           type="button"
           disabled={isRecording || voiceMutation.isPending}
@@ -330,8 +340,11 @@ export const AdminVoiceRecorderPanel = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: mode === "podcast" ? "1fr 1fr" : "1fr",
+          gridTemplateColumns:
+            mode === "podcast" && !isMobile ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)",
           gap: "10px",
+          width: "100%",
+          minWidth: 0,
         }}
       >
         <div
@@ -490,9 +503,17 @@ export const AdminVoiceRecorderPanel = ({
 
       {/* Campos adicionales en modo Podcast / Entrevista */}
       {mode === "podcast" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-            <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(3, minmax(0, 1fr))",
+              gap: "8px",
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
               <label style={{ fontSize: "0.66rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
                 TÍTULO DEL EPISODIO
               </label>

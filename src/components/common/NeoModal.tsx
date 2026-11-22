@@ -49,18 +49,21 @@ export const NeoModal = ({
       aria-modal="true"
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
+        inset: 0,
+        width: "100%",
+        height: "100dvh",
+        maxHeight: "100dvh",
         backgroundColor: "rgba(0, 0, 0, 0.78)",
         zIndex: 6000, // Por encima de header (100) y player (1000)
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "20px 16px",
+        padding: isMobile
+          ? "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(24px + env(safe-area-inset-bottom, 0px)) 12px"
+          : "20px 16px",
         backdropFilter: "blur(5px)",
         boxSizing: "border-box",
+        overflow: "hidden",
       }}
       onClick={() => closeOnBackdrop && onClose()}
     >
@@ -70,11 +73,11 @@ export const NeoModal = ({
           width: "100%",
           maxWidth,
           backgroundColor: backgroundColor || "var(--background)",
-          boxShadow: "8px 8px 0px var(--primary)",
+          boxShadow: isMobile ? "5px 5px 0px var(--primary)" : "8px 8px 0px var(--primary)",
           border: "3px solid var(--primary)",
           display: "flex",
           flexDirection: "column",
-          maxHeight: `${maxModalHeight}px`,
+          maxHeight: isMobile ? "100%" : `min(${maxModalHeight}px, 100%)`,
           position: "relative",
           boxSizing: "border-box",
           overflow: "hidden",
@@ -160,11 +163,14 @@ export const NeoModal = ({
           style={{
             flex: "1 1 auto",
             overflowY: bodyOverflow,
+            overflowX: "hidden",
             minHeight: 0,
-            padding: "14px 18px",
+            padding: isMobile ? "12px 14px 20px 14px" : "14px 18px",
             display: "flex",
             flexDirection: "column",
             gap: "12px",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
           }}
         >
           {children}

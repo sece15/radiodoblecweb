@@ -1028,7 +1028,8 @@ button {
   /* Move mobile menu down to match the new header height */
   .mobile-menu-drawer {
     top: 72px !important;
-    height: calc(100vh - 72px) !important;
+    height: calc(100dvh - 72px) !important;
+    max-height: calc(100dvh - 72px) !important;
   }
   .header-menu-btn {
     padding: 6px 10px !important;
@@ -1058,50 +1059,64 @@ button {
   top: 0;
   right: 0;
   width: min(320px, 85vw);
-  height: 100vh;
-  background-color: var(--background);
-  border-left: 4px solid var(--primary);
-  box-shadow: -6px 0px 0px rgba(0, 0, 0, 0.2);
+  height: 100dvh;
+  max-height: 100dvh;
+  background-color: #161922;
+  color: #F1F5F9;
+  border-left: 3px solid #2A3248;
+  box-shadow: -6px 0px 18px rgba(0, 0, 0, 0.45);
   z-index: 2000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 20px 16px;
+  padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px)) 16px;
   gap: 12px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   transform: translateX(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .mobile-menu-drawer.open {
   transform: translateX(0);
 }
 
-/* Mobile & Desktop Nav Button stylings */
+/* Mobile & Desktop Nav Button stylings (Unificado estilo C-Station azul oscuro) */
 .mobile-nav-link {
   width: 100%;
-  max-width: 280px;
+  max-width: 288px;
   text-align: left;
-  font-size: 0.8rem !important;
+  font-size: 0.78rem !important;
   letter-spacing: 0.04em;
-  padding: 8px 12px !important;
+  padding: 10px 13px !important;
   text-transform: uppercase;
   font-family: inherit;
   font-weight: 900;
-  border: 2.5px solid var(--primary) !important;
-  box-shadow: 3px 3px 0px 0px var(--primary) !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background-color: #1D2230;
+  color: #F1F5F9;
+  border: 2px solid #2C344A;
+  box-shadow: 3px 3px 0px 0px #0A0C12;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+  box-sizing: border-box;
+}
+
+.mobile-nav-link-active {
+  background-color: #232A3C;
+  color: #CCFF00;
+  border-color: #CCFF00;
+  box-shadow: 3px 3px 0px 0px #CCFF00;
 }
 
 .mobile-nav-link:active {
   transform: translate(2px, 2px) !important;
-  box-shadow: 1px 1px 0px 0px var(--primary) !important;
+  box-shadow: 1px 1px 0px 0px #0A0C12 !important;
 }
 
 @keyframes spin {

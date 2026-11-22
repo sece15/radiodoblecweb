@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import { FileAudio, Loader2, Upload } from "lucide-react";
+import { useModalDimensions } from "@/hooks/useModalDimensions";
 import type { AdminRadioPlaylist, AdminUploadResponse } from "@/types/adminRadio";
 
 interface AdminUploadTrackPanelProps {
@@ -41,92 +42,126 @@ export function AdminUploadTrackPanel({
   onChangeEnqueueNext,
   onSubmit,
 }: AdminUploadTrackPanelProps) {
+  const { isMobile } = useModalDimensions();
+
   return (
     <form
       onSubmit={onSubmit}
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(250px, 310px) minmax(0, 1fr)",
-        gap: "14px",
+        gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "minmax(250px, 310px) minmax(0, 1fr)",
+        gap: isMobile ? "10px" : "14px",
         alignItems: "start",
+        width: "100%",
+        minWidth: 0,
       }}
     >
-      {/* COLUMNA IZQUIERDA: PLAYLIST DESTINO */}
-      <div
-        style={{
-          border: "2px solid var(--primary)",
-          backgroundColor: "var(--surface-container)",
-          display: "flex",
-          flexDirection: "column",
-          maxHeight: "420px",
-          overflow: "hidden",
-          minWidth: 0,
-        }}
-      >
-        <div
-          style={{
-            padding: "8px 10px",
-            borderBottom: "2px solid var(--primary)",
-            fontSize: "0.68rem",
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-          }}
-        >
-          PLAYLIST DESTINO
+      {/* PLAYLIST DESTINO: Selector compacto en móvil, columna lateral en escritorio */}
+      {isMobile ? (
+        <div style={{ minWidth: 0 }}>
+          <label style={{ fontSize: "0.68rem", fontWeight: 900, display: "block", marginBottom: "4px" }}>
+            PLAYLIST DESTINO
+          </label>
+          <select
+            aria-label="Playlist destino"
+            value={uploadPlaylistId}
+            disabled={isUploading}
+            onChange={(e) => onSelectUploadPlaylist(Number(e.target.value))}
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              fontSize: "0.74rem",
+              fontWeight: 900,
+              border: "2px solid var(--primary)",
+              backgroundColor: "var(--surface-container)",
+              color: "var(--on-background)",
+              boxSizing: "border-box",
+            }}
+          >
+            {playlists.map((pl) => (
+              <option key={pl.id} value={pl.id}>
+                {pl.name} ({pl.num_songs})
+              </option>
+            ))}
+          </select>
         </div>
-
+      ) : (
         <div
           style={{
-            overflowY: "auto",
+            border: "2px solid var(--primary)",
+            backgroundColor: "var(--surface-container)",
             display: "flex",
             flexDirection: "column",
-            padding: "6px",
-            gap: "5px",
+            maxHeight: "420px",
+            overflow: "hidden",
+            minWidth: 0,
           }}
         >
-          {playlists.map((pl) => {
-            const isActive = uploadPlaylistId === pl.id;
-            return (
-              <button
-                key={pl.id}
-                type="button"
-                disabled={isUploading}
-                onClick={() => onSelectUploadPlaylist(pl.id)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 9px",
-                  fontSize: "0.68rem",
-                  fontWeight: 900,
-                  border: "1.5px solid var(--primary)",
-                  backgroundColor: isActive ? "var(--primary-container)" : "var(--card-bg)",
-                  color: isActive ? "var(--on-primary-container)" : "var(--on-background)",
-                  cursor: isUploading ? "wait" : "pointer",
-                  textAlign: "left",
-                  minWidth: 0,
-                  overflow: "hidden",
-                }}
-              >
-                <span
+          <div
+            style={{
+              padding: "8px 10px",
+              borderBottom: "2px solid var(--primary)",
+              fontSize: "0.68rem",
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            PLAYLIST DESTINO
+          </div>
+
+          <div
+            style={{
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              padding: "6px",
+              gap: "5px",
+            }}
+          >
+            {playlists.map((pl) => {
+              const isActive = uploadPlaylistId === pl.id;
+              return (
+                <button
+                  key={pl.id}
+                  type="button"
+                  disabled={isUploading}
+                  onClick={() => onSelectUploadPlaylist(pl.id)}
                   style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 9px",
+                    fontSize: "0.68rem",
+                    fontWeight: 900,
+                    border: "1.5px solid var(--primary)",
+                    backgroundColor: isActive ? "var(--primary-container)" : "var(--card-bg)",
+                    color: isActive ? "var(--on-primary-container)" : "var(--on-background)",
+                    cursor: isUploading ? "wait" : "pointer",
+                    textAlign: "left",
                     minWidth: 0,
+                    overflow: "hidden",
                   }}
                 >
-                  {pl.name}
-                </span>
-                <span style={{ flexShrink: 0, opacity: 0.85 }}>{pl.num_songs}</span>
-              </button>
-            );
-          })}
+                  <span
+                    style={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      minWidth: 0,
+                    }}
+                  >
+                    {pl.name}
+                  </span>
+                  <span style={{ flexShrink: 0, opacity: 0.85 }}>{pl.num_songs}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* COLUMNA DERECHA: ARCHIVO MP3 + METADATOS + SUBIR */}
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: 0 }}>
@@ -181,7 +216,15 @@ export function AdminUploadTrackPanel({
           Carpeta en servidor (automática): <strong>{resolvedUploadFolder}</strong>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))",
+            gap: "8px",
+            width: "100%",
+            minWidth: 0,
+          }}
+        >
           <div style={{ minWidth: 0 }}>
             <label style={{ fontSize: "0.68rem", fontWeight: 900, display: "block", marginBottom: "3px" }}>
               ARTISTA (OPCIONAL)
